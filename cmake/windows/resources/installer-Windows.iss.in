@@ -1,0 +1,334 @@
+#define MyAppName "@CMAKE_PROJECT_NAME@"
+#define MyAppVersion "@CMAKE_PROJECT_VERSION@"
+#define MyAppPublisher "@PLUGIN_AUTHOR@"
+#define MyAppURL "@PLUGIN_WEBSITE@"
+
+#define DEffectVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\3d-effect.dll")
+#define AdvancedMasksVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\obs-advanced-masks.dll")
+#define CompositeBlurVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\obs-composite-blur.dll")
+#define FreezeFilterVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\freeze-filter.dll")
+#define GradientSourceVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\gradient-source.dll")
+#define MoveVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\move-transition.dll")
+#define NoiseVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\obs-noise.dll")
+#define RetroEffectsVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\obs-noise.dll")
+#define SceneNotesDockVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\scene-notes-dock.dll")
+#define SourceCloneVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\source-clone.dll")
+#define StrokeGlowShadowVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\obs-stroke-glow-shadow.dll")
+#define SVGSourceVersion GetVersionNumbersString(SourcePath + "\..\release\Package\obs-plugins\64bit\svg-source.dll")
+
+[Setup]
+; NOTE: The value of AppId uniquely identifies this application.
+; Do not use the same AppId value in installers for other applications.
+; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
+AppId={{@UUID_APP@}}
+AppName="Fiji Suite"
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}
+DefaultDirName={code:GetDirName}
+AppendDefaultDirName=no
+DefaultGroupName="Fiji Suite"
+OutputBaseFilename={#MyAppName}-{#MyAppVersion}-windows-installer
+Compression=lzma
+SolidCompression=yes
+DirExistsWarning=no
+AllowNoIcons=yes
+; Wizard Information
+WizardStyle=modern
+WizardResizable=yes
+SetupIconFile="../media/icon.ico"
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Components]
+Name: "FijiSuite"; Description: "Fiji Suite"; Types: full compact custom; Flags: fixed checkablealone
+Name: "Plugins"; Description: "featured OBS plugins"; Types: full
+Name: "Plugins\3DEffect"; Description: "3D Effect (Exeldro) ({#deffectVersion})"; Types: full
+Name: "Plugins\AdvancedMasks"; Description: "Advanced Masks (FiniteSingularity) ({#advancedMasksVersion})"; Types: full
+Name: "Plugins\CompositeBlur"; Description: "Composite Blur (FiniteSingularity) ({#CompositeBlurVersion})"; Types: full
+Name: "Plugins\FreezeFilter"; Description: "Freeze Filter (Exeldro) ({#FreezeFilterVersion})"; Types: full
+Name: "Plugins\GradientSource"; Description: "Gradient Source (Exeldro) ({#GradientSourceVersion})"; Types: full
+Name: "Plugins\Move"; Description: "Move (Exeldro) ({#MoveVersion})"; Types: full
+Name: "Plugins\Noise"; Description: "Noise (FiniteSingularity) ({#NoiseVersion})"; Types: full
+Name: "Plugins\RetroEffects"; Description: "Retro Effects (FiniteSingularity) ({#RetroEffectsVersion})"; Types: full
+Name: "Plugins\SceneNotesDock"; Description: "Scene Notes Dock (Exeldro) ({#SceneNotesDockVersion})"; Types: full
+Name: "Plugins\SourceClone"; Description: "Source Clone (Exeldro) ({#SourceCloneVersion})"; Types: full
+Name: "Plugins\StrokeGlowShadow"; Description: "Stroke Glow Shadow (FiniteSingularity) ({#StrokeGlowShadowVersion})"; Types: full
+Name: "Plugins\SVGSource"; Description: "SVG Source (FiniteSingularity) ({#SVGSourceVersion})"; Types: full
+
+[Files]
+Source: "..\release\Package\obs-plugins\64bit\fiji-suite.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "FijiSuite"
+Source: "..\release\Package\obs-plugins\64bit\fiji-suite.*"; DestDir: "{commonappdata}\obs-studio\plugins\fiji-suite"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "FijiSuite"
+Source: "..\release\Package\data\obs-plugins\fiji-suite\locale\*"; DestDir: "{app}\data\obs-plugins\fiji-suite\locale"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "FijiSuite"
+Source: "..\release\Package\data\obs-plugins\fiji-suite\locale\*"; DestDir: "{commonappdata}\obs-studio\plugins\fiji-suite\data\locale"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "FijiSuite"
+
+Source: "..\release\Package\obs-plugins\64bit\3d-effect.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\3DEffect"
+Source: "..\release\Package\obs-plugins\64bit\3d-effect.*"; DestDir: "{commonappdata}\obs-studio\plugins\3d-effect"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\3DEffect"
+Source: "..\release\Package\data\obs-plugins\3d-effect\*"; DestDir: "{app}\data\obs-plugins\3d-effect"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\3DEffect"
+Source: "..\release\Package\data\obs-plugins\3d-effect\*"; DestDir: "{commonappdata}\obs-studio\plugins\3d-effect\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\3DEffect"
+
+Source: "..\release\Package\obs-plugins\64bit\obs-advanced-masks.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\AdvancedMasks"
+Source: "..\release\Package\obs-plugins\64bit\obs-advanced-masks.*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-advanced-masks"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\AdvancedMasks"
+Source: "..\release\Package\data\obs-plugins\obs-advanced-masks\*"; DestDir: "{app}\data\obs-plugins\obs-advanced-masks"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\AdvancedMasks"
+Source: "..\release\Package\data\obs-plugins\obs-advanced-masks\*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-advanced-masks\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\AdvancedMasks"
+
+Source: "..\release\Package\obs-plugins\64bit\obs-composite-blur.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\CompositeBlur"
+Source: "..\release\Package\obs-plugins\64bit\obs-composite-blur.*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-composite-blur"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\CompositeBlur"
+Source: "..\release\Package\data\obs-plugins\obs-composite-blur\*"; DestDir: "{app}\data\obs-plugins\obs-composite-blur"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\CompositeBlur"
+Source: "..\release\Package\data\obs-plugins\obs-composite-blur\*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-composite-blur\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\CompositeBlur"
+
+Source: "..\release\Package\obs-plugins\64bit\freeze-filter.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\FreezeFilter"
+Source: "..\release\Package\obs-plugins\64bit\freeze-filter.*"; DestDir: "{commonappdata}\obs-studio\plugins\freeze-filter"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\FreezeFilter"
+Source: "..\release\Package\data\obs-plugins\freeze-filter\*"; DestDir: "{app}\data\obs-plugins\freeze-filter"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\FreezeFilter"
+Source: "..\release\Package\data\obs-plugins\freeze-filter\*"; DestDir: "{commonappdata}\obs-studio\plugins\freeze-filter\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\FreezeFilter"
+
+Source: "..\release\Package\obs-plugins\64bit\gradient-source.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\GradientSource"
+Source: "..\release\Package\obs-plugins\64bit\gradient-source.*"; DestDir: "{commonappdata}\obs-studio\plugins\gradient-source"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\GradientSource"
+Source: "..\release\Package\data\obs-plugins\gradient-source\*"; DestDir: "{app}\data\obs-plugins\gradient-source"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\GradientSource"
+Source: "..\release\Package\data\obs-plugins\gradient-source\*"; DestDir: "{commonappdata}\obs-studio\plugins\gradient-source\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\GradientSource"
+
+Source: "..\release\Package\obs-plugins\64bit\move-transition.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Move"
+Source: "..\release\Package\obs-plugins\64bit\move-transition.*"; DestDir: "{commonappdata}\obs-studio\plugins\move-transition"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Move"
+Source: "..\release\Package\data\obs-plugins\move-transition\*"; DestDir: "{app}\data\obs-plugins\move-transition"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Move"
+Source: "..\release\Package\data\obs-plugins\move-transition\*"; DestDir: "{commonappdata}\obs-studio\plugins\move-transition\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Move"
+
+Source: "..\release\Package\obs-plugins\64bit\obs-noise.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Noise"
+Source: "..\release\Package\obs-plugins\64bit\obs-noise.*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-noise"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Noise"
+Source: "..\release\Package\data\obs-plugins\obs-noise\*"; DestDir: "{app}\data\obs-plugins\obs-noise"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Noise"
+Source: "..\release\Package\data\obs-plugins\obs-noise\*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-noise\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\Noise"
+
+Source: "..\release\Package\obs-plugins\64bit\obs-retro-effects.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\RetroEffects"
+Source: "..\release\Package\obs-plugins\64bit\obs-retro-effects.*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-retro-effects"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\RetroEffects"
+Source: "..\release\Package\data\obs-plugins\obs-retro-effects\*"; DestDir: "{app}\data\obs-plugins\obs-retro-effects"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\RetroEffects"
+Source: "..\release\Package\data\obs-plugins\obs-retro-effects\*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-retro-effects\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\RetroEffects"
+
+Source: "..\release\Package\obs-plugins\64bit\scene-notes-dock.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SceneNotesDock"
+Source: "..\release\Package\obs-plugins\64bit\scene-notes-dock.*"; DestDir: "{commonappdata}\obs-studio\plugins\scene-notes-dock"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SceneNotesDock"
+Source: "..\release\Package\data\obs-plugins\scene-notes-dock\*"; DestDir: "{app}\data\obs-plugins\scene-notes-dock"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SceneNotesDock"
+Source: "..\release\Package\data\obs-plugins\scene-notes-dock\*"; DestDir: "{commonappdata}\obs-studio\plugins\scene-notes-dock\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SceneNotesDock"
+
+Source: "..\release\Package\obs-plugins\64bit\source-clone.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SourceClone"
+Source: "..\release\Package\obs-plugins\64bit\source-clone.*"; DestDir: "{commonappdata}\obs-studio\plugins\source-clone"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SourceClone"
+Source: "..\release\Package\data\obs-plugins\source-clone\*"; DestDir: "{app}\data\obs-plugins\source-clone"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SourceClone"
+Source: "..\release\Package\data\obs-plugins\source-clone\*"; DestDir: "{commonappdata}\obs-studio\plugins\source-clone\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SourceClone"
+
+Source: "..\release\Package\obs-plugins\64bit\obs-stroke-glow-shadow.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\StrokeGlowShadow"
+Source: "..\release\Package\obs-plugins\64bit\obs-stroke-glow-shadow.*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-stroke-glow-shadow"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\StrokeGlowShadow"
+Source: "..\release\Package\data\obs-plugins\obs-stroke-glow-shadow\*"; DestDir: "{app}\data\obs-plugins\obs-stroke-glow-shadow"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\StrokeGlowShadow"
+Source: "..\release\Package\data\obs-plugins\obs-stroke-glow-shadow\*"; DestDir: "{commonappdata}\obs-studio\plugins\obs-stroke-glow-shadow\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\StrokeGlowShadow"
+
+Source: "..\release\Package\obs-plugins\64bit\svg-source.*"; DestDir: "{app}\obs-plugins\64bit"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SVGSource"
+Source: "..\release\Package\obs-plugins\64bit\svg-source.*"; DestDir: "{commonappdata}\obs-studio\plugins\svg-source"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SVGSource"
+Source: "..\release\Package\data\obs-plugins\svg-source\*"; DestDir: "{app}\data\obs-plugins\svg-source"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SVGSource"
+Source: "..\release\Package\data\obs-plugins\svg-source\*"; DestDir: "{commonappdata}\obs-studio\plugins\svg-source\data"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: "Plugins\SVGSource"
+
+Source: "..\LICENSE"; Flags: dontcopy
+; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+
+[Icons]
+Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+
+[Code]
+
+procedure TypesComboChange(Sender: TObject);
+var
+    I: Integer;
+    InstalledVersion: Int64;
+    ComingVersion: Int64;
+begin
+    for I := 0 to WizardForm.ComponentsList.Items.Count - 1 do begin
+      if (WizardForm.ComponentsList.Items[I] = '3D Effect (Exeldro) ({#DEffectVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\3d-effect\3d-effect.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\3d-effect.dll'), InstalledVersion) or not StrToVersion('{#DEffectVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\3d-effect.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\3d-effect.dll'), InstalledVersion) or not StrToVersion('{#DEffectVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Advanced Masks (FiniteSingularity) ({#AdvancedMasksVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\obs-advanced-masks\obs-advanced-masks.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-advanced-masks.dll'), InstalledVersion) or not StrToVersion('{#AdvancedMasksVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\obs-advanced-masks.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-advanced-masks.dll'), InstalledVersion) or not StrToVersion('{#AdvancedMasksVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Composite Blur (FiniteSingularity) ({#CompositeBlurVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\obs-composite-blur\obs-composite-blur.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-composite-blur.dll'), InstalledVersion) or not StrToVersion('{#CompositeBlurVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\obs-composite-blur.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-composite-blur.dll'), InstalledVersion) or not StrToVersion('{#CompositeBlurVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Freeze Filter (Exeldro) ({#FreezeFilterVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\freeze-filter\freeze-filter.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\freeze-filter.dll'), InstalledVersion) or not StrToVersion('{#FreezeFilterVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\freeze-filter.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\freeze-filter.dll'), InstalledVersion) or not StrToVersion('{#FreezeFilterVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Gradient Source (Exeldro) ({#GradientSourceVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\gradient-source\gradient-source.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\gradient-source.dll'), InstalledVersion) or not StrToVersion('{#GradientSourceVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\gradient-source.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\gradient-source.dll'), InstalledVersion) or not StrToVersion('{#GradientSourceVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Move (Exeldro) ({#MoveVersion})') and FileExists(ExpandConstant('{app}\obs-plugins\64bit\move-transition.dll')) then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\move-transition\move-transition.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\move-transition.dll'), InstalledVersion) or not StrToVersion('{#MoveVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\move-transition.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\move-transition.dll'), InstalledVersion) or not StrToVersion('{#MoveVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Noise (FiniteSingularity) ({#NoiseVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\obs-noise\obs-noise.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-noise.dll'), InstalledVersion) or not StrToVersion('{#NoiseVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\obs-noise.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-noise.dll'), InstalledVersion) or not StrToVersion('{#NoiseVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Retro Effects (FiniteSingularity) ({#RetroEffectsVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\obs-retro-effects\obs-retro-effects.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-retro-effects.dll'), InstalledVersion) or not StrToVersion('{#RetroEffectsVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\obs-retro-effects.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-retro-effects.dll'), InstalledVersion) or not StrToVersion('{#RetroEffectsVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Scene Notes Dock (Exeldro) ({#SceneNotesDockVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\scene-notes-dock\scene-notes-dock.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\scene-notes-dock.dll'), InstalledVersion) or not StrToVersion('{#SceneNotesDockVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\scene-notes-dock.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\scene-notes-dock.dll'), InstalledVersion) or not StrToVersion('{#SceneNotesDockVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Source Clone (Exeldro) ({#SourceCloneVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\source-clone\source-clone.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\source-clone.dll'), InstalledVersion) or not StrToVersion('{#SourceCloneVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\source-clone.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\source-clone.dll'), InstalledVersion) or not StrToVersion('{#SourceCloneVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'Stroke Glow Shadow (FiniteSingularity) ({#StrokeGlowShadowVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\obs-stroke-glow-shadow\obs-stroke-glow-shadow.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-stroke-glow-shadow.dll'), InstalledVersion) or not StrToVersion('{#StrokeGlowShadowVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\obs-stroke-glow-shadow.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\obs-stroke-glow-shadow.dll'), InstalledVersion) or not StrToVersion('{#StrokeGlowShadowVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if (WizardForm.ComponentsList.Items[I] = 'SVG Source (FiniteSingularity) ({#SVGSourceVersion})') then begin
+        if FileExists(ExpandConstant('{commonappdata}\obs-studio\plugins\svg-source\svg-source.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\svg-source.dll'), InstalledVersion) or not StrToVersion('{#SVGSourceVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end else if FileExists(ExpandConstant('{app}\obs-plugins\64bit\svg-source.dll')) and (not GetPackedVersion(ExpandConstant('{app}\obs-plugins\64bit\svg-source.dll'), InstalledVersion) or not StrToVersion('{#SVGSourceVersion}', ComingVersion) or (ComparePackedVersion(InstalledVersion, ComingVersion) >= 0)) then begin
+          WizardForm.ComponentsList.Checked[I] := False;
+          WizardForm.ComponentsList.ItemEnabled[I] := False;
+        end;
+      end;
+      if WizardForm.ComponentsList.ItemEnabled[I] then begin
+         if (WizardForm.TypesCombo.Text = 'Full installation') then begin
+           WizardForm.ComponentsList.Checked[I] := True;
+         end else if (WizardForm.TypesCombo.Text = 'Compact installation') then begin
+           WizardForm.ComponentsList.Checked[I] := False;
+         end;
+      end;
+    end;
+end;
+
+procedure InitializeWizard();
+var
+  GPLText: AnsiString;
+  Page: TOutputMsgMemoWizardPage;
+begin
+  ExtractTemporaryFile('LICENSE');
+  LoadStringFromFile(ExpandConstant('{tmp}\LICENSE'), GPLText);
+  Page := CreateOutputMsgMemoPage(wpWelcome,
+    'License Information', 'Please review the license terms before installing {#MyAppName}',
+    'Press Page Down to see the rest of the agreement. Once you are aware of your rights, click Next to continue.',
+    String(GPLText)
+  );
+  WizardForm.TypesCombo.OnChange := @TypesComboChange;
+end;
+
+// credit where it's due :
+// following function come from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
+function GetDirName(Value: string): string;
+var
+  InstallPath: string;
+begin
+  // initialize default path, which will be returned when the following registry
+  // key queries fail due to missing keys or for some different reason
+  Result := ExpandConstant('{pf}\obs-studio');
+  // query the first registry value; if this succeeds, return the obtained value
+  if RegQueryStringValue(HKLM32, 'SOFTWARE\OBS Studio', '', InstallPath) then
+    Result := InstallPath;
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\OBS Studio', '', InstallPath) then
+    Result := InstallPath;
+end;
+
+/////////////////////////////////////////////////////////////////////
+function NextButtonClick(PageId: Integer): Boolean;
+var
+    ObsFileName: string;
+    ObsMS, ObsLS: Cardinal;
+    ObsMajorVersion, ObsMinorVersion: Cardinal;
+begin
+    Result := True;
+    if not (PageId = wpSelectDir) then begin
+        exit;
+    end;
+    ObsFileName := ExpandConstant('{app}\bin\64bit\obs64.exe');
+    if not FileExists(ObsFileName) then begin
+        MsgBox('OBS Studio (bin\64bit\obs64.exe) does not seem to be installed in that folder.  Please select the correct folder.', mbError, MB_OK);
+        Result := False;
+        exit;
+    end;
+    Result := GetVersionNumbers(ObsFileName, ObsMS, ObsLS);
+    if not Result then begin
+        MsgBox('Failed to read version from OBS Studio (bin\64bit\obs64.exe).', mbError, MB_OK);
+        Result := False;
+        exit;
+    end;
+    { shift 16 bits to the right to get major version }
+    ObsMajorVersion := ObsMS shr 16; 
+    { select only low 16 bits }
+    ObsMinorVersion := ObsMS and $FFFF;
+    if ObsMajorVersion < 31 then begin
+        MsgBox('Version of OBS Studio (bin\64bit\obs64.exe) is lower than the version 31 required.', mbError, MB_OK);
+        Result := False;
+        exit;
+    end;
+    TypesComboChange(nil);
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+    if CurPageID = wpSelectComponents then begin
+        TypesComboChange(nil);
+        exit;
+    end;
+end;
