@@ -2,6 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.2.0
+
+- Decks: boards of buttons that run timed steps on OBS (scenes, sources, filters, text, mute, sounds), with
+  variables, waits and conditions, a hotkey per button, and triggers from the Fiji-chan bot.
+- The decks open in a browser, an OBS browser dock, or a phone on the local network, served from inside OBS on
+  a secret address; the same pages are available through the bot.
+- An editor for decks and an importer for SAMMI decks, which reports anything it could not convert.
+
 ## 0.1.1
 
 - Fixed a crash when OBS starts: the multiview asked for OBS's own outputs before OBS had created them.

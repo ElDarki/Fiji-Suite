@@ -85,6 +85,21 @@ camera are controlled with the standard obs-websocket requests.
 | `set_main_scene` | `scene` | Changes the main canvas's scene. |
 | `start_main` / `stop_main` | `output`: `stream`, `record`, `backtrack` or `virtual_cam` | Starts or stops one of OBS's own outputs. |
 
+### Decks
+
+| Request | Input | Output |
+|---|---|---|
+| `get_decks` | | `decks`: every deck with its buttons, steps and triggers (see `docs/decks.md`) |
+| `save_deck` | `deck` | `deck` as stored. Adds it, or replaces the deck with the same `id`; missing ids are filled in. |
+| `delete_deck` | `id` | |
+| `press_button` | `button`, `data` (optional variables for the run) | Fails when there is no such button or it is busy. |
+| `fire_trigger` | `button`, `data` | The same as `press_button`; used by the bot for Twitch triggers. |
+| `release_button` | `button` | Runs the button's release list, if it has one. |
+| `stop_button` | `button` (`all` stops every button and sound) | |
+| `get_deck_state` | | `running`: list of `{button}` |
+| `get_triggers` | | `triggers`: every trigger with its `button` and `deck` |
+| `get_web_file` | `name` | `content`, `type`: a file of the deck web interface |
+
 ### Window
 
 | Request | Input | Output |
@@ -112,6 +127,10 @@ Events arrive as standard `VendorEvent` messages with `vendorName` `fiji-suite`;
 | `outputs_changed` | the output list was edited in settings |
 | `canvas_changed` | the canvas list was edited in settings |
 | `scene_added` / `scene_removed` | `canvas`, `name`, `uuid` |
+| `decks_changed` | a deck was saved or deleted |
+| `button_state` | `button`, `running` |
+| `say` | `text`: a deck button wants this said in chat (the bot does it) |
+| `deck_notification` | `text`: a note for open deck pages |
 
 ## Fiji-chan bot link
 
