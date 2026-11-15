@@ -23,7 +23,7 @@ the trigger, or `/$global.name$/` for a variable shared by all buttons.
 | Step | What it does |
 |---|---|
 | Change scene | On the main canvas, or a Fiji Suite canvas by name. |
-| Show / hide source, Move, Scale, Rotate | A source inside a scene. An empty scene means the one the canvas is showing. |
+| Show / hide source, Move, Scale, Rotate | A source inside a scene. An empty scene means the one the canvas is showing. `# 21` as the source means the scene's item number 21. |
 | Turn filter on / off | A filter of a source. An empty source means the current scene. |
 | Set text | Changes the text of a text source. |
 | Mute / unmute | An audio source, including OBS's global audio devices. |

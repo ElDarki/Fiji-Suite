@@ -9,6 +9,7 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 - The decks open in a browser, an OBS browser dock, or a phone on the local network, served from inside OBS on
   a secret address; the same pages are available through the bot.
 - An editor for decks and an importer for SAMMI decks, which reports anything it could not convert.
+- A source can be named by its scene item number (`# 21`), as SAMMI decks do.
 
 ## 0.1.1
 

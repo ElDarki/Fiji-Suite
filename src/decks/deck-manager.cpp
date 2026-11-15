@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QSet>
 #include <QThread>
@@ -132,6 +133,12 @@ static OBSSceneItem item_of(const QJsonObject &step)
 	obs_scene_t *scene = obs_group_or_scene_from_source(sceneSource);
 	if (!scene) {
 		return nullptr;
+	}
+	// "# 21" means the scene's item number 21, which is how SAMMI decks can name a source
+	static const QRegularExpression byNumber(QStringLiteral("^#\\s*(\\d+)$"));
+	const auto numbered = byNumber.match(text(step, "source").trimmed());
+	if (numbered.hasMatch()) {
+		return obs_scene_find_sceneitem_by_id(scene, numbered.captured(1).toLongLong());
 	}
 	return obs_scene_find_source_recursive(scene, text(step, "source").toUtf8().constData());
 }
