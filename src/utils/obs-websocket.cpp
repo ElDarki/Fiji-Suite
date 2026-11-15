@@ -993,6 +993,16 @@ void vendor_request_stop_main(obs_data_t *request_data, obs_data_t *response_dat
 	main_output_request(request_data, response_data, false);
 }
 
+// Deck requests live with the deck manager (src/decks/deck-manager.cpp).
+void vendor_request_get_decks(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_save_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_delete_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_press_button(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_release_button(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_stop_button(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_get_deck_state(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_get_triggers(obs_data_t *request_data, obs_data_t *response_data, void *);
+
 // Every request, for OBS WebSocket clients and for the bot link alike.
 static const struct {
 	const char *name;
@@ -1038,6 +1048,15 @@ static const struct {
 	{"set_main_scene", vendor_request_set_main_scene},
 	{"start_main", vendor_request_start_main},
 	{"stop_main", vendor_request_stop_main},
+	{"get_decks", vendor_request_get_decks},
+	{"save_deck", vendor_request_save_deck},
+	{"delete_deck", vendor_request_delete_deck},
+	{"press_button", vendor_request_press_button},
+	{"release_button", vendor_request_release_button},
+	{"stop_button", vendor_request_stop_button},
+	{"get_deck_state", vendor_request_get_deck_state},
+	{"get_triggers", vendor_request_get_triggers},
+	{"fire_trigger", vendor_request_press_button},
 };
 
 bool fiji_call_request(const char *name, obs_data_t *request, obs_data_t *response)

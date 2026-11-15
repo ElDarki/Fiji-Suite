@@ -104,6 +104,12 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/transitions-dock.hpp)
 
 target_sources(${PROJECT_NAME} PRIVATE
+  src/decks/deck-manager.cpp
+  src/decks/deck-manager.hpp
+  src/decks/engine-core.cpp
+  src/decks/engine-core.hpp)
+
+target_sources(${PROJECT_NAME} PRIVATE
   src/dialogs/config-dialog.cpp
   src/dialogs/config-dialog.hpp
   src/dialogs/ffmpeg-output-dialog.cpp
@@ -168,4 +174,12 @@ if(BUILD_OUT_OF_TREE)
 	set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 else()
 	set_target_properties_obs(${PROJECT_NAME} PROPERTIES FOLDER "plugins/fiji" PREFIX "")
+endif()
+
+# Unit tests for the deck engine core, which depends on Qt Core only.
+#   cmake --build build_x64 --config RelWithDebInfo --target decks-engine-test
+if(BUILD_OUT_OF_TREE)
+  add_executable(decks-engine-test tests/engine-test.cpp src/decks/engine-core.cpp)
+  target_link_libraries(decks-engine-test PRIVATE Qt::Core)
+  set_target_properties(decks-engine-test PROPERTIES EXCLUDE_FROM_ALL ON)
 endif()

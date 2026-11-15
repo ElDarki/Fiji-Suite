@@ -1,4 +1,5 @@
 #include "dialogs/config-dialog.hpp"
+#include "decks/deck-manager.hpp"
 #include "dialogs/name-dialog.hpp"
 #include "docks/canvas-clone-dock.hpp"
 #include "docks/canvas-dock.hpp"
@@ -539,6 +540,9 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		save_current_profile_config(true);
 	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN) {
 		BotLink::Stop();
+		if (auto decks = DeckManager::Get()) {
+			decks->Shutdown();
+		}
 		MultiviewDock::CloseWindows();
 		MultiviewDock::ClearAll();
 		if (current_profile_config) {
@@ -836,6 +840,7 @@ bool obs_module_load(void)
 	transitions_dock = new TransitionsDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteTransitions", obs_module_text("FijiSuiteTransitions"),
 				    transitions_dock);
+	DeckManager::Create();
 	multiview_dock = new MultiviewDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteMultiview", obs_module_text("FijiSuiteMultiview"), multiview_dock);
 	return true;
@@ -868,6 +873,7 @@ void unload_obs_websocket();
 void obs_module_unload()
 {
 	BotLink::Stop();
+	DeckManager::Destroy();
 	unload_obs_websocket();
 	obs_frontend_remove_save_callback(save_load, nullptr);
 	obs_frontend_remove_event_callback(frontend_event, nullptr);
