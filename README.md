@@ -15,6 +15,9 @@ Extra canvases and multistream outputs for [OBS Studio](https://github.com/obspr
   main preview.
 - Hotkeys per canvas for Transition and for toggling studio mode, and an option to swap preview and program
   after a transition.
+- Decks: boards of buttons that run timed steps (scenes, sources, filters, sounds, chat), pressed from an OBS
+  dock, a browser, a phone on your network, a hotkey or a bot trigger, with an importer for SAMMI decks. See
+  `docs/decks.md`.
 - Remote control through the OBS WebSocket server, for bots and stream decks: see `docs/websocket.md`.
 - Optional link to a Fiji-chan bot: paste the bot's address in the settings and chat commands, rewards, alerts
   and Fiji-chan herself can see and control OBS. Off while the address is empty.

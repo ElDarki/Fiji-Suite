@@ -995,6 +995,7 @@ void vendor_request_stop_main(obs_data_t *request_data, obs_data_t *response_dat
 
 // Deck requests live with the deck manager (src/decks/deck-manager.cpp).
 void vendor_request_get_decks(obs_data_t *request_data, obs_data_t *response_data, void *);
+void vendor_request_get_web_file(obs_data_t *request_data, obs_data_t *response_data, void *);
 void vendor_request_save_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
 void vendor_request_delete_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
 void vendor_request_press_button(obs_data_t *request_data, obs_data_t *response_data, void *);
@@ -1057,6 +1058,7 @@ static const struct {
 	{"get_deck_state", vendor_request_get_deck_state},
 	{"get_triggers", vendor_request_get_triggers},
 	{"fire_trigger", vendor_request_press_button},
+	{"get_web_file", vendor_request_get_web_file},
 };
 
 bool fiji_call_request(const char *name, obs_data_t *request, obs_data_t *response)

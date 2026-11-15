@@ -546,7 +546,9 @@ void DeckManager::execute(const QJsonObject &step)
 								  : obs_sceneitem_set_scale(item, &value);
 		}
 	} else if (type == QStringLiteral("filter_visibility")) {
-		OBSSourceAutoRelease source = source_named(canvas, text(step, "source"));
+		// no source named: the scene the canvas is showing (scenes can carry filters too)
+		OBSSourceAutoRelease source = text(step, "source").isEmpty() ? scene_of(canvas, QString())
+									      : source_named(canvas, text(step, "source"));
 		OBSSourceAutoRelease filter = source ? obs_source_get_filter_by_name(source, text(step, "filter").toUtf8().constData())
 						     : nullptr;
 		if (filter) {

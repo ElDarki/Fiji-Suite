@@ -1,3 +1,4 @@
+#include "../decks/local-server.hpp"
 #include "../utils/bot-link.hpp"
 #include <QLineEdit>
 #include <QTimer>
@@ -239,6 +240,50 @@ OBSBasicSettings::OBSBasicSettings(QMainWindow *parent) : QDialog(parent)
 	botTimer->start(1000);
 	showBotStatus();
 	generalPageLayout->addLayout(botRow);
+
+	// Decks: the address of the board served from inside OBS. It contains a secret, so it is masked.
+	auto deckRow = new QHBoxLayout;
+	deckRow->addWidget(new QLabel(QString::fromUtf8(obs_module_text("DeckAddress"))));
+	auto deckAddress = new QLineEdit;
+	deckAddress->setReadOnly(true);
+	deckAddress->setEchoMode(QLineEdit::Password);
+	deckRow->addWidget(deckAddress, 1);
+	auto deckShow = new QPushButton(QString::fromUtf8(obs_module_text("DeckShow")));
+	deckShow->setCheckable(true);
+	connect(deckShow, &QPushButton::toggled, [deckAddress](bool on) {
+		deckAddress->setEchoMode(on ? QLineEdit::Normal : QLineEdit::Password);
+	});
+	deckRow->addWidget(deckShow);
+	auto deckReset = new QPushButton(QString::fromUtf8(obs_module_text("DeckReset")));
+	deckRow->addWidget(deckReset);
+	auto deckNetwork = new QCheckBox(QString::fromUtf8(obs_module_text("DeckNetwork")));
+	auto showDeckAddress = [deckAddress, deckNetwork] {
+		auto server = LocalServer::Get();
+		if (!server) {
+			deckAddress->setText(QString());
+			return;
+		}
+		const auto network = server->NetworkAddress();
+		deckAddress->setText(deckNetwork->isChecked() && !network.isEmpty() ? network : server->LocalAddress());
+	};
+	if (auto user_config = obs_frontend_get_user_config()) {
+		deckNetwork->setChecked(config_get_bool(user_config, "FijiSuite", "DeckNetwork"));
+	}
+	connect(deckNetwork, &QCheckBox::toggled, [showDeckAddress](bool checked) {
+		if (auto user_config = obs_frontend_get_user_config()) {
+			config_set_bool(user_config, "FijiSuite", "DeckNetwork", checked);
+			config_save_safe(user_config, "tmp", "bak");
+		}
+		LocalServer::Start(); // listens on the new set of addresses
+		showDeckAddress();
+	});
+	connect(deckReset, &QPushButton::clicked, [showDeckAddress] {
+		LocalServer::ResetToken();
+		showDeckAddress();
+	});
+	showDeckAddress();
+	generalPageLayout->addLayout(deckRow);
+	generalPageLayout->addWidget(deckNetwork, 0);
 
 	QScrollArea *scrollArea = new QScrollArea;
 	scrollArea->setWidget(generalPage);

@@ -14,7 +14,10 @@
 #include <sys/select.h>
 #endif
 
+#include "../decks/local-server.hpp"
+
 extern obs_websocket_vendor vendor;
+bool local_server_has_listeners();
 
 namespace {
 
@@ -253,6 +256,9 @@ void fiji_emit_event(const char *event, obs_data_t *data)
 	if (vendor) {
 		obs_websocket_vendor_emit_event(vendor, event, data);
 	}
+	if (auto server = LocalServer::Get()) {
+		server->Event(event, data);
+	}
 	if (state == BotLink::State::Connected) {
 		OBSDataAutoRelease message = obs_data_create();
 		obs_data_set_string(message, "type", "event");
@@ -266,5 +272,5 @@ void fiji_emit_event(const char *event, obs_data_t *data)
 
 bool fiji_events_wanted()
 {
-	return vendor || state == BotLink::State::Connected;
+	return vendor || state == BotLink::State::Connected || local_server_has_listeners();
 }

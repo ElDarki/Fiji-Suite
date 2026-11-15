@@ -301,7 +301,8 @@ void Engine::advance(Run &run, qint64 now)
 		} else if (type == QStringLiteral("else")) {
 			// reached by finishing the "if" branch: skip the "else" branch
 			run.next = skipBlock(run.steps, run.next, false);
-		} else if (type == QStringLiteral("end")) {
+		} else if (type == QStringLiteral("end") || type == QStringLiteral("comment") ||
+			   type == QStringLiteral("unsupported")) {
 			// nothing to do
 		} else if (type == QStringLiteral("stop")) {
 			run.finished = true;

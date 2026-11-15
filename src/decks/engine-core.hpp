@@ -23,6 +23,7 @@
 //   if          {left, op, right} ... else ... end
 //   stop        {}                                ends this run
 //   press       {button}    stop_button {button}
+//   comment, unsupported                          do nothing (notes, and steps an import could not convert)
 // Any other type goes to Host::execute. Before a step is used, /$name$/ in its text values is
 // replaced by the variable's value.
 namespace decks {

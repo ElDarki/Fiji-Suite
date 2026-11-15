@@ -31,13 +31,13 @@ else()
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE OBS::libobs)
 
-find_package(Qt6 COMPONENTS Widgets Core)
+find_package(Qt6 COMPONENTS Widgets Core Network)
 if(BUILD_OUT_OF_TREE)
   if(OS_LINUX OR OS_FREEBSD OR OS_OPENBSD)
     find_package(Qt6 REQUIRED Gui)
   endif()
 endif()
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Core Qt::Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Core Qt::Widgets Qt::Network)
 
 # libcurl ships with OBS; the bot link uses its WebSocket client.
 if(BUILD_OUT_OF_TREE)
@@ -107,7 +107,9 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/decks/deck-manager.cpp
   src/decks/deck-manager.hpp
   src/decks/engine-core.cpp
-  src/decks/engine-core.hpp)
+  src/decks/engine-core.hpp
+  src/decks/local-server.cpp
+  src/decks/local-server.hpp)
 
 target_sources(${PROJECT_NAME} PRIVATE
   src/dialogs/config-dialog.cpp

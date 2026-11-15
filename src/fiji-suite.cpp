@@ -1,5 +1,8 @@
 #include "dialogs/config-dialog.hpp"
 #include "decks/deck-manager.hpp"
+#include "decks/local-server.hpp"
+#include <QDesktopServices>
+#include <QUrl>
 #include "dialogs/name-dialog.hpp"
 #include "docks/canvas-clone-dock.hpp"
 #include "docks/canvas-dock.hpp"
@@ -528,6 +531,7 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		if (scenes_dock) {
 			QMetaObject::invokeMethod(scenes_dock, "FinishedLoading", Qt::QueuedConnection);
 		}
+		LocalServer::Start();
 		// The bot link runs whenever a bot address is set, independent of the remote control switch.
 		// It starts here, not earlier: the bot may ask for OBS state as soon as it is connected.
 		if (auto user_config = obs_frontend_get_user_config()) {
@@ -540,6 +544,7 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		save_current_profile_config(true);
 	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN) {
 		BotLink::Stop();
+		LocalServer::Stop();
 		if (auto decks = DeckManager::Get()) {
 			decks->Shutdown();
 		}
@@ -803,6 +808,14 @@ bool obs_module_load(void)
 		},
 		nullptr);
 	obs_frontend_add_tools_menu_item(
+		obs_module_text("OpenDecks"),
+		[](void *) {
+			if (auto server = LocalServer::Get()) {
+				QDesktopServices::openUrl(QUrl(server->LocalAddress()));
+			}
+		},
+		nullptr);
+	obs_frontend_add_tools_menu_item(
 		obs_module_text("MultiviewOverPreview"), [](void *) { MultiviewDock::ToggleOverMainPreview(); }, nullptr);
 	multiview_over_preview_hotkey = obs_hotkey_register_frontend(
 		"FijiSuiteMultiviewOverPreview", obs_module_text("MultiviewOverPreview"),
@@ -873,6 +886,7 @@ void unload_obs_websocket();
 void obs_module_unload()
 {
 	BotLink::Stop();
+	LocalServer::Stop();
 	DeckManager::Destroy();
 	unload_obs_websocket();
 	obs_frontend_remove_save_callback(save_load, nullptr);
