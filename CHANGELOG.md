@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.1.1
+
+- Fixed a crash when OBS starts: the multiview asked for OBS's own outputs before OBS had created them.
+- The bot link now connects only after OBS has finished loading.
+- New: the multiview can be shown in place of the main preview (Tools menu, the multiview's right-click
+  menu, or a hotkey).
+
 ## 0.1.0
 
 The first version of Fiji Suite.

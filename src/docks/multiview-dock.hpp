@@ -71,6 +71,7 @@ private:
 protected:
 	void contextMenuEvent(QContextMenuEvent *event) override;
 	void keyPressEvent(QKeyEvent *event) override;
+	bool eventFilter(QObject *watched, QEvent *event) override;
 
 public:
 	MultiviewDock(QWidget *parent = nullptr, bool window = false);
@@ -82,4 +83,6 @@ public:
 	static void ClearAll();
 	// OBS is exiting: close the extra windows.
 	static void CloseWindows();
+	// Shows the multiview in OBS's centre area in place of the main preview, or puts the preview back.
+	static void ToggleOverMainPreview();
 };

@@ -21,6 +21,9 @@ extern std::list<CanvasCloneDock *> canvas_clone_docks;
 extern OutputDock *output_dock;
 
 static std::list<MultiviewDock *> multiviews;
+// The multiview currently covering OBS's centre area, and whether the main preview was on before it.
+static MultiviewDock *overPreview = nullptr;
+static bool previewWasEnabled = true;
 
 // An output is flagged once it drops more than this share of its frames.
 static const double droppedWarningPercent = 1.0;
@@ -252,7 +255,11 @@ MultiviewDock::MultiviewDock(QWidget *parent, bool window_) : QFrame(parent), gr
 	setFocusPolicy(Qt::StrongFocus);
 
 	multiviews.push_back(this);
-	Rebuild();
+	// The dock is created while OBS is still loading; its tiles are built by RebuildAll() once the
+	// canvases exist. A window is opened later, when everything is there.
+	if (window) {
+		Rebuild();
+	}
 
 	connect(&refreshTimer, &QTimer::timeout, this, [this] { Refresh(); });
 	refreshTimer.start(1000);
@@ -261,6 +268,45 @@ MultiviewDock::MultiviewDock(QWidget *parent, bool window_) : QFrame(parent), gr
 MultiviewDock::~MultiviewDock()
 {
 	multiviews.remove(this);
+	if (overPreview == this) {
+		overPreview = nullptr;
+		obs_frontend_set_preview_enabled(previewWasEnabled);
+	}
+}
+
+void MultiviewDock::ToggleOverMainPreview()
+{
+	if (overPreview) {
+		overPreview->close(); // deletes it, which turns the main preview back on
+		return;
+	}
+	const auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
+	auto central = main_window ? main_window->centralWidget() : nullptr;
+	if (!central) {
+		return;
+	}
+	// The main preview is switched off while it is covered, so it neither renders underneath nor
+	// shows through; it goes back to how it was when the multiview is closed.
+	previewWasEnabled = obs_frontend_preview_enabled();
+	obs_frontend_set_preview_enabled(false);
+	auto view = new MultiviewDock(central, true);
+	overPreview = view;
+	view->setAttribute(Qt::WA_DeleteOnClose);
+	view->setAutoFillBackground(true);
+	view->setGeometry(central->rect());
+	central->installEventFilter(view);
+	view->show();
+	view->raise();
+	view->setFocus();
+}
+
+// Keeps the multiview the size of the centre area it covers.
+bool MultiviewDock::eventFilter(QObject *watched, QEvent *event)
+{
+	if (event->type() == QEvent::Resize && watched == parentWidget()) {
+		setGeometry(parentWidget()->rect());
+	}
+	return QFrame::eventFilter(watched, event);
 }
 
 void MultiviewDock::Clear()
@@ -317,6 +363,10 @@ void MultiviewDock::contextMenuEvent(QContextMenuEvent *event)
 	if (window) {
 		menu.addAction(QString::fromUtf8(obs_frontend_get_locale_string("Close")), this, [this] { close(); });
 	} else {
+		auto over = menu.addAction(QString::fromUtf8(obs_module_text("MultiviewOverPreview")), this,
+					    [] { ToggleOverMainPreview(); });
+		over->setCheckable(true);
+		over->setChecked(overPreview != nullptr);
 		auto fullscreen = menu.addMenu(QString::fromUtf8(obs_module_text("MultiviewFullscreen")));
 		const auto screens = QGuiApplication::screens();
 		for (int i = 0; i < screens.size(); i++) {

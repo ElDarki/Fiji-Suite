@@ -47,6 +47,8 @@ private:
 	QFrame *mainVirtualCamGroup = nullptr;
 	QString mainPlatformUrl;
 	bool exiting = false;
+	// OBS creates its own outputs after plugins load; asking for them earlier crashes inside OBS.
+	bool frontendReady = false;
 	bool mainStreamEnabled = true;
 	bool mainRecordEnabled = true;
 	bool mainBacktrackEnabled = true;

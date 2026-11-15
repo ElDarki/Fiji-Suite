@@ -776,6 +776,12 @@ void OutputDock::frontend_event(enum obs_frontend_event event, void *private_dat
 		return;
 	}
 	switch (event) {
+	case OBS_FRONTEND_EVENT_FINISHED_LOADING:
+		dock->frontendReady = true;
+		break;
+	case OBS_FRONTEND_EVENT_EXIT:
+		dock->frontendReady = false;
+		break;
 	case OBS_FRONTEND_EVENT_STREAMING_STARTED:
 		if (dock->mainStreamOnStarted) {
 			blog(LOG_INFO, "[Fiji Suite] Main stream started, starting next output");
@@ -1005,14 +1011,17 @@ std::vector<OutputState> OutputDock::GetOutputStates() const
 		fill(s, output);
 		states.push_back(s);
 	};
-	addMain(mainStreamEnabled, "stream", "Stream", obs_frontend_get_streaming_output(), mainStreamStartTime);
-	if (!states.empty()) {
-		states.back().server = mainPlatformUrl;
+	if (frontendReady && !exiting) {
+		addMain(mainStreamEnabled, "stream", "Stream", obs_frontend_get_streaming_output(), mainStreamStartTime);
+		if (!states.empty()) {
+			states.back().server = mainPlatformUrl;
+		}
+		addMain(mainRecordEnabled, "record", "Record", obs_frontend_get_recording_output(), mainRecordStartTime);
+		addMain(mainBacktrackEnabled, "backtrack", "Backtrack", obs_frontend_get_replay_buffer_output(),
+			mainBacktrackStartTime);
+		addMain(mainVirtualCamEnabled, "virtual_cam", "VirtualCamera", obs_frontend_get_virtualcam_output(),
+			mainVirtualCamStartTime);
 	}
-	addMain(mainRecordEnabled, "record", "Record", obs_frontend_get_recording_output(), mainRecordStartTime);
-	addMain(mainBacktrackEnabled, "backtrack", "Backtrack", obs_frontend_get_replay_buffer_output(), mainBacktrackStartTime);
-	addMain(mainVirtualCamEnabled, "virtual_cam", "VirtualCamera", obs_frontend_get_virtualcam_output(),
-		mainVirtualCamStartTime);
 
 	for (const auto &ow : outputWidgets) {
 		OutputState s;

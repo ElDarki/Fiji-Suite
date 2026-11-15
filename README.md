@@ -11,7 +11,8 @@ Extra canvases and multistream outputs for [OBS Studio](https://github.com/obspr
 - Output groups: right-click an output to put it in a group, then start or stop the whole group from the
   Outputs dock or with a hotkey.
 - Multiview dock: every canvas live side by side, each with the outputs it feeds, their uptime, bitrate and
-  dropped frames. Right-click it for a fullscreen copy on another display.
+  dropped frames. Right-click it for a fullscreen copy on another display, or to show it in place of the
+  main preview.
 - Hotkeys per canvas for Transition and for toggling studio mode, and an option to swap preview and program
   after a transition.
 - Remote control through the OBS WebSocket server, for bots and stream decks: see `docs/websocket.md`.

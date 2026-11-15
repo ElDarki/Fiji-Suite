@@ -50,6 +50,7 @@ ScenesDock *scenes_dock = nullptr;
 SourcesDock *sources_dock = nullptr;
 TransitionsDock *transitions_dock = nullptr;
 MultiviewDock *multiview_dock = nullptr;
+obs_hotkey_id multiview_over_preview_hotkey = OBS_INVALID_HOTKEY_ID;
 
 
 extern std::list<CanvasDock *> canvas_docks;
@@ -314,6 +315,10 @@ void save_current_profile_config(bool save_docks)
 	if (save_docks) {
 		save_dock_state(QStringLiteral(DOCK_MODE));
 	}
+	if (multiview_over_preview_hotkey != OBS_INVALID_HOTKEY_ID) {
+		OBSDataArrayAutoRelease keys = obs_hotkey_save(multiview_over_preview_hotkey);
+		obs_data_set_array(current_profile_config, "multiview_over_preview_hotkey", keys);
+	}
 	if (output_dock) {
 		output_dock->SaveSettings();
 	}
@@ -427,6 +432,9 @@ void load_current_profile_config()
 
 	load_outputs();
 
+	OBSDataArrayAutoRelease overPreviewKeys = obs_data_get_array(current_profile_config, "multiview_over_preview_hotkey");
+	obs_hotkey_load(multiview_over_preview_hotkey, overPreviewKeys);
+
 	QMetaObject::invokeMethod(
 		modesTabBar, [] { load_dock_state(QStringLiteral(DOCK_MODE)); }, Qt::QueuedConnection);
 }
@@ -518,6 +526,12 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		}
 		if (scenes_dock) {
 			QMetaObject::invokeMethod(scenes_dock, "FinishedLoading", Qt::QueuedConnection);
+		}
+		// The bot link runs whenever a bot address is set, independent of the remote control switch.
+		// It starts here, not earlier: the bot may ask for OBS state as soon as it is connected.
+		if (auto user_config = obs_frontend_get_user_config()) {
+			const char *address = config_get_string(user_config, "FijiSuite", "BotAddress");
+			BotLink::Start(address ? address : "");
 		}
 	} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
 		load_current_profile_config();
@@ -784,6 +798,17 @@ bool obs_module_load(void)
 			}
 		},
 		nullptr);
+	obs_frontend_add_tools_menu_item(
+		obs_module_text("MultiviewOverPreview"), [](void *) { MultiviewDock::ToggleOverMainPreview(); }, nullptr);
+	multiview_over_preview_hotkey = obs_hotkey_register_frontend(
+		"FijiSuiteMultiviewOverPreview", obs_module_text("MultiviewOverPreview"),
+		[](void *, obs_hotkey_id, obs_hotkey_t *, bool pressed) {
+			auto window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
+			if (pressed && window) {
+				QMetaObject::invokeMethod(window, [] { MultiviewDock::ToggleOverMainPreview(); }, Qt::QueuedConnection);
+			}
+		},
+		nullptr);
 
 	// Remote control is on unless switched off in the settings dialog; see obs_module_post_load.
 	if (auto user_config = obs_frontend_get_user_config()) {
@@ -836,11 +861,6 @@ void obs_module_post_load()
 	if (!user_config || config_get_bool(user_config, "FijiSuite", "RemoteControl")) {
 		load_obs_websocket();
 	}
-	// The bot link is separate from that switch: it runs whenever a bot address is set.
-	if (user_config) {
-		const char *address = config_get_string(user_config, "FijiSuite", "BotAddress");
-		BotLink::Start(address ? address : "");
-	}
 }
 
 void unload_obs_websocket();
@@ -868,6 +888,9 @@ void obs_module_unload()
 	obs_frontend_remove_dock("FijiSuiteTransitions");
 	MultiviewDock::CloseWindows();
 	obs_frontend_remove_dock("FijiSuiteMultiview");
+	if (multiview_over_preview_hotkey != OBS_INVALID_HOTKEY_ID) {
+		obs_hotkey_unregister(multiview_over_preview_hotkey);
+	}
 
 	if (output_dock) {
 		delete output_dock;
