@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="addon">
+  <id>com.obsproject.Studio.Plugin.FijiSuite</id>
+  <extends>com.obsproject.Studio</extends>
+  <name>Fiji Suite</name>
+  <summary>Extra canvases, multistream outputs and decks for OBS Studio</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-only</project_license>
+  <releases><release version="0.2.0" date="2026-11-19"/></releases>
+</component>
