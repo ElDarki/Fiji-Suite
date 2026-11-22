@@ -3,11 +3,11 @@
     "id": "b338cfd9-4cd8-425d-8f9a-5eaff499feef",
     "version": "0.2.0",
     "authors": [
-        "Fiji Suite"
+        "darkzeromex"
     ],
     "name": "fiji-suite",
-    "description": "Extra canvases and multistream outputs for OBS Studio",
-    "long_description": "Fiji Suite adds extra canvases with their own preview and program, and multistream outputs.",
+    "description": "Extra canvases, multistreaming and button decks for OBS Studio",
+    "long_description": "Fiji Suite adds extra canvases with their own preview and program, multistream outputs, and decks of buttons that control OBS.",
     "urls": {},
     "has_banner": false,
     "has_icon": false
