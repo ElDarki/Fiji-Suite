@@ -158,10 +158,19 @@ version is in [CHANGELOG.md](CHANGELOG.md).
 
 While the version starts with 0, any release may still change those things.
 
-For maintainers: the number is the `version` in `buildspec.json`; `data/manifest.json` must match it and the
-build stops if it does not. To release, change both, update the version and date in
-`build-aux/flatpak/com.obsproject.Studio.Plugin.FijiSuite.metainfo.xml`, add a section to `CHANGELOG.md`,
-commit, and tag the commit `vX.Y.Z`.
+### Making a release
+
+The version number lives in three files, which must agree: `version` in `buildspec.json`, `version` in
+`data/manifest.json`, and the `<release>` line (version and date) in
+`build-aux/flatpak/com.obsproject.Studio.Plugin.FijiSuite.metainfo.xml`.
+
+1. Change the number in those three files and add a `## X.Y.Z` section to `CHANGELOG.md`.
+2. Commit, tag the commit `vX.Y.Z`, and push the commit and the tag.
+
+The GitHub workflow in `.github/workflows/release.yaml` then builds the Windows zip, the Linux tar.gz and
+the Flatpak, and publishes a GitHub release with those files and the changelog section. It stops without
+releasing if the tag, the three version numbers or the changelog do not match. A tag with a suffix, such as
+`v1.0.0-beta1`, is published as a pre-release. Every push to `main` runs the same builds without releasing.
 
 ## Author
 
