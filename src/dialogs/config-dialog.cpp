@@ -189,6 +189,19 @@ OBSBasicSettings::OBSBasicSettings(QMainWindow *parent) : QDialog(parent)
 	});
 	generalPageLayout->addWidget(remoteControl, 0);
 
+	// One request to GitHub per OBS start; see utils/update-check.hpp.
+	auto checkForUpdates = new QCheckBox(QString::fromUtf8(obs_module_text("CheckForUpdates")));
+	if (auto user_config = obs_frontend_get_user_config()) {
+		checkForUpdates->setChecked(config_get_bool(user_config, "FijiSuite", "CheckForUpdates"));
+	}
+	connect(checkForUpdates, &QCheckBox::toggled, [](bool checked) {
+		if (auto user_config = obs_frontend_get_user_config()) {
+			config_set_bool(user_config, "FijiSuite", "CheckForUpdates", checked);
+			config_save_safe(user_config, "tmp", "bak");
+		}
+	});
+	generalPageLayout->addWidget(checkForUpdates, 0);
+
 	// Optional link to a Fiji-chan bot. The address holds the channel's secret, so it is masked.
 	auto botRow = new QHBoxLayout;
 	botRow->addWidget(new QLabel(QString::fromUtf8(obs_module_text("BotAddress"))));

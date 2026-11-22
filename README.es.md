@@ -50,6 +50,12 @@ ejecutan pasos en OBS, y que se pueden pulsar desde OBS, el navegador o el celul
 - Conexión opcional con el bot de Twitch Fiji-chan. Está apagada mientras no se ponga la dirección del bot, y
   todo lo demás funciona sin él.
 
+**Buscar actualizaciones**
+- Cuando OBS termina de abrir, Fiji Suite pregunta una sola vez a GitHub si hay una versión nueva y, si la
+  hay, ofrece abrir la página de descarga. Es la única petición que hace por su cuenta y no envía nada sobre ti
+  ni tu configuración. Para apagarlo, desmarca **Check for Fiji Suite updates when OBS starts** en Fiji Suite
+  Settings.
+
 Fiji Suite añade sus propios paneles y menús. No reorganiza la ventana de OBS.
 
 ## Requisitos

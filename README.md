@@ -47,6 +47,12 @@ press from OBS, a browser or your phone.
 - Optional link to the Fiji-chan Twitch bot. It is off while no bot address is set, and everything else works
   without it.
 
+**Update check**
+- When OBS has finished starting, Fiji Suite asks GitHub once whether a newer release exists and offers the
+  download page if there is one. That single request is the only one it makes on its own, and it sends
+  nothing about you or your setup. Untick **Check for Fiji Suite updates when OBS starts** in Fiji Suite
+  Settings to turn it off.
+
 Fiji Suite adds its own docks and menu items. It does not rearrange your OBS window.
 
 ## Requirements

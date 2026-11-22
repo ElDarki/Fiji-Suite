@@ -19,6 +19,7 @@
 #include "docks/transitions-dock.hpp"
 #include "utils/bot-link.hpp"
 #include "utils/obs-websocket-api.h"
+#include "utils/update-check.hpp"
 #include "version.h"
 #include <obs-frontend-api.h>
 #include <obs-module.h>
@@ -30,7 +31,7 @@
 #include <util/dstr.h>
 
 OBS_DECLARE_MODULE()
-OBS_MODULE_AUTHOR("Fiji Suite");
+OBS_MODULE_AUTHOR("darkzeromex");
 OBS_MODULE_USE_DEFAULT_LOCALE("fiji-suite", "en-US")
 
 // The single dock mode this fork uses; see the comment on modesTabBar in obs_module_load.
@@ -538,11 +539,13 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 			const char *address = config_get_string(user_config, "FijiSuite", "BotAddress");
 			BotLink::Start(address ? address : "");
 		}
+		UpdateCheck::Start();
 	} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
 		load_current_profile_config();
 	} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
 		save_current_profile_config(true);
 	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN) {
+		UpdateCheck::Stop();
 		BotLink::Stop();
 		LocalServer::Stop();
 		if (auto decks = DeckManager::Get()) {
@@ -830,6 +833,7 @@ bool obs_module_load(void)
 	// Remote control is on unless switched off in the settings dialog; see obs_module_post_load.
 	if (auto user_config = obs_frontend_get_user_config()) {
 		config_set_default_bool(user_config, "FijiSuite", "RemoteControl", true);
+		config_set_default_bool(user_config, "FijiSuite", "CheckForUpdates", true);
 	}
 
 	output_dock = new OutputDock(main_window);
@@ -885,6 +889,7 @@ void unload_obs_websocket();
 
 void obs_module_unload()
 {
+	UpdateCheck::Stop();
 	BotLink::Stop();
 	LocalServer::Stop();
 	DeckManager::Destroy();

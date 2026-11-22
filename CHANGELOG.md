@@ -2,6 +2,12 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.3.0
+
+- Update check: when OBS has finished starting, Fiji Suite asks GitHub once whether a newer release exists and,
+  if so, offers to open the download page, skip that version, or ask again next time. It makes no other
+  requests. Turn it off with **Check for Fiji Suite updates when OBS starts** in the settings.
+
 ## 0.2.0
 
 - Decks: boards of buttons that run timed steps on OBS (scenes, sources, filters, text, mute, sounds), with
