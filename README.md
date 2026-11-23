@@ -44,8 +44,8 @@ press from OBS, a browser or your phone.
   sources of the same type), transform and filters.
 - Remote control through the OBS WebSocket server, for bots and stream decks:
   [docs/websocket.md](docs/websocket.md).
-- Optional link to the Fiji-chan Twitch bot. It is off while no bot address is set, and everything else works
-  without it.
+- Optional link to the Fiji-chan Twitch bot (1.4 or later). It is off while no bot address is set, and everything
+  else works without it; [docs/websocket.md](docs/websocket.md#fiji-chan-bot-link) has the details.
 
 **Update check**
 - When OBS has finished starting, Fiji Suite asks GitHub once whether a newer release exists and offers the

@@ -6,6 +6,7 @@
   let deck = null;      // the working copy being edited
   let selected = null;  // the selected button object inside `deck`, or null
   let dirty = false;
+  let linked = null;     // the bot link: true, false, or null when this page can't tell (opened through the bot)
 
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const touch = () => { dirty = true; drawSaveBar(); };
@@ -173,7 +174,9 @@
         el("h3", {}, "On release"),
         listEditor(b.release, STEP_TYPES, true, drawSide),
         el("h3", {}, "Triggers"),
-        el("div", { class: "hint" }, "Triggers come from the bot, so they fire only while OBS is connected to it."),
+        el("div", { class: "hint" }, linked === true ? "Linked to Fiji-chan: these triggers fire now."
+          : linked === false ? "Not linked to Fiji-chan right now. Triggers and Say in chat steps are saved and work once OBS is linked (Tools → Fiji Suite Settings → General)."
+          : "Triggers come from the bot, so they fire only while OBS is connected to it."),
         listEditor(b.triggers, TRIGGER_TYPES, false, drawSide));
     } else {
       parts.push(el("div", { class: "hint" }, "Pick a key to change it, or a dashed slot to add one."));
@@ -298,6 +301,8 @@
   });
 
   window.addEventListener("beforeunload", (event) => { if (dirty) event.preventDefault(); });
+  // Only the local deck server knows get_link; through the bot the request fails and the plain hint stays.
+  Fiji.call("get_link").then((r) => { linked = r.success ? !!r.linked : null; drawSide(); }).catch(() => {});
   load().catch((error) => {
     const tray = document.getElementById("deck");
     tray.hidden = true;

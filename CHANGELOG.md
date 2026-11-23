@@ -2,6 +2,18 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.6.0
+
+- The link to the Fiji-chan bot speaks the new bridge contract (`BRIDGE_CONTRACT.md` 1.2): a handshake that agrees
+  on what both sides can do, answers within 10 seconds, and full snapshots of OBS instead of the bot asking every
+  15 seconds. **Needs Fiji-chan 1.4 or later**; older bots never finish the handshake.
+- The bot address shows the link's state as it changes (off, connecting with the last error, connected), says why
+  it stopped (a bad address, a bot speaking another link version), and explains what waits while OBS is not linked.
+- The deck editor says whether triggers can fire right now.
+- Inside: the plugin follows Model-View-Controller plus the State pattern (`CLAUDE.md`, `docs/architecture.md`).
+  Every bot command runs through one thread-safe dispatcher on OBS's own thread, and the link is an explicit
+  STANDALONE / CONNECTING / LINKED state machine, with tests for both.
+
 ## 0.5.0
 
 - Fiji Sun and Fiji Moon are now themes of their own: pick them in **Settings → Appearance → Theme** instead of

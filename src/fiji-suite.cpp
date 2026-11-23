@@ -17,12 +17,18 @@
 #include "docks/stats-dock.hpp"
 #include "docks/transform-dock.hpp"
 #include "docks/transitions-dock.hpp"
-#include "utils/bot-link.hpp"
+#include "bridge/bot-link.hpp"
+#include "controller/command-dispatcher.hpp"
+#include "controller/obs-command-handler.hpp"
+#include "obs/request-obs-api.hpp"
+#include "state/link-state.hpp"
+#include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
 #include "utils/update-check.hpp"
 #include "utils/fiji-look.hpp"
 #include "version.h"
 #include <obs-frontend-api.h>
+#include <obs.hpp>
 #include <obs-module.h>
 #include <QApplication>
 #include <QDockWidget>
@@ -507,9 +513,84 @@ static void log_same_sources()
 	}
 }
 
+// The MVC + State side of the plugin (CLAUDE.md), built once the UI is up: the link state machine, the dispatcher
+// that runs every bridge command on this thread, its OBS handler, and the optional bot link.
+namespace {
+struct Core {
+	fiji::state::LinkStateMachine link;
+	fiji::controller::CommandDispatcher dispatcher;
+	fiji::obs::RequestObsApi obs;
+	fiji::controller::ObsCommandHandler handler{obs};
+	fiji::bridge::BotLink bot{dispatcher, link, QStringLiteral(PROJECT_VERSION),
+				  [](const QString &line) { blog(LOG_INFO, "[Fiji Suite] %s", line.toUtf8().constData()); }};
+	QString mainScene; // for scene.program's "previous"
+
+	Core()
+	{
+		dispatcher.registerHandler(&handler);
+		fiji::bridge::BotLink::setInstance(&bot);
+	}
+	~Core() { fiji::bridge::BotLink::setInstance(nullptr); }
+};
+Core *core = nullptr;
+
+void start_core()
+{
+	if (core) {
+		return;
+	}
+	core = new Core;
+	OBSSourceAutoRelease scene = obs_frontend_get_current_scene();
+	core->mainScene = scene ? QString::fromUtf8(obs_source_get_name(scene)) : QString();
+}
+
+void stop_core()
+{
+	if (core) {
+		core->bot.shutdown();
+		delete core;
+		core = nullptr;
+	}
+}
+
+// OBS's own main canvas has no Fiji Suite dock to report it, so its changes are told to the bridge from here.
+void main_canvas_event(enum obs_frontend_event event)
+{
+	if (!core || !core->bot.acl().linked()) {
+		return;
+	}
+	if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED) {
+		OBSSourceAutoRelease scene = obs_frontend_get_current_scene();
+		const auto name = scene ? QString::fromUtf8(obs_source_get_name(scene)) : QString();
+		if (name != core->mainScene) {
+			core->bot.acl().onPluginEvent(QStringLiteral("main_scene_changed"),
+						      {{"scene", name}, {"previous", core->mainScene}});
+			core->mainScene = name;
+		}
+	} else if (event == OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED || event == OBS_FRONTEND_EVENT_TRANSITION_LIST_CHANGED) {
+		core->bot.acl().onPluginEvent(QStringLiteral("scene_list_changed"), {});
+	}
+}
+} // namespace
+
+fiji::state::LinkStateMachine *fiji_link_state()
+{
+	return core ? &core->link : nullptr;
+}
+
+void fiji_set_bot_address(const QString &address)
+{
+	if (core) {
+		core->bot.setAddress(address);
+	}
+}
+
 static void frontend_event(enum obs_frontend_event event, void *private_data)
 {
 	UNUSED_PARAMETER(private_data);
+	if (event == OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED || event == OBS_FRONTEND_EVENT_TRANSITION_LIST_CHANGED) {
+		main_canvas_event(event);
+	}
 	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 		finished_loading = true;
 		FijiLook::ShowRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()));
@@ -537,9 +618,10 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		LocalServer::Start();
 		// The bot link runs whenever a bot address is set, independent of the remote control switch.
 		// It starts here, not earlier: the bot may ask for OBS state as soon as it is connected.
+		start_core();
 		if (auto user_config = obs_frontend_get_user_config()) {
 			const char *address = config_get_string(user_config, "FijiSuite", "BotAddress");
-			BotLink::Start(address ? address : "");
+			fiji_set_bot_address(QString::fromUtf8(address ? address : ""));
 		}
 		UpdateCheck::Start();
 	} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
@@ -548,7 +630,7 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		save_current_profile_config(true);
 	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN) {
 		UpdateCheck::Stop();
-		BotLink::Stop();
+		stop_core();
 		LocalServer::Stop();
 		if (auto decks = DeckManager::Get()) {
 			decks->Shutdown();
@@ -598,6 +680,7 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 			output_dock->UpdateMainBacktrackStatus(false);
 		}
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED || event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED) {
+		main_canvas_event(event);
 		if (live_scenes_dock) {
 			QMetaObject::invokeMethod(live_scenes_dock, "MainSceneChanged", Qt::QueuedConnection);
 		}
@@ -895,7 +978,7 @@ void unload_obs_websocket();
 void obs_module_unload()
 {
 	UpdateCheck::Stop();
-	BotLink::Stop();
+	stop_core();
 	LocalServer::Stop();
 	DeckManager::Destroy();
 	unload_obs_websocket();

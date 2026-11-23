@@ -99,7 +99,7 @@ jobs:
           cmake --install build_x86_64 --prefix "$PWD/stage"
       - name: Unit and architecture tests
         run: |
-          cmake --build build_x86_64 --parallel --target fiji-arch-test decks-engine-test
+          cmake --build build_x86_64 --parallel --target fiji-arch-test fiji-core-test decks-engine-test
           ctest --test-dir build_x86_64 --output-on-failure
       - name: Package
         # Same layout as ~/.config/obs-studio/plugins/fiji-suite expects: bin/64bit and data.

@@ -3,7 +3,7 @@
 // CONTROLLER layer: the thread-safe dispatcher. Bridge commands arrive on the link thread, hotkeys and docks on the Qt
 // thread; all of them post() here. One consumer runs every command, in order, on the OBS/UI thread (queued with
 // QMetaObject::invokeMethod(Qt::QueuedConnection)), where the handlers call libobs through ObsApi.
-// Handlers are the only code outside src/obs/ that drives libobs. Scaffold: declarations only.
+// Handlers are the only code outside src/obs/ that drives libobs.
 
 #include "command.hpp"
 

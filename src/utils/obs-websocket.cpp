@@ -4,17 +4,52 @@
 #include "../docks/live-scenes-dock.hpp"
 #include "../docks/output-dock.hpp"
 #include "../version.h"
-#include "bot-link.hpp"
+#include "../bridge/bot-link.hpp"
+#include "../decks/local-server.hpp"
+#include "fiji-events.hpp"
 #include "obs-websocket-api.h"
 #include <obs-frontend-api.h>
 #include <obs.hpp>
 #include <QDateTime>
+#include <QJsonDocument>
 #include <list>
 #include <QDockWidget>
 #include <QMainWindow>
 #include <QThread>
 
 obs_websocket_vendor vendor = nullptr;
+bool local_server_has_listeners();
+
+void fiji_emit_event(const char *event, obs_data_t *data)
+{
+	if (vendor) {
+		obs_websocket_vendor_emit_event(vendor, event, data);
+	}
+	if (auto server = LocalServer::Get()) {
+		server->Event(event, data);
+	}
+	// The bridge ACL turns the plugin's events into contract EVENTs (or SYNC_STATEs), on the UI thread.
+	auto link = fiji::bridge::BotLink::instance();
+	if (link && link->acl().linked()) {
+		const auto json = data ? QJsonDocument::fromJson(QByteArray(obs_data_get_json(data))).object() : QJsonObject();
+		const auto name = QString::fromUtf8(event);
+		QMetaObject::invokeMethod(link, [link, name, json] { link->acl().onPluginEvent(name, json); });
+	}
+}
+
+bool fiji_events_wanted()
+{
+	auto link = fiji::bridge::BotLink::instance();
+	return vendor || (link && link->acl().linked()) || local_server_has_listeners();
+}
+
+// Whether the bot link is up, for the deck editor: Twitch triggers and chat steps only work while it is.
+void vendor_request_get_link(obs_data_t *, obs_data_t *response_data, void *)
+{
+	auto link = fiji::bridge::BotLink::instance();
+	obs_data_set_bool(response_data, "linked", link && link->linkedNow());
+	obs_data_set_bool(response_data, "success", true);
+}
 extern std::list<CanvasDock *> canvas_docks;
 extern std::list<CanvasCloneDock *> canvas_clone_docks;
 extern OutputDock *output_dock;
@@ -1019,6 +1054,7 @@ static const struct {
 } requests[] = {
 	{"version", vendor_request_version},
 	{"get_look", vendor_request_get_look},
+	{"get_link", vendor_request_get_link},
 	{"get_canvas", vendor_request_get_canvas},
 	{"switch_scene", vendor_request_switch_scene},
 	{"current_scene", vendor_request_current_scene},

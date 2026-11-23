@@ -8,6 +8,7 @@ Checks
 - that only src/obs/ includes libobs among the new layers, and views never call obs_* functions;
 - that the legacy folders (code from before this layout) only shrink, and no unknown folder appears in src/;
 - BRIDGE_CONTRACT.md: its catalogue block parses, src/bridge/envelope.hpp matches its version and message types,
+  src/bridge/catalogue.cpp embeds the same block,
   and the bot repo's copy (../twitchbot) is byte-identical when it is checked out next to this one.
 """
 from __future__ import annotations
@@ -128,6 +129,9 @@ def check_contract(errors: list[str]) -> None:
     types = re.search(r"enum class MessageType\s*\{([^}]*)\}", envelope)
     if not types or [t.strip() for t in types.group(1).split(",") if t.strip()] != contract["types"]:
         errors.append(f"src/bridge/envelope.hpp MessageType must list {contract['types']} in that order")
+    embedded = re.search(r'R"json\(\n(.*?)\n\)json"', (SRC / "bridge" / "catalogue.cpp").read_text(encoding="utf-8"), re.S)
+    if not embedded or embedded.group(1) != blocks[0]:
+        errors.append("src/bridge/catalogue.cpp must hold the contract's catalogue block exactly; paste it from BRIDGE_CONTRACT.md")
     bot_copy = ROOT.parent / "twitchbot" / "BRIDGE_CONTRACT.md"
     if bot_copy.exists() and bot_copy.read_bytes() != contract_path.read_bytes():
         errors.append("BRIDGE_CONTRACT.md differs from ../twitchbot/BRIDGE_CONTRACT.md; change both together")

@@ -2,7 +2,6 @@
 
 // BRIDGE (the plugin's Anti-Corruption Layer): the envelope of BRIDGE_CONTRACT.md section 2. Only src/bridge/ may
 // use this. kContractVersion must equal the contract's version (tools/check-architecture.py checks it).
-// Scaffold: declarations only.
 
 #include <QByteArray>
 #include <QJsonObject>
@@ -11,7 +10,7 @@
 
 namespace fiji::bridge {
 
-inline constexpr const char *kContractVersion = "1.1";
+inline constexpr const char *kContractVersion = "1.2";
 inline constexpr int kAckTimeoutMs = 10000;
 
 enum class MessageType { COMMAND, EVENT, ACK, HELLO, SYNC_STATE };
@@ -27,5 +26,9 @@ struct Envelope {
 	static std::optional<Envelope> parse(const QByteArray &frame);
 	QByteArray serialise() const;
 };
+
+QString typeName(MessageType type);
+QString majorOf(const QString &version);
+QString newId();
 
 } // namespace fiji::bridge

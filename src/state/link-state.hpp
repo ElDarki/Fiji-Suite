@@ -4,11 +4,13 @@
 //
 //   STANDALONE --address set--> CONNECTING --HELLO done--> LINKED
 //        ^                         |   ^                     |
-//        +----failure (reason)-----+   +------dropped--------+
+//        +--final failure----------+   +------dropped--------+
 //   any state --address cleared--> STANDALONE
 //
+// A final failure (a bad address, a bot speaking another contract version) ends in STANDALONE with its reason. A
+// passing one (refused, timed out) keeps CONNECTING, with the reason shown, while the transport tries again.
 // STANDALONE is a normal, fully working mode: nothing throws or logs errors there. Twitch-dependent controls bind to
-// twitchFeaturesAvailable() and are disabled with an explanation (never hidden). Scaffold: declarations only.
+// twitchFeaturesAvailable() and are disabled with an explanation (never hidden).
 
 #include <QObject>
 #include <QString>
@@ -19,8 +21,11 @@ namespace fiji::state {
 
 enum class LinkStateId { STANDALONE, CONNECTING, LINKED };
 
-// Why the machine is in STANDALONE (shown to the user), or why a connection attempt ended.
+// Why the machine is in STANDALONE, or why the last connection attempt ended.
 enum class LinkReason { None, NoAddress, AddressCleared, BadAddress, Refused, VersionMismatch, Dropped };
+
+// Final failures end in STANDALONE; the others keep CONNECTING while the transport retries.
+bool isFinal(LinkReason reason);
 
 class LinkStateMachine;
 
@@ -49,7 +54,7 @@ public:
 class ConnectingState final : public LinkState {
 public:
 	LinkStateId id() const override { return LinkStateId::CONNECTING; }
-	void enter(LinkStateMachine &machine) override;
+	void onAddressSet(LinkStateMachine &machine, const QString &address) override;
 	void onAddressCleared(LinkStateMachine &machine) override;
 	void onHelloCompleted(LinkStateMachine &machine, const QStringList &accepted) override;
 	void onFailure(LinkStateMachine &machine, LinkReason reason, const QString &detail) override;
@@ -58,9 +63,11 @@ public:
 class LinkedState final : public LinkState {
 public:
 	LinkStateId id() const override { return LinkStateId::LINKED; }
-	void enter(LinkStateMachine &machine) override;
 	void exit(LinkStateMachine &machine) override;
+	void onAddressSet(LinkStateMachine &machine, const QString &address) override;
 	void onAddressCleared(LinkStateMachine &machine) override;
+	void onHelloCompleted(LinkStateMachine &machine, const QStringList &accepted) override;
+	void onFailure(LinkStateMachine &machine, LinkReason reason, const QString &detail) override;
 	void onDropped(LinkStateMachine &machine) override;
 };
 
@@ -69,28 +76,39 @@ class LinkStateMachine : public QObject {
 
 public:
 	explicit LinkStateMachine(QObject *parent = nullptr);
+	~LinkStateMachine() override;
 
 	LinkStateId state() const;
 	LinkReason lastReason() const;
 	QString lastDetail() const;
-	bool twitchFeaturesAvailable() const; // true only in LINKED
+	bool twitchFeaturesAvailable() const;     // true only in LINKED
 	QStringList acceptedCapabilities() const; // empty unless LINKED
+	bool accepts(const QString &capability) const;
 
-	// Inputs, called on the UI thread (the transport posts them there).
+	// Inputs, called on the UI thread (the transport and the bridge post them there).
 	void addressSet(const QString &address);
 	void addressCleared();
 	void helloCompleted(const QStringList &accepted);
-	void failed(LinkReason reason, const QString &detail);
+	void failed(LinkReason reason, const QString &detail = QString());
 	void dropped();
 
 	// Used by the states only.
 	void transitionTo(std::unique_ptr<LinkState> next, LinkReason reason = LinkReason::None,
 			  const QString &detail = QString());
+	void setAccepted(const QStringList &accepted);
+	void setReason(LinkReason reason, const QString &detail);
 
 signals:
 	void stateChanged(fiji::state::LinkStateId state);
+	void reasonChanged(fiji::state::LinkReason reason, const QString &detail);
 	void twitchFeaturesAvailableChanged(bool available);
 	void capabilitiesChanged(const QStringList &accepted);
+
+private:
+	std::unique_ptr<LinkState> current_;
+	LinkReason reason_ = LinkReason::NoAddress;
+	QString detail_;
+	QStringList accepted_;
 };
 
 } // namespace fiji::state

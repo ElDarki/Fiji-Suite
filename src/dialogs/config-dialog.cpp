@@ -1,5 +1,6 @@
 #include "../decks/local-server.hpp"
-#include "../utils/bot-link.hpp"
+#include "../state/link-state.hpp"
+#include "../utils/fiji-events.hpp"
 #include <QLineEdit>
 #include <QTimer>
 #include "../version.h"
@@ -224,33 +225,43 @@ OBSBasicSettings::OBSBasicSettings(QMainWindow *parent) : QDialog(parent)
 			config_set_string(user_config, "FijiSuite", "BotAddress", address.constData());
 			config_save_safe(user_config, "tmp", "bak");
 		}
-		BotLink::Start(address.constData());
+		fiji_set_bot_address(QString::fromUtf8(address));
 	});
-	auto botTimer = new QTimer(this);
+	// The status follows the link's state machine (STANDALONE / CONNECTING / LINKED) and says why.
 	auto showBotStatus = [botStatus] {
+		auto link = fiji_link_state();
+		if (!link) {
+			botStatus->setText(QString::fromUtf8(obs_module_text("BotOff")));
+			return;
+		}
+		using fiji::state::LinkReason;
+		using fiji::state::LinkStateId;
 		const char *key = "BotOff";
-		switch (BotLink::GetState()) {
-		case BotLink::State::BadAddress:
-			key = "BotBadAddress";
+		switch (link->state()) {
+		case LinkStateId::STANDALONE:
+			key = link->lastReason() == LinkReason::BadAddress        ? "BotBadAddress"
+			      : link->lastReason() == LinkReason::VersionMismatch ? "BotVersionMismatch"
+										  : "BotOff";
 			break;
-		case BotLink::State::Connecting:
+		case LinkStateId::CONNECTING:
 			key = "BotConnecting";
 			break;
-		case BotLink::State::Connected:
+		case LinkStateId::LINKED:
 			key = "BotConnected";
-			break;
-		case BotLink::State::Off:
 			break;
 		}
 		auto text = QString::fromUtf8(obs_module_text(key));
-		const auto error = BotLink::LastError();
-		if (!error.isEmpty() && BotLink::GetState() == BotLink::State::Connecting) {
-			text += QStringLiteral(" (") + error + QStringLiteral(")");
+		if (link->state() == LinkStateId::CONNECTING && !link->lastDetail().isEmpty()) {
+			text += QStringLiteral(" (") + link->lastDetail() + QStringLiteral(")");
 		}
 		botStatus->setText(text);
+		botStatus->setToolTip(link->twitchFeaturesAvailable() ? QString()
+								      : QString::fromUtf8(obs_module_text("BotStandaloneHint")));
 	};
-	connect(botTimer, &QTimer::timeout, showBotStatus);
-	botTimer->start(1000);
+	if (auto link = fiji_link_state()) {
+		connect(link, &fiji::state::LinkStateMachine::stateChanged, botStatus, showBotStatus);
+		connect(link, &fiji::state::LinkStateMachine::reasonChanged, botStatus, showBotStatus);
+	}
 	showBotStatus();
 	generalPageLayout->addLayout(botRow);
 

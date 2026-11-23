@@ -17,7 +17,7 @@ cmake --build build_x86_64 --parallel
 # Tests
 python3 tools/check-architecture.py                       # layer rules + bridge contract (no build needed)
 node tests/import.test.js                                 # deck importers
-cmake --build build_x86_64 --target fiji-arch-test decks-engine-test
+cmake --build build_x86_64 --target fiji-arch-test fiji-core-test decks-engine-test
 ctest --test-dir build_x86_64 --output-on-failure         # every C++ test plus the architecture rules
 
 # Themes: edit tools/build-themes.py (never the generated data/themes files), then

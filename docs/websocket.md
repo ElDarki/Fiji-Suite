@@ -135,17 +135,22 @@ Events arrive as standard `VendorEvent` messages with `vendorName` `fiji-suite`;
 
 ## Fiji-chan bot link
 
-The same requests and events are also available to a Fiji-chan bot without OBS's WebSocket server: paste the
-bot's address into **Tools → Fiji Suite Settings → General → Fiji-chan bot address** and the plugin connects out
-to it. This link is independent of the "Allow remote control" switch and is off while the field is empty.
+A Fiji-chan bot can drive OBS without OBS's WebSocket server: paste the bot's address into **Tools → Fiji Suite
+Settings → General → Fiji-chan bot address** and the plugin connects out to it. This link is independent of the
+"Allow remote control" switch and is off while the field is empty.
 
-Messages are JSON text frames:
+It speaks the bridge contract in [`BRIDGE_CONTRACT.md`](../BRIDGE_CONTRACT.md) (the same file sits in the bot's
+repository): a HELLO handshake that agrees on what both sides can do, COMMANDs answered by ACKs, EVENTs, and full
+SYNC_STATE snapshots. Inside the plugin, `src/bridge/` translates between it and the plugin's own commands and
+events; `docs/architecture.md` shows where it sits.
 
-| Direction | Message |
-|---|---|
-| plugin → bot | `{"type": "hello", "plugin": "fiji-suite", "version": "..."}` once, on connecting |
-| bot → plugin | `{"type": "request", "id": "7", "request": "start_group", "data": {...}}` |
-| plugin → bot | `{"type": "response", "id": "7", "data": {"success": true, ...}}` |
-| plugin → bot | `{"type": "event", "event": "switch_scene", "data": {...}}` |
+The link has three states, shown next to the address:
 
-The plugin reconnects by itself, waiting 2 seconds after the first failure and up to 60 seconds between later ones.
+| State | Shown as | What works |
+|---|---|---|
+| STANDALONE | *off*, or why it stopped (a bad address, a bot speaking another link version) | Everything except what needs Twitch: deck triggers and *Say in chat* steps wait. |
+| CONNECTING | *connecting...* and the last error, if any | The same; the plugin keeps trying, waiting 2 seconds after the first failure and up to 60 seconds between later ones. |
+| LINKED | *connected* | Everything, Twitch included. |
+
+Bots up to Fiji-chan 1.3 speak the older link and never finish the handshake; update the bot to use this plugin
+version with it.

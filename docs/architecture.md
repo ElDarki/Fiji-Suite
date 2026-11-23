@@ -54,3 +54,8 @@ explanation until `LINKED`, and the accepted capabilities say which bot features
 `src/docks`, `src/dialogs`, `src/utils`, `src/decks` and `src/fiji-suite.cpp` predate the layers. Each piece moves in
 its own change: its data into a model, its life cycle into a state, its libobs calls into a handler behind `ObsApi`,
 its widgets into `src/view`, with tests for the model, state and handler. Then its entry leaves the legacy list.
+
+Moved so far (0.6.0): the bot link. The curl transport, the ACL and `BotLink` are in `src/bridge/`; the link's life cycle
+is `state::LinkStateMachine`; bot commands run through `controller::CommandDispatcher` and `ObsCommandHandler`; and
+`obs::RequestObsApi` reaches OBS through the plugin's request table until those calls move into it as direct libobs
+calls. `fiji-suite.cpp` builds them once OBS has finished loading.

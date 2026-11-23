@@ -123,9 +123,35 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/dialogs/stream-output-dialog.cpp
   src/dialogs/stream-output-dialog.hpp)
 
+# The MVC + State layers (CLAUDE.md).
+set(FIJI_CORE_SOURCES
+  src/bridge/bridge-acl.cpp
+  src/bridge/bridge-acl.hpp
+  src/bridge/catalogue.cpp
+  src/bridge/catalogue.hpp
+  src/bridge/envelope.cpp
+  src/bridge/envelope.hpp
+  src/controller/command-dispatcher.cpp
+  src/controller/command-dispatcher.hpp
+  src/controller/command.hpp
+  src/controller/obs-command-handler.cpp
+  src/controller/obs-command-handler.hpp
+  src/model/obs-status.cpp
+  src/model/obs-status.hpp
+  src/obs/obs-api.hpp
+  src/state/link-state.cpp
+  src/state/link-state.hpp)
 target_sources(${PROJECT_NAME} PRIVATE
-  src/utils/bot-link.cpp
-  src/utils/bot-link.hpp
+  ${FIJI_CORE_SOURCES}
+  src/bridge/bot-link.cpp
+  src/bridge/bot-link.hpp
+  src/bridge/link-transport.cpp
+  src/bridge/link-transport.hpp
+  src/obs/request-obs-api.cpp
+  src/obs/request-obs-api.hpp)
+
+target_sources(${PROJECT_NAME} PRIVATE
+  src/utils/fiji-events.hpp
   src/utils/update-check.cpp
   src/utils/update-check.hpp
   src/utils/fiji-look.cpp
@@ -189,25 +215,23 @@ if(BUILD_OUT_OF_TREE)
   target_link_libraries(decks-engine-test PRIVATE Qt::Core)
   set_target_properties(decks-engine-test PROPERTIES EXCLUDE_FROM_ALL ON)
 
-  # The MVC + State layers (CLAUDE.md): every header compiles with Qt Core alone. Plus the include rules and the
-  # bridge contract check. Build the test targets, then run them all:
-  #   cmake --build build_x86_64 --target fiji-arch-test decks-engine-test && ctest --test-dir build_x86_64
-  add_executable(
-    fiji-arch-test
-    tests/arch-headers.cpp
-    src/bridge/bridge-acl.hpp
-    src/controller/command-dispatcher.hpp
-    src/model/deck-model.hpp
-    src/state/link-state.hpp
-    src/state/link-state.cpp
-    src/controller/command-dispatcher.cpp)
+  # The MVC + State layers (CLAUDE.md) with Qt Core alone: every header compiles (fiji-arch-test), and the link
+  # state machine, dispatcher and bridge ACL work against a fake ObsApi (fiji-core-test). Plus the include rules and
+  # the bridge contract check. Build the test targets, then run them all:
+  #   cmake --build build_x86_64 --target fiji-arch-test fiji-core-test decks-engine-test && ctest --test-dir build_x86_64
+  add_executable(fiji-arch-test tests/arch-headers.cpp src/model/deck-model.hpp ${FIJI_CORE_SOURCES})
   target_link_libraries(fiji-arch-test PRIVATE Qt::Core)
   set_target_properties(fiji-arch-test PROPERTIES EXCLUDE_FROM_ALL ON AUTOMOC ON)
+  add_executable(fiji-core-test tests/core-test.cpp ${FIJI_CORE_SOURCES})
+  target_link_libraries(fiji-core-test PRIVATE Qt::Core)
+  set_target_properties(fiji-core-test PROPERTIES EXCLUDE_FROM_ALL ON AUTOMOC ON)
 
   enable_testing()
   find_package(Python3 COMPONENTS Interpreter)
   add_test(NAME decks-engine COMMAND decks-engine-test)
   add_test(NAME architecture-headers COMMAND fiji-arch-test)
+  add_test(NAME core COMMAND fiji-core-test)
+  set_tests_properties(core PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
   if(Python3_Interpreter_FOUND)
     add_test(NAME architecture-rules COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/check-architecture.py)
   endif()

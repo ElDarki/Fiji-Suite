@@ -2,7 +2,7 @@
 
 This file is the **Anti-Corruption Layer (ACL) contract** between the Fiji-chan bot (`twitchbot`) and the Fiji Suite
 OBS plugin (`fiji-suite`). The same file sits at the root of both repositories, byte for byte; a test in each repo
-checks it. Contract version: **1.1**.
+checks it. Contract version: **1.2**.
 
 ## 1. Purpose and boundaries
 
@@ -20,7 +20,7 @@ The plugin dials the bot: `wss://<bot>/m/obs/ws/<overlay token>` (or `ws://` on 
 text frame, JSON-RPC style:
 
 ```json
-{ "version": "1.1", "id": "6f1c…", "type": "COMMAND", "action": "scene.switch", "payload": { "scene": "BRB" } }
+{ "version": "1.2", "id": "6f1c…", "type": "COMMAND", "action": "scene.switch", "payload": { "scene": "BRB" } }
 ```
 
 | Field | Type | Rule |
@@ -43,7 +43,8 @@ dropped and logged once; it never closes the link.
 - **EVENT**: news, fire and forget, no ACK. Sent only for capabilities both sides accepted (section 3).
 - **HELLO**: the handshake (section 3). Answered by the other side's HELLO, not by an ACK.
 - **SYNC_STATE**: a full snapshot of the accepted capabilities (section 4). Its `id` echoes the `state.sync` COMMAND
-  that asked for it, or is a fresh id when sent after the handshake.
+  that asked for it, or is a fresh id when the plugin sends it on its own (after the handshake, or after a change no
+  event covers).
 
 ### Error codes
 
@@ -69,13 +70,13 @@ dropped and logged once; it never closes the link.
 
 1. The plugin connects and sends first:
    ```json
-   { "version": "1.1", "id": "h-1", "type": "HELLO", "action": "link.hello",
+   { "version": "1.2", "id": "h-1", "type": "HELLO", "action": "link.hello",
      "payload": { "role": "plugin", "app": "fiji-suite", "app_version": "0.6.0",
                   "capabilities": ["scenes", "transitions", "outputs", "output.alerts", "decks", "decks.pages", "chat"] } }
    ```
 2. The bot answers with its own HELLO. `accepted` is the intersection of both lists, in the plugin's order:
    ```json
-   { "version": "1.1", "id": "h-1", "type": "HELLO", "action": "link.hello",
+   { "version": "1.2", "id": "h-1", "type": "HELLO", "action": "link.hello",
      "payload": { "role": "bot", "app": "fiji-chan", "app_version": "1.4.0",
                   "capabilities": ["scenes", "transitions", "outputs", "output.alerts", "decks", "decks.pages", "chat", "triggers"],
                   "accepted": ["scenes", "transitions", "outputs", "output.alerts", "decks", "decks.pages", "chat"] } }
@@ -101,7 +102,9 @@ dropped and logged once; it never closes the link.
 Right after a successful handshake the plugin sends one SYNC_STATE with everything the accepted capabilities cover.
 Either side may later ask for another with the COMMAND `state.sync`; the plugin then answers with an ACK
 `{ok: true, result: {}}` followed by a SYNC_STATE whose `id` equals the command's `id`. Events after a snapshot are
-deltas on top of it; a receiver that misses one asks for a new snapshot instead of guessing.
+deltas on top of it; a receiver that misses one asks for a new snapshot instead of guessing. The plugin also sends a
+SYNC_STATE on its own, with a fresh `id`, when something changes that no event covers: scenes or canvases added,
+removed or renamed, outputs added or removed, decks saved or deleted. A receiver replaces what it knew with it.
 
 ```json
 { "version": "1.0", "id": "s-1", "type": "SYNC_STATE", "action": "state.snapshot",
@@ -184,7 +187,7 @@ Both ACLs and both test suites read this block. It must stay in step with the ta
 
 ```json bridge-contract
 {
-  "version": "1.1",
+  "version": "1.2",
   "types": ["COMMAND", "EVENT", "ACK", "HELLO", "SYNC_STATE"],
   "errors": ["BAD_REQUEST", "UNKNOWN_ACTION", "NOT_FOUND", "BUSY", "OBS_ERROR", "TIMEOUT", "NOT_LINKED"],
   "output_states": ["IDLE", "STARTING", "ACTIVE", "RECONNECTING", "STOPPING", "FAILED"],
@@ -287,3 +290,4 @@ release and noted in both changelogs.
 |---|---|---|
 | 1.0 | 2026-11-23 | First contract: envelope, HELLO with capabilities, SYNC_STATE, catalogue, contract-0 migration table. |
 | 1.1 | 2026-11-23 | `transition.run`; `scene.switch` without `canvas` means the main canvas; `main` and `uptime` in SYNC_STATE; `all` as an output target; `output.dropped` cadence; how the bot tells contract 0 from 1.x. |
+| 1.2 | 2026-11-23 | The plugin may send a SYNC_STATE on its own when something changes that no event covers. |

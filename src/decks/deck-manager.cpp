@@ -1,7 +1,7 @@
 #include "deck-manager.hpp"
 
 #include "../docks/canvas-dock.hpp"
-#include "../utils/bot-link.hpp"
+#include "../utils/fiji-events.hpp"
 #include <obs-frontend-api.h>
 #include <obs-module.h>
 #include <QDir>
