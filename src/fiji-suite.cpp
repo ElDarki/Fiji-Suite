@@ -20,6 +20,7 @@
 #include "utils/bot-link.hpp"
 #include "utils/obs-websocket-api.h"
 #include "utils/update-check.hpp"
+#include "utils/fiji-look.hpp"
 #include "version.h"
 #include <obs-frontend-api.h>
 #include <obs-module.h>
@@ -785,6 +786,9 @@ bool obs_module_load(void)
 	blog(LOG_INFO, "[Fiji Suite] loaded version %s", PROJECT_VERSION);
 
 	obs_register_source(&component_info);
+
+	// Her fonts, and the Fiji Sun / Fiji Moon themes copied where OBS looks for them.
+	FijiLook::Install();
 
 	obs_frontend_add_event_callback(frontend_event, nullptr);
 

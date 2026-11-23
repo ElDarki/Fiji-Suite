@@ -53,6 +53,12 @@ press from OBS, a browser or your phone.
   nothing about you or your setup. Untick **Check for Fiji Suite updates when OBS starts** in Fiji Suite
   Settings to turn it off.
 
+**Fiji Sun and Fiji Moon themes**
+- Two OBS themes in Fiji-chan's colours: **Fiji Sun** (warm sand and sea-glass teal) and **Fiji Moon** (moonlit
+  indigo with a warm lantern glow), with her fonts. They work on OBS 31, 32 and 33.
+- Fiji Suite copies them into your OBS themes folder. Restart OBS once after installing, then pick one in
+  **Settings → Appearance → Style**. Nothing changes until you pick one.
+
 Fiji Suite adds its own docks and menu items. It does not rearrange your OBS window.
 
 ## Requirements

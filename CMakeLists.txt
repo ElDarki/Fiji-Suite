@@ -128,6 +128,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/bot-link.hpp
   src/utils/update-check.cpp
   src/utils/update-check.hpp
+  src/utils/fiji-look.cpp
+  src/utils/fiji-look.hpp
   src/utils/color.cpp
   src/utils/event-filter.cpp
   src/utils/icon.cpp

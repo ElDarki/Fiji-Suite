@@ -56,6 +56,12 @@ ejecutan pasos en OBS, y que se pueden pulsar desde OBS, el navegador o el celul
   ni tu configuración. Para apagarlo, desmarca **Check for Fiji Suite updates when OBS starts** en Fiji Suite
   Settings.
 
+**Temas Fiji Sun y Fiji Moon**
+- Dos temas para OBS con los colores de Fiji-chan: **Fiji Sun** (arena cálida y verde agua de vidrio de mar) y
+  **Fiji Moon** (índigo de luna con el brillo cálido de un farol), con sus fuentes. Funcionan en OBS 31, 32 y 33.
+- Fiji Suite los copia a la carpeta de temas de OBS. Reinicia OBS una vez después de instalar y elige uno en
+  **Ajustes → Apariencia → Estilo**. Nada cambia hasta que elijas uno.
+
 Fiji Suite añade sus propios paneles y menús. No reorganiza la ventana de OBS.
 
 ## Requisitos
