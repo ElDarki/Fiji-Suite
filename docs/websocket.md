@@ -99,6 +99,7 @@ camera are controlled with the standard obs-websocket requests.
 | `get_deck_state` | | `running`: list of `{button}` |
 | `get_triggers` | | `triggers`: every trigger with its `button` and `deck` |
 | `get_web_file` | `name` | `content`, `type`: a file of the deck web interface |
+| `get_look` | | `dark`: true when OBS uses a dark theme; the deck pages then start in Fiji Moon |
 
 ### Window
 

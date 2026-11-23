@@ -1,119 +1,514 @@
-:root {
-  --bg: #17171c;
-  --panel: #22222a;
-  --line: #34343f;
-  --text: #e8e8ee;
-  --muted: #9a9aa8;
-  --accent: #5b8def;
-  --live: #d92c2c;
+/* Fiji Suite deck pages, in Fiji-chan's style (Sun by day, Moon by night).
+   The first part is a copy of the bot's design tokens (twitchbot docs/style-guide/tokens.css, version 1.1); replace it
+   with a fresh copy when the guide changes. The page styles follow after it. */
+
+/* Fiji-chan design tokens, version 1.1.
+   Sun Fiji on :root and [data-mood="sun"]; Moon Fiji on [data-mood="moon"] (and the dark colour scheme until the
+   viewer picks). Components only read these variables, so the same markup works in both moods.
+   Generated from the style guide (docs/style-guide/style-guide.html); change values there and regenerate. */
+
+:root, [data-mood="sun"] {
+  --ground: #f7f1eb;
+  --surface: #fffcf8;
+  --surface-2: #f3ebe3;
+  --surface-3: #e9ddd1;
+  --ink: #2b2230;
+  --ink-2: #574a59;
+  --muted: #6b5e6c;
+  --border: #e6d9cc;
+  --control: #98837b;
+  --accent: #167a71;
+  --accent-hover: #11655e;
+  --on-accent: #ffffff;
+  --accent-ink: #10675f;
+  --second: #d0802f;
+  --second-ink: #8a4b0e;
+  --blush: #eeaab6;
+  --glow: #f2b679;
+  --sky-1: #ebe6ea;
+  --sky-2: #f3e3d8;
+  --sky-3: #f3d7c2;
+  --sky-ink: #2b2230;
+  --sky-ink-2: #574a59;
+  --sea-1: #a3cfc7;
+  --sea-2: #5ea79d;
+  --ja-ink: #a33b5b;
+  --success: #18733f;
+  --warning: #8f5000;
+  --danger: #bd2748;
+  --accent-soft: rgba(22, 122, 113, 0.12);
+  --second-soft: rgba(208, 128, 47, 0.16);
+  --blush-soft: rgba(238, 170, 182, 0.22);
+  --glow-soft: rgba(242, 182, 121, 0.14);
+  --bubble: #fffcf8;
+  --bubble-line: #2b2230;
+  --focus: #167a71;
+  --success-soft: rgba(24, 115, 63, 0.12);
+  --warning-soft: rgba(143, 80, 0, 0.12);
+  --danger-soft: rgba(189, 39, 72, 0.12);
+  --m-tts: #c2347a;
+  --m-tts-soft: rgba(194, 52, 122, 0.12);
+  --m-chat: #1b7a44;
+  --m-chat-soft: rgba(27, 122, 68, 0.12);
+  --m-sound: #b8530e;
+  --m-sound-soft: rgba(184, 83, 14, 0.12);
+  --m-cmd: #2f5fc4;
+  --m-cmd-soft: rgba(47, 95, 196, 0.12);
+  --m-story: #8a6108;
+  --m-story-soft: rgba(138, 97, 8, 0.12);
+  --m-music: #7a3cc0;
+  --m-music-soft: rgba(122, 60, 192, 0.12);
+  --m-fiji: #0d7f76;
+  --m-fiji-soft: rgba(13, 127, 118, 0.12);
+  --m-discord: #4752c4;
+  --m-discord-soft: rgba(71, 82, 196, 0.12);
+  --m-obs: #3d5466;
+  --m-obs-soft: rgba(61, 84, 102, 0.12);
+  --shadow-sm: 3px 4px 0 rgba(43, 34, 48, .16);
+  --shadow: 4px 5px 0 rgba(43, 34, 48, .88);
+  --ink-ring: 0 0 0 2px #2b2230;
+  --panel-line: rgba(43, 34, 48, .82);
+  --line-w: 2px;
+  --cel-hi: inset 0 2px 0 rgba(255, 255, 255, .5);
+  --accent-edge: #0c534d;
+  --tone: rgba(105, 70, 50, .16);
+  --kira: #f2b679;
+  --sheen: linear-gradient(transparent, transparent);
+  --live: #c8243f;
 }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-mood]) {
+    --ground: #110f29;
+    --surface: #1a1738;
+    --surface-2: #231f46;
+    --surface-3: #2e2955;
+    --ink: #f1eefc;
+    --ink-2: #cbc6ea;
+    --muted: #b9b3de;
+    --border: #322c5e;
+    --control: #6f68a2;
+    --accent: #62d9c9;
+    --accent-hover: #8ee6da;
+    --on-accent: #04211e;
+    --accent-ink: #7fe3d7;
+    --second: #e3bd76;
+    --second-ink: #f0cf8f;
+    --blush: #ff9fc4;
+    --glow: #e8bf78;
+    --sky-1: #0a081f;
+    --sky-2: #1a1644;
+    --sky-3: #352561;
+    --sky-ink: #f1eefc;
+    --sky-ink-2: #cbc6ea;
+    --sea-1: #2b2563;
+    --sea-2: #1d6878;
+    --ja-ink: #ffb3cb;
+    --success: #7fe0a0;
+    --warning: #ffd27a;
+    --danger: #ff8fa1;
+    --accent-soft: rgba(98, 217, 201, 0.16);
+    --second-soft: rgba(227, 189, 118, 0.2);
+    --blush-soft: rgba(255, 159, 196, 0.22);
+    --glow-soft: rgba(232, 191, 120, 0.2);
+    --bubble: #231f46;
+    --bubble-line: #e7ac70;
+    --focus: #62d9c9;
+    --success-soft: rgba(127, 224, 160, 0.16);
+    --warning-soft: rgba(255, 210, 122, 0.16);
+    --danger-soft: rgba(255, 143, 161, 0.16);
+    --m-tts: #ff8cc6;
+    --m-tts-soft: rgba(255, 140, 198, 0.18);
+    --m-chat: #82e39a;
+    --m-chat-soft: rgba(130, 227, 154, 0.18);
+    --m-sound: #ffae6b;
+    --m-sound-soft: rgba(255, 174, 107, 0.18);
+    --m-cmd: #8fb2ff;
+    --m-cmd-soft: rgba(143, 178, 255, 0.18);
+    --m-story: #ffd66b;
+    --m-story-soft: rgba(255, 214, 107, 0.18);
+    --m-music: #c8a2ff;
+    --m-music-soft: rgba(200, 162, 255, 0.18);
+    --m-fiji: #72e4d8;
+    --m-fiji-soft: rgba(114, 228, 216, 0.18);
+    --m-discord: #a3abff;
+    --m-discord-soft: rgba(163, 171, 255, 0.18);
+    --m-obs: #b9c9d6;
+    --m-obs-soft: rgba(185, 201, 214, 0.18);
+    --shadow-sm: 0 2px 10px rgba(4, 2, 16, .45);
+    --shadow: 0 18px 44px rgba(4, 2, 16, .55);
+    --ink-ring: 0 0 0 1px rgba(227, 189, 118, .42);
+    --panel-line: #322c5e;
+    --line-w: 1px;
+    --cel-hi: inset 0 1px 0 rgba(255, 255, 255, .07);
+    --accent-edge: #2a9a8e;
+    --tone: rgba(227, 189, 118, .14);
+    --kira: #f3e3bf;
+    --sheen: linear-gradient(160deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, 0) 45%);
+    --live: #ff7a93;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]:not([data-mood]), :root[data-mood="moon"], [data-mood="moon"] {
+  --ground: #110f29;
+  --surface: #1a1738;
+  --surface-2: #231f46;
+  --surface-3: #2e2955;
+  --ink: #f1eefc;
+  --ink-2: #cbc6ea;
+  --muted: #b9b3de;
+  --border: #322c5e;
+  --control: #6f68a2;
+  --accent: #62d9c9;
+  --accent-hover: #8ee6da;
+  --on-accent: #04211e;
+  --accent-ink: #7fe3d7;
+  --second: #e3bd76;
+  --second-ink: #f0cf8f;
+  --blush: #ff9fc4;
+  --glow: #e8bf78;
+  --sky-1: #0a081f;
+  --sky-2: #1a1644;
+  --sky-3: #352561;
+  --sky-ink: #f1eefc;
+  --sky-ink-2: #cbc6ea;
+  --sea-1: #2b2563;
+  --sea-2: #1d6878;
+  --ja-ink: #ffb3cb;
+  --success: #7fe0a0;
+  --warning: #ffd27a;
+  --danger: #ff8fa1;
+  --accent-soft: rgba(98, 217, 201, 0.16);
+  --second-soft: rgba(227, 189, 118, 0.2);
+  --blush-soft: rgba(255, 159, 196, 0.22);
+  --glow-soft: rgba(232, 191, 120, 0.2);
+  --bubble: #231f46;
+  --bubble-line: #e7ac70;
+  --focus: #62d9c9;
+  --success-soft: rgba(127, 224, 160, 0.16);
+  --warning-soft: rgba(255, 210, 122, 0.16);
+  --danger-soft: rgba(255, 143, 161, 0.16);
+  --m-tts: #ff8cc6;
+  --m-tts-soft: rgba(255, 140, 198, 0.18);
+  --m-chat: #82e39a;
+  --m-chat-soft: rgba(130, 227, 154, 0.18);
+  --m-sound: #ffae6b;
+  --m-sound-soft: rgba(255, 174, 107, 0.18);
+  --m-cmd: #8fb2ff;
+  --m-cmd-soft: rgba(143, 178, 255, 0.18);
+  --m-story: #ffd66b;
+  --m-story-soft: rgba(255, 214, 107, 0.18);
+  --m-music: #c8a2ff;
+  --m-music-soft: rgba(200, 162, 255, 0.18);
+  --m-fiji: #72e4d8;
+  --m-fiji-soft: rgba(114, 228, 216, 0.18);
+  --m-discord: #a3abff;
+  --m-discord-soft: rgba(163, 171, 255, 0.18);
+  --m-obs: #b9c9d6;
+  --m-obs-soft: rgba(185, 201, 214, 0.18);
+  --shadow-sm: 0 2px 10px rgba(4, 2, 16, .45);
+  --shadow: 0 18px 44px rgba(4, 2, 16, .55);
+  --ink-ring: 0 0 0 1px rgba(227, 189, 118, .42);
+  --panel-line: #322c5e;
+  --line-w: 1px;
+  --cel-hi: inset 0 1px 0 rgba(255, 255, 255, .07);
+  --accent-edge: #2a9a8e;
+  --tone: rgba(227, 189, 118, .14);
+  --kira: #f3e3bf;
+  --sheen: linear-gradient(160deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, 0) 45%);
+  --live: #ff7a93;
+}
+:root[data-theme="dark"]:not([data-mood]), :root[data-mood="moon"] { color-scheme: dark; }
+
+/* ---- mood: shape, motion, space, type and effects (Sun = manga page, Moon = VIP night lounge) ---- */
+:root, [data-mood="sun"] {
+  --r-xs: 8px; --r-sm: 12px; --r-md: 16px; --r-lg: 22px; --r-xl: 30px; --r-bubble: 26px; --r-pill: 999px;
+  --dur-press: 90ms; --dur-1: 140ms; --dur-2: 220ms; --dur-page: 320ms;
+  --ease: cubic-bezier(.34, 1.56, .64, 1); --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --press: scale(.95); --sticker: 3px; --lift: -3px; --pad-card: 24px; --gap-section: 96px;
+  --font-name: "Mochiy Pop One", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
+  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
+  --w-name: 400; --w-h1: 700; --w-h: 700; --w-speech: 700; --name-track: 0;
+  --sky-bg: linear-gradient(180deg, var(--sky-1) 0 36%, var(--sky-2) 36% 72%, var(--sky-3) 72%);
+  --side-bg: linear-gradient(180deg, var(--sky-1) 0 calc(100% - 150px), var(--sky-2) calc(100% - 150px) calc(100% - 96px), var(--sky-3) calc(100% - 96px));
+  --halftone-on: 1; --stars-on: 0; --kira-on: 1; --lantern-on: 0; --kira-anim: twinkle 1.6s cubic-bezier(.2, .8, .2, 1) 3;
+  --orb-bg: var(--blush-soft); --orb-ring: inset 0 0 0 2px rgba(43, 34, 48, .16); --orb-outline: 0 solid transparent;
+  --wave-line: rgba(43, 34, 48, .8); --wave-w: 2px; --speed: rgba(43, 34, 48, .85); --speed-w: .9deg;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-mood]) {
+    --r-xs: 8px; --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 24px; --r-bubble: 20px;
+    --dur-press: 100ms; --dur-1: 180ms; --dur-2: 300ms; --dur-page: 400ms;
+    --ease: cubic-bezier(.16, 1, .3, 1); --press: scale(.98); --sticker: 0px; --lift: -2px; --pad-card: 28px; --gap-section: 112px;
+    --font-name: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --w-name: 800; --w-h1: 800; --w-h: 700; --w-speech: 600; --name-track: .01em;
+    --sky-bg: radial-gradient(110% 80% at 72% 100%, var(--sky-3) 0%, rgba(0, 0, 0, 0) 62%), linear-gradient(180deg, var(--sky-1), var(--sky-2));
+    --side-bg: radial-gradient(140% 50% at 50% 100%, var(--sky-3) 0%, rgba(0, 0, 0, 0) 70%), linear-gradient(180deg, var(--sky-1), var(--sky-2));
+  --halftone-on: 0; --stars-on: .55; --kira-on: 0; --lantern-on: 1; --kira-anim: none;
+    --orb-bg: transparent; --orb-ring: inset 0 0 0 1px rgba(227, 189, 118, .55); --orb-outline: 1px solid rgba(227, 189, 118, .28);
+    --wave-line: rgba(227, 189, 118, .6); --wave-w: 1px; --speed: rgba(227, 189, 118, .5); --speed-w: .35deg;
+  }
+}
+:root[data-theme="dark"]:not([data-mood]), :root[data-mood="moon"], [data-mood="moon"] {
+  --r-xs: 8px; --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 24px; --r-bubble: 20px;
+  --dur-press: 100ms; --dur-1: 180ms; --dur-2: 300ms; --dur-page: 400ms;
+  --ease: cubic-bezier(.16, 1, .3, 1); --press: scale(.98); --sticker: 0px; --lift: -2px; --pad-card: 28px; --gap-section: 112px;
+  --font-name: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --w-name: 800; --w-h1: 800; --w-h: 700; --w-speech: 600; --name-track: .01em;
+  --sky-bg: radial-gradient(110% 80% at 72% 100%, var(--sky-3) 0%, rgba(0, 0, 0, 0) 62%), linear-gradient(180deg, var(--sky-1), var(--sky-2));
+  --side-bg: radial-gradient(140% 50% at 50% 100%, var(--sky-3) 0%, rgba(0, 0, 0, 0) 70%), linear-gradient(180deg, var(--sky-1), var(--sky-2));
+  --halftone-on: 0; --stars-on: .55; --kira-on: 0; --lantern-on: 1; --kira-anim: none;
+  --orb-bg: transparent; --orb-ring: inset 0 0 0 1px rgba(227, 189, 118, .55); --orb-outline: 1px solid rgba(227, 189, 118, .28);
+  --wave-line: rgba(227, 189, 118, .6); --wave-w: 1px; --speed: rgba(227, 189, 118, .5); --speed-w: .35deg;
+}
+
+/* ---- type ---- */
+:root {
+  --font-ui: "Nunito Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --fs-name: clamp(2.8rem, 7vw, 4.8rem); --fs-h1: clamp(1.75rem, 3.2vw, 2.25rem); --fs-h2: 1.45rem; --fs-h3: 1.12rem;
+  --fs-speech: 1.08rem; --fs-body: 1rem; --fs-small: .875rem; --fs-label: .8125rem;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+  --twitch: #8a3ffc; --twitch-hover: #7a2ff0;
+}
+
+/* The sparkle animation that --kira-anim names. */
+@keyframes twinkle { 0%, 100% { transform: scale(.6) rotate(0deg); opacity: .5; } 45% { transform: scale(1) rotate(25deg); opacity: 1; } }
+
+/* ==========================================================================
+   Her fonts. The files sit next to this page on the plugin's server. Through the bot that copy cannot be
+   relayed, so the browser falls back to the bot's own /static/fonts. SIL Open Font License (data/fonts).
+   ========================================================================== */
+@font-face { font-family: "Nunito Sans"; font-weight: 400 600; font-display: swap;
+  src: local("Nunito Sans"), url("nunito-sans-latin-600-normal.woff2") format("woff2"), url("/static/fonts/nunito-sans-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito Sans"; font-weight: 700 900; font-display: swap;
+  src: local("Nunito Sans Bold"), url("nunito-sans-latin-700-normal.woff2") format("woff2"), url("/static/fonts/nunito-sans-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Zen Maru Gothic"; font-weight: 700; font-display: swap;
+  src: local("Zen Maru Gothic Bold"), url("zen-maru-gothic-latin-700-normal.woff2") format("woff2"), url("/static/fonts/zen-maru-gothic-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Shippori Mincho B1"; font-weight: 700 800; font-display: swap;
+  src: url("shippori-mincho-b1-latin-700-normal.woff2") format("woff2"), url("/static/fonts/shippori-mincho-b1-latin-700-normal.woff2") format("woff2"); }
+
+/* ==========================================================================
+   The deck pages (board.html, editor.html). Components only read the tokens above, so Sun and Moon share it.
+   data-mood on <html> picks the mood (fiji.js); without it the device's light/dark setting decides.
+   ========================================================================== */
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 14px/1.4 system-ui, "Segoe UI", sans-serif;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 var(--fs-small)/1.5 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
-input, select, textarea {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 4px 6px;
-  min-width: 0;
-}
-textarea { resize: vertical; min-height: 3em; }
-a { color: var(--accent); }
+a { color: var(--accent-ink); font-weight: 700; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
+input, select, textarea {
+  min-width: 0;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1.5px solid var(--control);
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
+}
+input:hover, select:hover, textarea:hover { border-color: var(--ink-2); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+textarea { resize: vertical; min-height: 4.5em; }
+input[type="checkbox"] { min-height: 0; width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* ---- the bar: deck tabs, then actions ---- */
 .bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 8px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-bottom: var(--line-w) solid var(--panel-line);
 }
 .bar .spacer { flex: 1; }
 .tab, .plain {
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1.5px solid var(--control);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: 700 var(--fs-small)/1.2 var(--font-ui);
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), transform var(--dur-press) var(--ease);
 }
-.tab.current { background: var(--accent); border-color: var(--accent); color: #fff; }
-.plain:hover, .tab:hover { border-color: var(--accent); }
-.plain.danger:hover { border-color: var(--live); color: var(--live); }
+.tab:hover, .plain:hover { border-color: var(--accent); color: var(--ink); }
+.tab:active, .plain:active { transform: var(--press); }
+.tab.current { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+.plain.danger { color: var(--danger); border-color: var(--danger); }
+.plain.danger:hover { background: var(--danger-soft); color: var(--danger); }
+.plain.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: var(--cel-hi), 0 3px 0 var(--accent-edge); }
+.plain.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
+.plain.mood { width: 34px; padding: 0; font-size: 1rem; }
 
-/* the deck: a grid of cells, buttons placed by column / row */
+/* ---- the deck: a grid of cells, buttons placed by column / row ---- */
 .deck {
   flex: 1;
   min-height: 0;
   display: grid;
-  gap: 6px;
-  padding: 8px;
+  gap: 10px;
+  padding: 12px;
 }
 .deck-button {
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 4px;
+  position: relative;
+  border: var(--line-w) solid var(--panel-line);
+  border-radius: var(--r-md);
+  padding: 6px;
+  background-color: var(--surface-2);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm), var(--cel-hi);
   cursor: pointer;
   overflow: hidden;
   white-space: pre-line;
-  word-break: break-word;
-  font-weight: 600;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  font: 700 var(--fs-small)/1.25 var(--font-ui);
   background-size: cover;
   background-position: center;
   touch-action: manipulation;
   user-select: none;
+  transition: transform var(--dur-press) var(--ease), box-shadow var(--dur-1) var(--ease-out);
 }
-.deck-button:active { filter: brightness(0.85); }
-.deck-button.running { border-color: var(--live); box-shadow: 0 0 0 2px var(--live) inset; }
-.deck-button.selected { border-color: var(--accent); }
+.deck-button:hover { transform: translateY(var(--lift)); }
+.deck-button:active { transform: var(--press); filter: brightness(.92); }
+/* running: the on-air ring, never colour alone — a dot marks it too */
+.deck-button.running { box-shadow: 0 0 0 3px var(--live), var(--shadow-sm); }
+.deck-button.running::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--live);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.deck-button.selected { box-shadow: 0 0 0 3px var(--accent), var(--shadow-sm); }
 .cell {
-  border: 1px dashed var(--line);
-  border-radius: 8px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-md);
   cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
 }
-.cell:hover { border-color: var(--accent); }
-.empty { margin: auto; color: var(--muted); text-align: center; padding: 24px; }
+.cell:hover { border-color: var(--accent); background: var(--accent-soft); }
+.empty {
+  margin: auto;
+  max-width: 28rem;
+  padding: 32px 24px;
+  color: var(--muted);
+  text-align: center;
+  font-weight: 600;
+}
 
-#toasts { position: fixed; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
-.toast { background: var(--panel); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 12px; max-width: 60vw; }
+/* ---- toasts: a pill like the bot's ---- */
+#toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+.toast {
+  padding: 9px 18px;
+  border: 2px solid var(--accent);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow), var(--ink-ring);
+  font: 700 var(--fs-small)/1.4 var(--font-ui);
+  animation: toast-in var(--dur-2) var(--ease);
+}
+@keyframes toast-in { from { transform: translateY(12px); opacity: 0; } }
 
-/* editor */
+/* ---- the editor: the deck on the left, the selected button's settings on the right ---- */
 .editor { flex: 1; min-height: 0; display: flex; }
 .editor .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .editor .side {
   width: 420px;
   max-width: 50vw;
   overflow: auto;
-  background: var(--panel);
-  border-left: 1px solid var(--line);
-  padding: 10px;
+  padding: 16px;
+  background: var(--surface);
+  border-left: var(--line-w) solid var(--panel-line);
 }
-.side h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.side h3 {
+  margin: 20px 0 8px;
+  color: var(--ink);
+  font: var(--w-h) var(--fs-h3)/1.3 var(--font-display);
+}
 .side h3:first-child { margin-top: 0; }
-.row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
-.row label { width: 130px; flex: none; color: var(--muted); }
+.row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.row label { width: 130px; flex: none; color: var(--ink-2); font-weight: 700; }
 .row input, .row select, .row textarea { flex: 1; }
 .row input[type="checkbox"] { flex: none; }
-.row input[type="color"] { flex: none; width: 44px; padding: 0; height: 28px; }
+.row input[type="color"] { flex: none; width: 48px; height: 34px; padding: 2px; }
 .step {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 6px;
-  margin-bottom: 6px;
-  background: var(--bg);
+  margin-bottom: 8px;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
 }
-.step.unsupported { border-color: #e0a000; }
-.step .head { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; }
+.step.unsupported { border-color: var(--warning); background: var(--warning-soft); }
+.step .head { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
 .step .head select { flex: 1; }
-.step .head input { width: 70px; }
-.step .head .plain { padding: 2px 7px; }
-.hint { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
-.report { white-space: pre-wrap; font: 12px/1.5 ui-monospace, Consolas, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; max-height: 50vh; overflow: auto; }
+.step .head input { width: 76px; }
+.step .head .plain { min-height: 30px; padding: 0 10px; }
+.hint { margin: 4px 0 10px; color: var(--muted); font-size: var(--fs-label); }
+.report {
+  max-height: 50vh;
+  overflow: auto;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  white-space: pre-wrap;
+  font: 12px/1.5 var(--font-mono);
+}
+
+/* ---- phones: bigger targets, and the editor stacks ---- */
+@media (max-width: 760px) {
+  .tab, .plain { min-height: 44px; }
+  .plain.mood { width: 44px; }
+  .deck { gap: 8px; padding: 8px; }
+  .deck-button { padding: 4px; font-size: .75rem; }
+  .editor { flex-direction: column; overflow: auto; }
+  .editor .stage { min-height: 55vh; }
+  .editor .side { width: auto; max-width: none; border-left: 0; border-top: var(--line-w) solid var(--panel-line); overflow: visible; }
+  .row { flex-wrap: wrap; }
+  .row label { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  .deck-button:hover { transform: none; }
+}

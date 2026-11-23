@@ -14,6 +14,11 @@ or a trigger from the Fiji-chan bot. Decks live in the plugin and work with no b
 
 The board has an **Edit** link to the editor. A deck is changed only when you press **Save deck**.
 
+The pages come in Fiji-chan's two looks: **Sun** and **Moon**. They start in Moon when OBS uses a dark theme
+and in Sun otherwise. The ☀/☾ button switches and remembers the choice on that device, and `?mood=sun` or
+`?mood=moon` at the end of the address fixes the look (handy for a browser dock). A button without its own
+colour takes the look's colours.
+
 ## Buttons and steps
 
 Each step has a time in milliseconds after the press, and steps run in list order, each once its time has

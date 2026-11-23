@@ -51,7 +51,7 @@
       return el("input", { type: "number", value: object[key] ?? 0, oninput: (e) => changed(Number(e.target.value)) });
     }
     if (kind === "color") {
-      return el("input", { type: "color", value: object[key] || "#3a3a46", oninput: (e) => changed(e.target.value) });
+      return el("input", { type: "color", value: object[key] || "#5ea79d", oninput: (e) => changed(e.target.value) });
     }
     return el("input", { type: "text", value: object[key] ?? "", oninput: (e) => changed(e.target.value) });
   }
@@ -115,10 +115,9 @@
       }
     }
     for (const b of deck.buttons) {
-      const color = b.color || "#3a3a46";
       nodes.push(place(el("button", {
         class: "deck-button" + (b === selected ? " selected" : ""),
-        style: `background-color:${color};color:${b.text_color || Fiji.readableOn(color)};`,
+        style: Fiji.buttonStyle(b),
         onclick: () => { selected = b; draw(); },
       }, b.text || ""), b.x || 0, b.y || 0, b.w, b.h));
     }
@@ -126,7 +125,7 @@
   }
 
   function addButton(x, y) {
-    selected = { id: "", text: "New", color: "#3a3a46", x, y, w: 1, h: 1, steps: [], release: [], triggers: [] };
+    selected = { id: "", text: "New", color: "", x, y, w: 1, h: 1, steps: [], release: [], triggers: [] };
     deck.buttons.push(selected);
     touch(); draw();
   }
@@ -190,8 +189,9 @@
       el("button", { class: "plain", onclick: () => document.getElementById("sammi-file").click() }, "Import from SAMMI"),
       el("span", { class: "spacer" }),
       deck ? el("button", { class: "plain danger", onclick: removeDeck }, "Delete deck") : null,
-      deck ? el("button", { class: "tab" + (dirty ? " current" : ""), onclick: save }, dirty ? "Save deck *" : "Saved") : null,
-      el("a", { class: "plain", href: "./" }, "Back to decks"));
+      deck ? el("button", { class: "plain" + (dirty ? " primary" : ""), onclick: save }, dirty ? "Save deck *" : "Saved") : null,
+      el("a", { class: "plain", href: "./" }, "Back to decks"),
+      Fiji.moodButton());
   }
 
   function draw() { drawTabs(); drawGrid(); drawSide(); }

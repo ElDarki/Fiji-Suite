@@ -27,6 +27,14 @@ void vendor_request_version(obs_data_t *request_data, obs_data_t *response_data,
 	obs_data_set_bool(response_data, "success", true);
 }
 
+// Which mood the deck pages should start in: Moon when OBS uses a dark theme, Sun otherwise.
+void vendor_request_get_look(obs_data_t *request_data, obs_data_t *response_data, void *)
+{
+	UNUSED_PARAMETER(request_data);
+	obs_data_set_bool(response_data, "dark", obs_frontend_is_theme_dark());
+	obs_data_set_bool(response_data, "success", true);
+}
+
 void vendor_request_get_canvas(obs_data_t *request_data, obs_data_t *response_data, void *)
 {
 	UNUSED_PARAMETER(request_data);
@@ -1010,6 +1018,7 @@ static const struct {
 	void (*handler)(obs_data_t *request_data, obs_data_t *response_data, void *);
 } requests[] = {
 	{"version", vendor_request_version},
+	{"get_look", vendor_request_get_look},
 	{"get_canvas", vendor_request_get_canvas},
 	{"switch_scene", vendor_request_switch_scene},
 	{"current_scene", vendor_request_current_scene},

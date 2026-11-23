@@ -52,6 +52,56 @@ const Fiji = {
     setTimeout(() => note.remove(), 5000);
   },
 
+  // The inline look of a deck button. A button without its own colour keeps the page's (Sun or Moon) look.
+  buttonStyle(button) {
+    let style = "";
+    if (button.color) {
+      style += `background-color:${button.color};color:${button.text_color || Fiji.readableOn(button.color)};`;
+    } else if (button.text_color) {
+      style += `color:${button.text_color};`;
+    }
+    if (button.image) style += `background-image:url("${encodeURI(button.image)}");`;
+    return style;
+  },
+
+  // Sun or Moon. "?mood=sun|moon" in the address wins, then the choice made with the mood button, then the OBS
+  // theme (dark → Moon). Until one of those is known, the device's light/dark setting decides (style.css).
+  mood: null,
+  setMood(mood, remember) {
+    if (mood !== "sun" && mood !== "moon") return;
+    Fiji.mood = mood;
+    document.documentElement.dataset.mood = mood;
+    if (remember) {
+      try { localStorage.setItem("fiji-mood", mood); } catch (error) { /* private window: not remembered */ }
+    }
+    document.querySelectorAll(".plain.mood").forEach(Fiji.paintMoodButton);
+  },
+  startMood() {
+    const asked = new URLSearchParams(location.search).get("mood");
+    let saved = null;
+    try { saved = localStorage.getItem("fiji-mood"); } catch (error) { /* ignore */ }
+    if (asked) return Fiji.setMood(asked);
+    if (saved) return Fiji.setMood(saved);
+    Fiji.call("get_look").then((look) => {
+      if (!Fiji.mood && look && look.success) Fiji.setMood(look.dark ? "moon" : "sun");
+    }).catch(() => {});
+  },
+  paintMoodButton(button) {
+    const moon = Fiji.mood ? Fiji.mood === "moon" : matchMedia("(prefers-color-scheme: dark)").matches;
+    button.textContent = moon ? "☾" : "☀";
+    const label = moon ? "Moon look. Switch to Sun" : "Sun look. Switch to Moon";
+    button.title = label;
+    button.setAttribute("aria-label", label);
+  },
+  moodButton() {
+    const button = Fiji.el("button", { class: "plain mood", type: "button", onclick: () => {
+      const moon = Fiji.mood ? Fiji.mood === "moon" : matchMedia("(prefers-color-scheme: dark)").matches;
+      Fiji.setMood(moon ? "sun" : "moon", true);
+    } });
+    Fiji.paintMoodButton(button);
+    return button;
+  },
+
   // Black or white, whichever reads better on the given #rrggbb background.
   readableOn(color) {
     const m = /^#?([0-9a-f]{6})$/i.exec(color || "");
@@ -61,3 +111,5 @@ const Fiji = {
     return luminance > 150 ? "#101014" : "#ffffff";
   },
 };
+
+Fiji.startMood();

@@ -15,12 +15,10 @@
   }
 
   function buttonNode(button) {
-    const color = button.color || "#3a3a46";
     const node = el("button", {
       class: "deck-button" + (running.has(button.id) ? " running" : ""),
       "data-id": button.id,
-      style: `background-color:${color};color:${button.text_color || Fiji.readableOn(color)};` +
-             (button.image ? `background-image:url("${encodeURI(button.image)}");` : ""),
+      style: Fiji.buttonStyle(button),
     }, button.text || "");
     // press on the way down and release on the way up, so buttons with a release list work
     node.addEventListener("pointerdown", (event) => {
@@ -44,6 +42,7 @@
       el("span", { class: "spacer" }),
       el("button", { class: "plain danger", onclick: () => Fiji.call("stop_button", { button: "all" }) }, "Stop all"),
       viewOnly ? null : el("a", { class: "plain", href: "editor.html" }, "Edit"),
+      Fiji.moodButton(),
     );
     const board = document.getElementById("deck");
     if (!deck) {
