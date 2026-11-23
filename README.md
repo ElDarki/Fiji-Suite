@@ -64,8 +64,7 @@ Fiji Suite adds its own docks and menu items. It does not rearrange your OBS win
 ## Install
 
 Download the file for your system from the
-[latest release](https://github.com/ElDarki/Fiji-Suite/releases/latest) or from the Fiji Suite page on the
-OBS forums. Close OBS before you install.
+[latest release](https://github.com/ElDarki/Fiji-Suite/releases/latest). Close OBS before you install.
 
 ### Windows
 
@@ -127,8 +126,7 @@ English for now.
 
 ## Reporting problems
 
-Post a bug report in the discussion of the Fiji Suite page on the OBS forums, or open an
-[issue on GitHub](https://github.com/ElDarki/Fiji-Suite/issues). Please include:
+Open an [issue on GitHub](https://github.com/ElDarki/Fiji-Suite/issues). Please include:
 
 - Your OBS log: **Help → Log Files → Upload Current Log File**, then paste the link.
 - If OBS crashed: the crash report from **Help → Crash Reports**.

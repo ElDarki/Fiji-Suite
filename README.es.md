@@ -67,8 +67,7 @@ Fiji Suite añade sus propios paneles y menús. No reorganiza la ventana de OBS.
 ## Instalación
 
 Descarga el archivo para tu sistema desde la
-[última versión](https://github.com/ElDarki/Fiji-Suite/releases/latest) o desde la página de Fiji Suite en
-los foros de OBS. Cierra OBS antes de instalar.
+[última versión](https://github.com/ElDarki/Fiji-Suite/releases/latest). Cierra OBS antes de instalar.
 
 ### Windows
 
@@ -133,8 +132,7 @@ del plugin está en inglés por ahora.
 
 ## Si algo falla
 
-Escribe en la discusión de la página de Fiji Suite en los foros de OBS, o abre un
-[issue en GitHub](https://github.com/ElDarki/Fiji-Suite/issues). Incluye:
+Abre un [issue en GitHub](https://github.com/ElDarki/Fiji-Suite/issues). Incluye:
 
 - El registro de OBS: **Ayuda → Archivos de registro → Subir el archivo de registro actual**, y pega el
   enlace.
