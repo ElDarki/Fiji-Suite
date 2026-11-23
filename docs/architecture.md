@@ -1,0 +1,56 @@
+# Fiji Suite architecture
+
+Model-View-Controller plus the State pattern, with a contract-first bridge to the Fiji-chan bot. The rules are in
+`CLAUDE.md`; `tools/check-architecture.py` enforces them.
+
+## Layers
+
+```
+            ┌──────────────── View (src/view, data/web) ────────────────┐
+            │ docks, dialogs, widgets, deck pages                        │
+            └──────┬─────────────────────────────▲───────────────────────┘
+          intents  │                             │ signals
+                   ▼                             │
+ hotkeys ──► ┌──────────── Controller (src/controller) ─────────┐
+ local deck  │ CommandDispatcher (thread-safe queue)             │
+ server  ──► │   └─ handlers ── ObsApi (src/obs) ──► libobs      │
+ obs-ws  ──► └──────┬────────────────────────────────────────────┘
+                    │ change                    ▲ Command / CommandResult
+                    ▼                           │
+            ┌── Model (src/model) ──┐   ┌── Bridge ACL (src/bridge) ──┐ ◄── WebSocket ──► Fiji-chan bot
+            │ decks, settings, …    │   │ envelopes ⇄ Commands/events │     (BRIDGE_CONTRACT.md)
+            │ LocalStore ─► ObsData │   └─────────────▲───────────────┘
+            └───────────────────────┘                 │ state, capabilities
+            ┌── State (src/state) ──────────────────────────────────────┐
+            │ LinkStateMachine: STANDALONE / CONNECTING / LINKED; outputs; deck keys │
+            └───────────────────────────────────────────────────────────┘
+```
+
+## Threads
+
+| Thread | Runs |
+|---|---|
+| OBS/UI (Qt main) | views, models, state machines, the dispatcher's consumer, every libobs call made by handlers |
+| Link transport | the bot WebSocket; `BridgeAcl::onFrame` parses and posts Commands; ACKs are queued back to it |
+| Local deck server | HTTP for the deck pages; posts Commands |
+| obs-websocket | vendor requests; posts Commands and waits for their CommandResult |
+
+Only the dispatcher crosses threads: everything else stays on the thread that owns it.
+
+## The link states
+
+```
+ STANDALONE ──address set──► CONNECTING ──HELLO done──► LINKED
+     ▲                          │  ▲                       │
+     └──failure (reason)────────┘  └────────dropped────────┘
+ any ──address cleared──► STANDALONE
+```
+
+`STANDALONE` is a full working mode: decks, outputs and docks all work. Twitch-dependent controls are disabled with an
+explanation until `LINKED`, and the accepted capabilities say which bot features are there.
+
+## Moving the legacy code
+
+`src/docks`, `src/dialogs`, `src/utils`, `src/decks` and `src/fiji-suite.cpp` predate the layers. Each piece moves in
+its own change: its data into a model, its life cycle into a state, its libobs calls into a handler behind `ObsApi`,
+its widgets into `src/view`, with tests for the model, state and handler. Then its entry leaves the legacy list.

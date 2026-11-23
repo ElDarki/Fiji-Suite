@@ -1,0 +1,13 @@
+# View layer
+
+Docks, dialogs and widgets (Qt Widgets), plus the deck web pages in `data/web/`.
+
+- Views **observe models** (Qt signals) and **send intents to controllers** (`CommandDispatcher::post` or a controller
+  method). They never call `obs_*`, never include `obs.h`, and never build or read bridge envelopes.
+- Twitch-dependent controls bind their enabled state and tooltip to
+  `fiji::state::LinkStateMachine::twitchFeaturesAvailable()`: disabled with an explanation in `STANDALONE` and
+  `CONNECTING`, never hidden, never an error.
+- Visual rules come from the style guide (Fiji Sun / Fiji Moon themes, `tools/build-themes.py`).
+
+The docks and dialogs from before this layout still live in `src/docks/`, `src/dialogs/` and `src/utils/widgets/`;
+they move here one at a time (see the legacy list in `tools/check-architecture.py`).

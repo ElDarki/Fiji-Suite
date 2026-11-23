@@ -188,4 +188,27 @@ if(BUILD_OUT_OF_TREE)
   add_executable(decks-engine-test tests/engine-test.cpp src/decks/engine-core.cpp)
   target_link_libraries(decks-engine-test PRIVATE Qt::Core)
   set_target_properties(decks-engine-test PROPERTIES EXCLUDE_FROM_ALL ON)
+
+  # The MVC + State layers (CLAUDE.md): every header compiles with Qt Core alone. Plus the include rules and the
+  # bridge contract check. Build the test targets, then run them all:
+  #   cmake --build build_x86_64 --target fiji-arch-test decks-engine-test && ctest --test-dir build_x86_64
+  add_executable(
+    fiji-arch-test
+    tests/arch-headers.cpp
+    src/bridge/bridge-acl.hpp
+    src/controller/command-dispatcher.hpp
+    src/model/deck-model.hpp
+    src/state/link-state.hpp
+    src/state/link-state.cpp
+    src/controller/command-dispatcher.cpp)
+  target_link_libraries(fiji-arch-test PRIVATE Qt::Core)
+  set_target_properties(fiji-arch-test PROPERTIES EXCLUDE_FROM_ALL ON AUTOMOC ON)
+
+  enable_testing()
+  find_package(Python3 COMPONENTS Interpreter)
+  add_test(NAME decks-engine COMMAND decks-engine-test)
+  add_test(NAME architecture-headers COMMAND fiji-arch-test)
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME architecture-rules COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/check-architecture.py)
+  endif()
 endif()
