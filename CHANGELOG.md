@@ -2,6 +2,22 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.5.0
+
+- Fiji Sun and Fiji Moon are now themes of their own: pick them in **Settings → Appearance → Theme** instead of
+  as a style of Yami. If you had picked one in 0.4.0, it stays picked.
+- They follow Fiji-chan's style guide, not just her colours: pill buttons in Nunito Sans, a teal primary look with
+  a cel edge for anything switched on or live, her rounded checkboxes, chip tabs and selected rows, cards for
+  group boxes, dock titles in her display face (Zen Maru Gothic by day, Shippori Mincho by night) with an ink line
+  by day and a gold hairline by night, and fields that turn teal when you type in them.
+- The first time Fiji Suite adds the themes it reminds you to restart OBS once, since OBS only looks for new
+  themes when it starts.
+- The encoder tabs in Fiji Suite Settings take their look from the OBS theme.
+- The deck pages follow the style guide's deck: 96 px keys with a cel edge that share the width in a narrow dock,
+  a teal ring and dot on a key that is running, **Edit deck** as the board's main button, an editor with dashed
+  slots to add keys, labels above every field and a save bar, her icons instead of text symbols, and her face on
+  empty pages.
+
 ## 0.4.0
 
 - **Fiji Sun and Fiji Moon**: two OBS themes in Fiji-chan's colours, with her fonts (Nunito Sans, Zen Maru Gothic).

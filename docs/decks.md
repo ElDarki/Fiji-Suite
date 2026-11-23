@@ -12,7 +12,9 @@ or a trigger from the Fiji-chan bot. Decks live in the plugin and work with no b
   open the address shown there on the device. It must be on the same network.
 - The address contains a secret. **Reset** makes a new one and the old address stops working.
 
-The board has an **Edit** link to the editor. A deck is changed only when you press **Save deck**.
+**Edit deck** on the board opens the editor on that deck. Pick a key to change it in the panel on the right, or a
+dashed slot to add one. A deck is changed only when you press **Save deck** in the bar at the bottom of the panel,
+which wakes up as soon as something is not saved.
 
 The pages come in Fiji-chan's two looks: **Sun** and **Moon**. They start in Moon when OBS uses a dark theme
 and in Sun otherwise. The ☀/☾ button switches and remembers the choice on that device, and `?mood=sun` or

@@ -4,6 +4,7 @@
 #include <util/bmem.h>
 
 #include <QFontDatabase>
+#include <QMessageBox>
 #include <QString>
 
 #include <fstream>
@@ -16,8 +17,15 @@ namespace FijiLook {
 
 namespace {
 
-const char *const FONTS[] = {"fonts/NunitoSans-Regular.ttf", "fonts/NunitoSans-Bold.ttf",
-			     "fonts/ZenMaruGothic-Bold.ttf"};
+// Theme files earlier versions installed and this one no longer ships. Only these names are ever removed.
+const char *const RETIRED[] = {"Fiji_Sun.ovt", "Fiji_Moon.ovt"};
+
+bool restartNeeded = false;
+
+// Nunito Sans for everything people operate; Zen Maru Gothic (Sun) and Shippori Mincho B1 (Moon) for headings.
+// The Mincho is cut down to Latin, punctuation and kana to keep the plugin small.
+const char *const FONTS[] = {"fonts/NunitoSans-Regular.ttf", "fonts/NunitoSans-Bold.ttf", "fonts/ZenMaruGothic-Bold.ttf",
+			     "fonts/ShipporiMinchoB1-Bold-subset.ttf"};
 
 std::string ReadAll(const fs::path &file)
 {
@@ -55,8 +63,10 @@ fs::path UserThemesDir(const fs::path &pluginConfigDir)
 	return dir.parent_path().parent_path() / "themes";
 }
 
-int CopyThemes(const fs::path &from, const fs::path &to)
+int CopyThemes(const fs::path &from, const fs::path &to, int *added)
 {
+	if (added)
+		*added = 0;
 	std::error_code ec;
 	if (!fs::is_directory(from, ec))
 		return 0;
@@ -65,17 +75,33 @@ int CopyThemes(const fs::path &from, const fs::path &to)
 		return 0;
 
 	int written = 0;
-	for (const auto &entry : fs::directory_iterator(from, ec)) {
-		if (!entry.is_regular_file() || entry.path().extension() != ".ovt")
+	// the theme files, and the folders of icons they use (FijiSun/, FijiMoon/)
+	for (auto it = fs::recursive_directory_iterator(from, ec); !ec && it != fs::recursive_directory_iterator();
+	     it.increment(ec)) {
+		const auto &entry = *it;
+		const auto ext = entry.path().extension();
+		if (!entry.is_regular_file() || (ext != ".obt" && ext != ".ovt" && ext != ".svg"))
 			continue;
-		const fs::path target = to / entry.path().filename();
+		const fs::path target = to / fs::relative(entry.path(), from, ec);
 		const std::string content = ReadAll(entry.path());
-		if (fs::exists(target, ec) && ReadAll(target) == content)
+		const bool existed = fs::exists(target, ec);
+		if (existed && ReadAll(target) == content)
 			continue;
+		fs::create_directories(target.parent_path(), ec);
 		std::ofstream out(target, std::ios::binary | std::ios::trunc);
 		out << content;
-		if (out.good())
+		if (out.good()) {
 			written++;
+			if (!existed && added && ext != ".svg")
+				(*added)++;
+		}
+	}
+
+	// 0.4.0 installed the themes as Yami styles; they are base themes now (same ids), so the old files go
+	for (const char *old : RETIRED) {
+		const fs::path target = to / old;
+		if (fs::exists(target, ec) && !fs::exists(from / old, ec))
+			fs::remove(target, ec);
 	}
 	return written;
 }
@@ -85,7 +111,7 @@ void Install()
 	RegisterFonts();
 
 	// obs_module_file finds files, so ask for one theme and take its folder
-	const fs::path themes = ModuleFile("themes/Fiji_Sun.ovt").parent_path();
+	const fs::path themes = ModuleFile("themes/Fiji_Sun.obt").parent_path();
 	char *config = obs_module_get_config_path(obs_current_module(), "");
 	if (themes.empty() || !config) {
 		bfree(config);
@@ -94,8 +120,23 @@ void Install()
 	const fs::path target = UserThemesDir(fs::u8path(config));
 	bfree(config);
 
-	if (int n = CopyThemes(themes, target))
+	int added = 0;
+	if (int n = CopyThemes(themes, target, &added))
 		blog(LOG_INFO, "[Fiji Suite] installed %d theme file(s) into %s", n, target.u8string().c_str());
+	// OBS lists themes only when it starts, before plugins load: new ones show up after a restart
+	restartNeeded = added > 0;
+}
+
+void ShowRestartNotice(QWidget *parent)
+{
+	if (!restartNeeded)
+		return;
+	restartNeeded = false;
+	auto box = new QMessageBox(QMessageBox::Information, QString::fromUtf8(obs_module_text("ThemesAddedTitle")),
+				   QString::fromUtf8(obs_module_text("ThemesAddedText")), QMessageBox::Ok, parent);
+	box->setAttribute(Qt::WA_DeleteOnClose);
+	box->setModal(false);
+	box->show();
 }
 
 } // namespace FijiLook

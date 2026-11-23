@@ -2,15 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fiji Suite deck editor</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="bar" id="tabs"></div>
+<header class="deck-head">
+  <nav class="deck-tabs" id="tabs" aria-label="Decks"></nav>
+  <div class="deck-actions" id="actions"></div>
+</header>
 <div class="editor">
-  <div class="stage"><div class="deck" id="deck"></div></div>
-  <div class="side" id="side"></div>
+  <main class="deck-body"><div class="keys editing" id="deck"></div></main>
+  <aside class="panel" aria-label="Deck and key settings">
+    <div class="panel-body" id="side"></div>
+    <div class="savebar" id="savebar"></div>
+  </aside>
 </div>
 <input type="file" id="sammi-file" accept=".json,application/json" hidden>
 <script src="fiji.js"></script>

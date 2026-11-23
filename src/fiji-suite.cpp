@@ -512,6 +512,7 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 	UNUSED_PARAMETER(private_data);
 	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 		finished_loading = true;
+		FijiLook::ShowRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()));
 		log_same_sources();
 		struct obs_frontend_source_list transitions = {};
 		obs_frontend_get_transitions(&transitions);

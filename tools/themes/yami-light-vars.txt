@@ -1,0 +1,12 @@
+    /* Yami Light's values (OBS 33), for everything not set below */
+    /* OBS 33 colours its Light rules use; OBS 31 and 32 do not define them */
+    --purple6: #2E1A60;
+    --yellow6: #493709;
+    --bg_window: var(--grey7);
+    --bg_base: var(--grey6);
+    --bg_preview: var(--grey8);
+
+
+
+    --input_bg_hover: var(--grey3);
+    --input_bg_focus: var(--grey3);

@@ -33,6 +33,8 @@ static QByteArray content_type(const QString &name)
 		return "image/svg+xml";
 	} else if (name.endsWith(QStringLiteral(".png"))) {
 		return "image/png";
+	} else if (name.endsWith(QStringLiteral(".webp"))) {
+		return "image/webp";
 	} else if (name.endsWith(QStringLiteral(".woff2"))) {
 		return "font/woff2";
 	}

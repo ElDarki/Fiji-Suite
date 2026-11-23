@@ -57,10 +57,13 @@ ejecutan pasos en OBS, y que se pueden pulsar desde OBS, el navegador o el celul
   Settings.
 
 **Temas Fiji Sun y Fiji Moon**
-- Dos temas para OBS con los colores de Fiji-chan: **Fiji Sun** (arena cálida y verde agua de vidrio de mar) y
-  **Fiji Moon** (índigo de luna con el brillo cálido de un farol), con sus fuentes. Funcionan en OBS 31, 32 y 33.
-- Fiji Suite los copia a la carpeta de temas de OBS. Reinicia OBS una vez después de instalar y elige uno en
-  **Ajustes → Apariencia → Estilo**. Nada cambia hasta que elijas uno.
+- Dos temas para OBS que siguen la guía de estilo de Fiji-chan: **Fiji Sun** (una página de manga en una playa
+  soleada: papel cálido, líneas de tinta, verde agua) y **Fiji Moon** (un lounge de noche: índigo, líneas doradas,
+  títulos en Mincho), con sus fuentes, botones de píldora, pestañas tipo chip y sus casillas. Funcionan en OBS 31,
+  32 y 33.
+- Fiji Suite los copia a la carpeta de temas de OBS. OBS solo busca temas nuevos al abrir, así que reinícialo
+  una vez después de instalar (Fiji Suite te lo recuerda) y elige uno en **Ajustes → Apariencia → Tema**.
+  Nada cambia hasta que elijas uno.
 
 Fiji Suite añade sus propios paneles y menús. No reorganiza la ventana de OBS.
 

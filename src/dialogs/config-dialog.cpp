@@ -1944,19 +1944,10 @@ void OBSBasicSettings::LoadOutputLayout(obs_data_t *settings, QFormLayout *outpu
 	auto advancedGroupLayout = new QVBoxLayout;
 	advancedGroup->setLayout(advancedGroupLayout);
 
-	// Tab widget
-	// 1 = bg for active tab + pane, 2 = inactive tabs, 3 = tab text colour, 4 = border colour for pane
-	auto tabStyles =
-		QString("QTabWidget::pane {  background: %1; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; border-top-right-radius: 4px; margin-top: -1px; padding-top: 8px; border: 1px solid %4; } QTabWidget::tab-bar { margin-bottom: 0; padding-bottom: 0; border-color: %4; } QTabBar::tab { color: %3; padding: 10px; margin-bottom: 0; border: 1px solid %4; } QTabBar::tab:selected { background: %1; font-weight: bold; border-bottom: none; } QTabBar::tab:!selected { background: %2; }")
-			.arg(palette().color(QPalette::ColorRole::Mid).name(QColor::HexRgb),
-			     palette().color(QPalette::ColorRole::Light).name(QColor::HexRgb),
-			     palette().color(QPalette::ColorRole::Text).name(QColor::HexRgb),
-			     palette().color(QPalette::ColorRole::Light).name(QColor::HexRgb));
-
+	// The encoder tabs take their look from the OBS theme (chips in Fiji Sun and Moon).
 	auto advancedTabWidget = new QTabWidget;
 	advancedTabWidget->setContentsMargins(0, 0, 0, 0);
 	advancedTabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-	advancedTabWidget->setStyleSheet(tabStyles);
 	//	advancedTabWidget->setStyleSheet("QTabWidget::tab-bar { border: 1px solid gray; }"
 	//									 "QTabBar::tab { background: gray; color: white; padding: 10px; }"
 	//									 "QTabBar::tab:selected { background: lightgray; }"
