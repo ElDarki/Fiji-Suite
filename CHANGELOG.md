@@ -2,6 +2,17 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.4.0
+
+- **Fiji Sun and Fiji Moon**: two OBS themes in Fiji-chan's colours, with her fonts (Nunito Sans, Zen Maru Gothic).
+  Fiji Suite copies them into your OBS themes folder; restart OBS once, then pick one in **Settings → Appearance**.
+  They work on OBS 31, 32 and 33.
+- The Fiji Suite docks follow whichever OBS theme you use: active output buttons take the theme's colour, like
+  OBS's own controls, and themes can colour the multiview's live border and warnings.
+- The deck pages have Fiji-chan's Sun and Moon looks. They start in Moon when OBS uses a dark theme; the ☀/☾
+  button or `?mood=sun|moon` in the address changes it. Bigger touch targets on phones.
+- New WebSocket request `get_look`.
+
 ## 0.3.0
 
 - Update check: when OBS has finished starting, Fiji Suite asks GitHub once whether a newer release exists and,
