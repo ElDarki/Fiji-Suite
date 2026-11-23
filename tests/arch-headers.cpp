@@ -41,7 +41,7 @@ int main()
 	// The states' transitions get their tests (tests/link-state-test.cpp) with the first feature; until then the
 	// scaffold only declares them, so nothing here may instantiate a class whose methods are not defined yet.
 	check(static_cast<int>(state::LinkStateId::LINKED) == 2, "three link states: STANDALONE, CONNECTING, LINKED");
-	check(std::strcmp(bridge::kContractVersion, "1.0") == 0, "bridge contract version (BRIDGE_CONTRACT.md)");
+	check(std::strcmp(bridge::kContractVersion, "1.1") == 0, "bridge contract version (BRIDGE_CONTRACT.md)");
 	check(bridge::kAckTimeoutMs == 10000, "ACK timeout is 10 s");
 	check(static_cast<int>(bridge::MessageType::SYNC_STATE) == 4, "five message types, in contract order");
 

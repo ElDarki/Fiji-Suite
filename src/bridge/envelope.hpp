@@ -11,7 +11,7 @@
 
 namespace fiji::bridge {
 
-inline constexpr const char *kContractVersion = "1.0";
+inline constexpr const char *kContractVersion = "1.1";
 inline constexpr int kAckTimeoutMs = 10000;
 
 enum class MessageType { COMMAND, EVENT, ACK, HELLO, SYNC_STATE };

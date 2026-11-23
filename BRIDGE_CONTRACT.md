@@ -2,7 +2,7 @@
 
 This file is the **Anti-Corruption Layer (ACL) contract** between the Fiji-chan bot (`twitchbot`) and the Fiji Suite
 OBS plugin (`fiji-suite`). The same file sits at the root of both repositories, byte for byte; a test in each repo
-checks it. Contract version: **1.0**.
+checks it. Contract version: **1.1**.
 
 ## 1. Purpose and boundaries
 
@@ -20,7 +20,7 @@ The plugin dials the bot: `wss://<bot>/m/obs/ws/<overlay token>` (or `ws://` on 
 text frame, JSON-RPC style:
 
 ```json
-{ "version": "1.0", "id": "6f1c…", "type": "COMMAND", "action": "scene.switch", "payload": { "scene": "BRB" } }
+{ "version": "1.1", "id": "6f1c…", "type": "COMMAND", "action": "scene.switch", "payload": { "scene": "BRB" } }
 ```
 
 | Field | Type | Rule |
@@ -69,13 +69,13 @@ dropped and logged once; it never closes the link.
 
 1. The plugin connects and sends first:
    ```json
-   { "version": "1.0", "id": "h-1", "type": "HELLO", "action": "link.hello",
+   { "version": "1.1", "id": "h-1", "type": "HELLO", "action": "link.hello",
      "payload": { "role": "plugin", "app": "fiji-suite", "app_version": "0.6.0",
                   "capabilities": ["scenes", "transitions", "outputs", "output.alerts", "decks", "decks.pages", "chat"] } }
    ```
 2. The bot answers with its own HELLO. `accepted` is the intersection of both lists, in the plugin's order:
    ```json
-   { "version": "1.0", "id": "h-1", "type": "HELLO", "action": "link.hello",
+   { "version": "1.1", "id": "h-1", "type": "HELLO", "action": "link.hello",
      "payload": { "role": "bot", "app": "fiji-chan", "app_version": "1.4.0",
                   "capabilities": ["scenes", "transitions", "outputs", "output.alerts", "decks", "decks.pages", "chat", "triggers"],
                   "accepted": ["scenes", "transitions", "outputs", "output.alerts", "decks", "decks.pages", "chat"] } }
@@ -106,15 +106,19 @@ deltas on top of it; a receiver that misses one asks for a new snapshot instead 
 ```json
 { "version": "1.0", "id": "s-1", "type": "SYNC_STATE", "action": "state.snapshot",
   "payload": {
-    "canvases": [ { "canvas": "Main", "program": "Just chatting", "preview": null, "studio_mode": false,
+    "canvases": [ { "canvas": "Main", "main": true, "program": "Just chatting", "preview": null, "studio_mode": false,
                     "scenes": ["Starting soon", "Just chatting", "BRB"], "transitions": ["Fade", "Cut"] } ],
-    "outputs":  [ { "output": "Twitch", "kind": "stream", "canvas": "Main", "group": "Main",
-                    "state": "ACTIVE", "dropped_frames": 0, "total_frames": 18000 } ],
+    "outputs":  [ { "output": "Twitch", "kind": "stream", "canvas": "Main", "group": "Main", "main": true,
+                    "state": "ACTIVE", "uptime": 300, "dropped_frames": 0, "total_frames": 18000 } ],
     "decks":    [ { "id": "d1", "name": "Stream", "buttons": 15 } ],
     "running":  ["b7"] } }
 ```
 
 `state` of an output is one of `IDLE`, `STARTING`, `ACTIVE`, `RECONNECTING`, `STOPPING`, `FAILED`.
+
+Optional fields (1.1): `main` is true for OBS's own main canvas and for the outputs OBS itself owns (its stream,
+recording, replay buffer and virtual camera); left out means false. `uptime` is how many whole seconds an output has
+been active when the snapshot was taken; left out means 0.
 
 ## 5. Action catalogue
 
@@ -132,8 +136,9 @@ Direction: **B→P** bot to plugin, **P→B** plugin to bot.
 
 | Action | Type | Dir | Payload | ACK result |
 |---|---|---|---|---|
-| `scene.switch` | COMMAND | B→P | `scene`, `canvas`? (all canvases when left out) | `{}` |
+| `scene.switch` | COMMAND | B→P | `scene`, `canvas`? (the main canvas when left out) | `{}` |
 | `transition.set` | COMMAND | B→P | `canvas`, `transition` | `{}` |
+| `transition.run` | COMMAND | B→P | `canvas` (studio mode: puts the canvas's preview on program) | `{}` |
 | `scene.program` | EVENT | P→B | `canvas`, `scene`, `previous` | n/a |
 | `scene.list` | EVENT | P→B | `canvas`, `scenes` | n/a |
 
@@ -141,10 +146,13 @@ Direction: **B→P** bot to plugin, **P→B** plugin to bot.
 
 | Action | Type | Dir | Payload | ACK result |
 |---|---|---|---|---|
-| `output.start` | COMMAND | B→P | `target`: an output name, a group name, or `stream` \| `record` \| `backtrack` \| `virtual_cam` | `{ "started": [names] }` |
+| `output.start` | COMMAND | B→P | `target`: an output name, a group name, `stream` \| `record` \| `backtrack` \| `virtual_cam`, or `all` | `{ "started": [names] }` |
 | `output.stop` | COMMAND | B→P | `target` as above | `{ "stopped": [names] }` |
 | `output.state` | EVENT | P→B | `output`, `kind`, `state`, `error`? | n/a |
 | `output.dropped` | EVENT | P→B | `output`, `dropped_frames`, `total_frames` | n/a |
+
+`output.dropped` is sent about every 15 seconds for each active output. Its counts are cumulative since the output
+started; the bot works out the share dropped between two reports.
 
 ### decks (`decks`, `decks.pages`, `triggers`)
 
@@ -176,7 +184,7 @@ Both ACLs and both test suites read this block. It must stay in step with the ta
 
 ```json bridge-contract
 {
-  "version": "1.0",
+  "version": "1.1",
   "types": ["COMMAND", "EVENT", "ACK", "HELLO", "SYNC_STATE"],
   "errors": ["BAD_REQUEST", "UNKNOWN_ACTION", "NOT_FOUND", "BUSY", "OBS_ERROR", "TIMEOUT", "NOT_LINKED"],
   "output_states": ["IDLE", "STARTING", "ACTIVE", "RECONNECTING", "STOPPING", "FAILED"],
@@ -193,6 +201,8 @@ Both ACLs and both test suites read this block. It must stay in step with the ta
                        "payload": {"required": ["scene"], "optional": ["canvas"]}, "result": []},
     "transition.set": {"type": "COMMAND", "dir": "B>P", "capability": "transitions",
                        "payload": {"required": ["canvas", "transition"], "optional": []}, "result": []},
+    "transition.run": {"type": "COMMAND", "dir": "B>P", "capability": "transitions",
+                       "payload": {"required": ["canvas"], "optional": []}, "result": []},
     "scene.program":  {"type": "EVENT", "dir": "P>B", "capability": "scenes",
                        "payload": {"required": ["canvas", "scene"], "optional": ["previous"]}},
     "scene.list":     {"type": "EVENT", "dir": "P>B", "capability": "scenes",
@@ -252,15 +262,19 @@ Both ACLs and both test suites read this block. It must stay in step with the ta
 Up to plugin 0.5.x the link carries the plugin's obs-websocket-style messages: `{type: "request", id, request, data}`
 answered by `{type: "response", …}`, raw events (`switch_scene`, `stop_output`, `button_state`, `say`, …) and
 `get_status` polling. The bot's ACL keeps a `legacy_v0` translator that maps those to the same domain calls and events
-until plugin 0.6.0 (the first to send HELLO) is installed; a plugin that does not send HELLO within 5 seconds is
-treated as contract 0. Support for contract 0 is removed in a later release and noted in both changelogs.
+until plugin 0.6.0 (the first to send HELLO) is installed. The bot decides on the plugin's first frame: a HELLO
+envelope means contract 1.x; a contract-0 frame (contract-0 plugins open with `{type: "hello", plugin, version}`)
+means contract 0; and 5 seconds of silence also means contract 0. Support for contract 0 is removed in a later
+release and noted in both changelogs.
 
 | Contract 0 | Contract 1.0 |
 |---|---|
-| `switch_scene` request | `scene.switch` |
+| `switch_scene` / `set_main_scene` request | `scene.switch` (with / without `canvas`) |
 | `switch_transition` request | `transition.set` |
-| `start_main` / `start_output` / `start_group` | `output.start` |
-| `stop_main` / `stop_output` / `stop_group` | `output.stop` |
+| `transition` request | `transition.run` |
+| `start_main` / `start_output` / `start_group` / `start_all_outputs` | `output.start` |
+| `stop_main` / `stop_output` / `stop_group` / `stop_all_outputs` | `output.stop` |
+| `get_deck_state` | the SYNC_STATE `running` list plus `deck.key` events |
 | `get_decks`, `press_button`, `release_button`, `stop_button`, `save_deck`, `delete_deck` | `deck.list`, `deck.press`, `deck.release`, `deck.stop`, `deck.save`, `deck.delete` |
 | `get_web_file`, `get_look` | `deck.file`, `look.get` |
 | `get_triggers`, `fire_trigger` | `deck.triggers`, `deck.fire` |
@@ -272,3 +286,4 @@ treated as contract 0. Support for contract 0 is removed in a later release and 
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-23 | First contract: envelope, HELLO with capabilities, SYNC_STATE, catalogue, contract-0 migration table. |
+| 1.1 | 2026-11-23 | `transition.run`; `scene.switch` without `canvas` means the main canvas; `main` and `uptime` in SYNC_STATE; `all` as an output target; `output.dropped` cadence; how the bot tells contract 0 from 1.x. |
