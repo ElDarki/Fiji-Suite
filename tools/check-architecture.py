@@ -35,6 +35,9 @@ LEGACY = {
     "src/utils",
 }
 
+# Files the build writes into src/ (CMake's configure_file); never committed (.gitignore).
+GENERATED = {"version.h"}
+
 LIBOBS = re.compile(r'#\s*include\s*[<"](obs[^>"]*\.h|util/[^>"]+|graphics/[^>"]+|callback/[^>"]+|media-io/[^>"]+)[>"]')
 WIDGETS = re.compile(r'#\s*include\s*[<"](QtWidgets/[^>"]*|Q(Widget|Dialog|DockWidget|MainWindow|Label|PushButton|'
                      r'Layout|HBoxLayout|VBoxLayout|GridLayout|Menu|Action|ToolButton|LineEdit|ComboBox|CheckBox|'
@@ -104,7 +107,7 @@ def check_legacy(errors: list[str]) -> None:
     for entry in sorted(LEGACY):
         if not (ROOT / entry).exists():
             errors.append(f"{entry} no longer exists: remove it from LEGACY in tools/check-architecture.py")
-    known = set(LAYERS) | {Path(e).name for e in LEGACY}
+    known = set(LAYERS) | {Path(e).name for e in LEGACY} | GENERATED
     for child in sorted(SRC.iterdir()):
         if child.name not in known:
             errors.append(f"src/{child.name} is neither a layer ({', '.join(LAYERS)}) nor legacy; put new code in a layer")
@@ -139,6 +142,8 @@ def check_contract(errors: list[str]) -> None:
 
 def self_test() -> None:
     """The patterns catch what they should (guards the guard)."""
+    ignored = (ROOT / ".gitignore").read_text(encoding="utf-8").split()
+    assert all(name in ignored for name in GENERATED), "a GENERATED file must be in .gitignore"
     assert LIBOBS.search('#include <obs.h>') and LIBOBS.search('#include <obs-frontend-api.h>')
     assert LIBOBS.search('#include <util/config-file.h>') and not LIBOBS.search('#include <QObject>')
     assert WIDGETS.search('#include <QWidget>') and WIDGETS.search('#include <QtWidgets/QLabel>')
