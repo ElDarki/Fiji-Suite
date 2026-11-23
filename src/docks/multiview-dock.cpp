@@ -41,9 +41,9 @@ CanvasTile::CanvasTile(obs_canvas_t *canvas_, const QString &dockName_, CanvasDo
 	  chipsLayout(new QVBoxLayout)
 {
 	setObjectName(QStringLiteral("canvasTile"));
-	// the border is the on-air light: red while any output on this canvas is live
-	setStyleSheet(QStringLiteral("#canvasTile{border:2px solid transparent;border-radius:4px;}"
-				     "#canvasTile[live=\"true\"]{border-color:#d92c2c;}"));
+	// the border is the on-air light: liveColor (red unless the theme says otherwise) while any output on this
+	// canvas is live
+	ApplyBorderStyle();
 	setProperty("live", false);
 
 	auto layout = new QVBoxLayout;
@@ -134,6 +134,32 @@ static QIcon output_icon(const OutputState &s)
 	return getPlatformIconFromEndpoint(s.server);
 }
 
+void CanvasTile::ApplyBorderStyle()
+{
+	setStyleSheet(QStringLiteral("#canvasTile{border:2px solid transparent;border-radius:4px;}"
+				     "#canvasTile[live=\"true\"]{border-color:%1;}")
+			      .arg(liveColor.name()));
+}
+
+void CanvasTile::SetLiveColor(const QColor &color)
+{
+	if (!color.isValid() || color == liveColor)
+		return;
+	liveColor = color;
+	ApplyBorderStyle();
+}
+
+void CanvasTile::SetWarningColor(const QColor &color)
+{
+	if (!color.isValid() || color == warningColor)
+		return;
+	warningColor = color;
+	for (auto &entry : chips) {
+		if (!entry.second.text->styleSheet().isEmpty())
+			entry.second.text->setStyleSheet(QStringLiteral("color:%1;").arg(warningColor.name()));
+	}
+}
+
 void CanvasTile::UpdateOutputs(const std::vector<OutputState> &states)
 {
 	UpdateTitle();
@@ -218,7 +244,7 @@ void CanvasTile::UpdateOutputs(const std::vector<OutputState> &states)
 		if (chip.text->text() != text) {
 			chip.text->setText(text);
 		}
-		const auto style = warning ? QStringLiteral("color:#e0a000;") : QString();
+		const auto style = warning ? QStringLiteral("color:%1;").arg(warningColor.name()) : QString();
 		if (chip.text->styleSheet() != style) {
 			chip.text->setStyleSheet(style);
 		}

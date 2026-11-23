@@ -107,3 +107,9 @@ QDockWidget {
 .text-danger {
     color: #bd2748;
 }
+
+/* Fiji Suite's multiview: the on-air border and the dropped-frames warning */
+CanvasTile {
+    qproperty-liveColor: #c8243f;
+    qproperty-warningColor: #8f5000;
+}

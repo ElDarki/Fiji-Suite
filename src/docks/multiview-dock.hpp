@@ -5,6 +5,7 @@
 #include <map>
 #include <obs.hpp>
 #include <QElapsedTimer>
+#include <QColor>
 #include <QFrame>
 #include <QGridLayout>
 #include <QLabel>
@@ -15,8 +16,12 @@
 class CanvasDock;
 
 // One canvas in the multiview: its live program picture and the outputs it feeds.
+// The live border and the warning text colours can be set by a theme, the way OBS themes colour the volume meter:
+//   CanvasTile { qproperty-liveColor: #c8243f; qproperty-warningColor: #8f5000; }
 class CanvasTile : public QFrame {
 	Q_OBJECT
+	Q_PROPERTY(QColor liveColor READ LiveColor WRITE SetLiveColor DESIGNABLE true)
+	Q_PROPERTY(QColor warningColor READ WarningColor WRITE SetWarningColor DESIGNABLE true)
 private:
 	struct Chip {
 		QWidget *row = nullptr;
@@ -34,6 +39,10 @@ private:
 	QPointer<CanvasDock> canvasDock;
 	bool mainCanvas;
 	bool live = false;
+	QColor liveColor{0xd9, 0x2c, 0x2c};
+	QColor warningColor{0xe0, 0xa0, 0x00};
+
+	void ApplyBorderStyle();
 
 	OBSQTDisplay *display;
 	QLabel *title;
@@ -53,6 +62,11 @@ public:
 	~CanvasTile();
 
 	void UpdateOutputs(const std::vector<OutputState> &states);
+
+	QColor LiveColor() const { return liveColor; }
+	void SetLiveColor(const QColor &color);
+	QColor WarningColor() const { return warningColor; }
+	void SetWarningColor(const QColor &color);
 };
 
 // Shows every canvas side by side. Used as a dock, and as a borderless window for a spare monitor.

@@ -151,7 +151,6 @@ OutputDock::OutputDock(QWidget *parent) : QFrame(parent)
 	mainStreamButton->setObjectName(QStringLiteral("canvasStream"));
 	mainStreamButton->setMinimumHeight(30);
 	mainStreamButton->setIcon(create2StateIcon(":/fiji/media/streaming.svg", ":/fiji/media/stream.svg"));
-	mainStreamButton->setStyleSheet("QAbstractButton:checked{background: rgb(0,210,153);}");
 	mainStreamButton->setCheckable(true);
 	mainStreamButton->setChecked(false);
 
@@ -212,7 +211,6 @@ OutputDock::OutputDock(QWidget *parent) : QFrame(parent)
 	mainRecordButton->setObjectName(QStringLiteral("canvasRecord"));
 	mainRecordButton->setMinimumHeight(30);
 	mainRecordButton->setIcon(create2StateIcon(":/fiji/media/recording.svg", ":/fiji/media/record.svg"));
-	mainRecordButton->setStyleSheet("QAbstractButton:checked{background: rgb(255,0,0);}");
 	mainRecordButton->setCheckable(true);
 	mainRecordButton->setChecked(false);
 	QObject::connect(mainRecordButton, SIGNAL(clicked()), main_window, SLOT(RecordActionTriggered()));
@@ -234,7 +232,7 @@ OutputDock::OutputDock(QWidget *parent) : QFrame(parent)
 	mainBacktrackCheckboxButton = new QPushButton;
 	mainBacktrackCheckboxButton->setCheckable(true);
 	mainBacktrackCheckboxButton->setStyleSheet(QString::fromUtf8(
-		"QPushButton:checked{background: rgb(26,87,255);} QPushButton{ border-top-right-radius: 0; border-bottom-right-radius: 0; width: 32px; padding-left: 0px; padding-right: 0px;}"));
+		"QPushButton{ border-top-right-radius: 0; border-bottom-right-radius: 0; width: 32px; padding-left: 0px; padding-right: 0px;}"));
 
 	auto buttonLayout = new QHBoxLayout;
 	mainBacktrackCheckboxButton->setLayout(buttonLayout);
@@ -247,7 +245,7 @@ OutputDock::OutputDock(QWidget *parent) : QFrame(parent)
 	mainBacktrackButton->setMinimumHeight(30);
 	mainBacktrackButton->setIcon(create2StateIcon(":/fiji/media/backtrack_on.svg", ":/fiji/media/backtrack_off.svg"));
 	mainBacktrackButton->setStyleSheet(
-		"QPushButton:checked{background: rgb(26,87,255);} QPushButton{min-width: 32px; padding-left: 0px; padding-right: 0px; border-top-left-radius: 0; border-bottom-left-radius: 0;}");
+		"QPushButton{min-width: 32px; padding-left: 0px; padding-right: 0px; border-top-left-radius: 0; border-bottom-left-radius: 0;}");
 	mainBacktrackButton->setCheckable(true);
 	mainBacktrackButton->setChecked(false);
 	QObject::connect(mainBacktrackButton, &QPushButton::clicked, [this] {
@@ -304,7 +302,6 @@ OutputDock::OutputDock(QWidget *parent) : QFrame(parent)
 	mainVirtualCamButton->setObjectName(QStringLiteral("canvasVirtualCamera"));
 	mainVirtualCamButton->setMinimumHeight(30);
 	mainVirtualCamButton->setIcon(create2StateIcon(":/fiji/media/virtual_cam_on.svg", ":/fiji/media/virtual_cam_off.svg"));
-	mainVirtualCamButton->setStyleSheet("QAbstractButton:checked{background: rgb(192,128,0);}");
 	mainVirtualCamButton->setCheckable(true);
 	mainVirtualCamButton->setChecked(false);
 

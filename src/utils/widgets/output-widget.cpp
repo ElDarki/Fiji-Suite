@@ -52,7 +52,6 @@ OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(pa
 
 	if (strcmp(output_type, "record") == 0) {
 		outputButton->setIcon(create2StateIcon(":/fiji/media/recording.svg", ":/fiji/media/record.svg"));
-		outputButton->setStyleSheet("QAbstractButton:checked{background: rgb(255,0,0);}");
 		outputButton->setToolTip(QString::fromUtf8(obs_module_text("Record")));
 
 		std::string splitName = "FijiSuiteSplit";
@@ -157,7 +156,7 @@ OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(pa
 
 	} else if (strcmp(output_type, "backtrack") == 0) {
 		outputButton->setStyleSheet(QString::fromUtf8(
-			"QPushButton:checked{background: rgb(26,87,255);} QPushButton{ border-top-right-radius: 0; border-bottom-right-radius: 0; width: 32px; padding-left: 0px; padding-right: 0px;}"));
+			"QPushButton{ border-top-right-radius: 0; border-bottom-right-radius: 0; width: 32px; padding-left: 0px; padding-right: 0px;}"));
 
 		auto replayEnable = new QCheckBox;
 		auto testl = new QHBoxLayout;
@@ -179,7 +178,7 @@ OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(pa
 		extraButton->setCheckable(true);
 		extraButton->setIcon(create2StateIcon(":/fiji/media/backtrack_on.svg", ":/fiji/media/backtrack_off.svg"));
 		extraButton->setStyleSheet(QString::fromUtf8(
-			"QPushButton:checked{background: rgb(26,87,255);} QPushButton{min-width: 32px; padding-left: 0px; padding-right: 0px; border-top-left-radius: 0; border-bottom-left-radius: 0;}"));
+			"QPushButton{min-width: 32px; padding-left: 0px; padding-right: 0px; border-top-left-radius: 0; border-bottom-left-radius: 0;}"));
 		extraButton->setToolTip(QString::fromUtf8(obs_module_text("SaveBacktrack")));
 
 		connect(extraButton, &QPushButton::clicked, [this] {
@@ -219,15 +218,12 @@ OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(pa
 
 	} else if (strcmp(output_type, "virtual_cam") == 0) {
 		outputButton->setIcon(create2StateIcon(":/fiji/media/virtual_cam_on.svg", ":/fiji/media/virtual_cam_off.svg"));
-		outputButton->setStyleSheet("QAbstractButton:checked{background: rgb(192,128,0);}");
 		outputButton->setToolTip(QString::fromUtf8(obs_module_text("VirtualCamera")));
 	} else if (strcmp(output_type, "ffmpeg") == 0) {
 		outputButton->setIcon(create2StateIcon(":/fiji/media/ffmpeg_on.svg", ":/fiji/media/ffmpeg_off.svg"));
-		outputButton->setStyleSheet("QAbstractButton:checked{background: rgb(0,135,0);}");
 		outputButton->setToolTip(QString::fromUtf8(obs_module_text("Ffmpeg")));
 	} else {
 		outputButton->setIcon(create2StateIcon(":/fiji/media/streaming.svg", ":/fiji/media/stream.svg"));
-		outputButton->setStyleSheet("QAbstractButton:checked{background: rgb(0,210,153);}");
 		outputButton->setToolTip(QString::fromUtf8(obs_module_text("Stream")));
 	}
 	outputButton->setCheckable(true);
