@@ -2,7 +2,7 @@
 #include "decks/local-server.hpp"
 #include <QDesktopServices>
 #include <QUrl>
-#include "dialogs/name-dialog.hpp"
+#include "view/name-dialog.hpp"
 #include "docks/canvas-clone-dock.hpp"
 #include "docks/canvas-dock.hpp"
 #include "docks/capture-dock.hpp"

@@ -1,4 +1,4 @@
-#include "../dialogs/name-dialog.hpp"
+#include "../view/name-dialog.hpp"
 #include "../utils/widgets/focus-scroll-spinbox.hpp"
 #include "transitions-dock.hpp"
 #include <obs.hpp>
@@ -109,7 +109,7 @@ TransitionsDock::TransitionsDock(QWidget *parent) : QFrame(parent)
 				if (t) {
 					std::string name = obs_source_get_name(t);
 					while (true) {
-						if (!NameDialog::AskForName(
+						if (!fiji::view::NameDialog::AskForName(
 							    this, QString::fromUtf8(obs_module_text("TransitionName")), name)) {
 							obs_source_release(t);
 							return;
@@ -223,7 +223,7 @@ TransitionsDock::TransitionsDock(QWidget *parent) : QFrame(parent)
 			}
 			std::string name = obs_source_get_name(t);
 			while (true) {
-				if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("TransitionName")), name)) {
+				if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("TransitionName")), name)) {
 					return;
 				}
 				if (name.empty()) {

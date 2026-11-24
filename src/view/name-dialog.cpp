@@ -1,8 +1,9 @@
 #include "name-dialog.hpp"
 
+#include <QDialogButtonBox>
 #include <QVBoxLayout>
 
-#include "obs-module.h"
+namespace fiji::view {
 
 NameDialog::NameDialog(QWidget *parent, const QString &title) : QDialog(parent)
 {
@@ -24,20 +25,19 @@ NameDialog::NameDialog(QWidget *parent, const QString &title) : QDialog(parent)
 	connect(buttonbox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
-static bool IsWhitespace(char ch)
+std::string NameDialog::CleanName(std::string str)
 {
-	return ch == ' ' || ch == '\t';
-}
-
-static void CleanWhitespace(std::string &str)
-{
-	while (!str.empty() && IsWhitespace(str.back()))
+	auto isWhitespace = [](char ch) {
+		return ch == ' ' || ch == '\t';
+	};
+	while (!str.empty() && isWhitespace(str.back()))
 		str.erase(str.end() - 1);
-	while (!str.empty() && IsWhitespace(str.front()))
+	while (!str.empty() && isWhitespace(str.front()))
 		str.erase(str.begin());
+	return str;
 }
 
-bool NameDialog::AskForName(QWidget *parent, const QString &title, std::string &name)
+bool fiji::view::NameDialog::AskForName(QWidget *parent, const QString &title, std::string &name)
 {
 	NameDialog dialog(parent, title);
 	dialog.userText->setMaxLength(170);
@@ -47,7 +47,8 @@ bool NameDialog::AskForName(QWidget *parent, const QString &title, std::string &
 	if (dialog.exec() != DialogCode::Accepted) {
 		return false;
 	}
-	name = dialog.userText->text().toUtf8().constData();
-	CleanWhitespace(name);
+	name = CleanName(dialog.userText->text().toUtf8().constData());
 	return true;
 }
+
+} // namespace fiji::view

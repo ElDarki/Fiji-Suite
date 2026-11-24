@@ -16,7 +16,7 @@
 #include <src/utils/icon.hpp>
 #include <QContextMenuEvent>
 #include <QMenu>
-#include <src/dialogs/name-dialog.hpp>
+#include "../../view/name-dialog.hpp"
 #include <src/docks/output-dock.hpp>
 #include <src/utils/obs-websocket-api.h>
 #include <util/config-file.h>
@@ -1617,7 +1617,7 @@ void OutputWidget::contextMenuEvent(QContextMenuEvent *event)
 	groupMenu->addSeparator();
 	groupMenu->addAction(QString::fromUtf8(obs_module_text("OutputGroupNew")), [this, setGroup] {
 		std::string name;
-		if (NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("OutputGroupName")), name) && !name.empty()) {
+		if (fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("OutputGroupName")), name) && !name.empty()) {
 			setGroup(QString::fromUtf8(name.c_str()).trimmed());
 		}
 	});

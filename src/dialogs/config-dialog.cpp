@@ -46,7 +46,7 @@
 #ifndef _WIN32
 #include <dlfcn.h>
 #endif
-#include "name-dialog.hpp"
+#include "../view/name-dialog.hpp"
 
 extern bool isTwitchServer(QString outputServer);
 
@@ -1692,7 +1692,7 @@ void OBSBasicSettings::AddOutput(QFormLayout *outputsLayout, obs_data_t *setting
 		} else if (strcmp(output_type, "virtual_cam") == 0) {
 			std::string name = obs_module_text("VirtualCamera");
 			while (true) {
-				if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("OutputName")), name)) {
+				if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("OutputName")), name)) {
 					break;
 				}
 
@@ -2868,7 +2868,7 @@ void OBSBasicSettings::AddVirtualCam()
 
 	std::string name = obs_module_text("VirtualCamera");
 	while (true) {
-		if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("OutputName")), name)) {
+		if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("OutputName")), name)) {
 			break;
 		}
 

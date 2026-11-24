@@ -1,4 +1,4 @@
-#include "../dialogs/name-dialog.hpp"
+#include "../view/name-dialog.hpp"
 #include "canvas-dock.hpp"
 #include "scenes-dock.hpp"
 #include "sources-dock.hpp"
@@ -150,7 +150,7 @@ ScenesDock::ScenesDock(QWidget *parent) : QFrame(parent)
 		obs_source_t *s = nullptr;
 		do {
 			obs_source_release(s);
-			if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
+			if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
 				break;
 			}
 			s = obs_canvas_get_source_by_name(c, name.c_str());
@@ -509,7 +509,7 @@ void ScenesDock::ShowScenesContextMenu(QListWidgetItem *widget_item)
 		obs_source_t *s = nullptr;
 		do {
 			obs_source_release(s);
-			if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
+			if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
 				break;
 			}
 			s = obs_canvas_get_source_by_name(c, name.c_str());
@@ -851,7 +851,7 @@ void ScenesDock::AddScene(QString duplicate, bool ask_name)
 	}
 	do {
 		obs_source_release(s);
-		if (ask_name && !NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
+		if (ask_name && !fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
 			break;
 		}
 		s = obs_canvas_get_source_by_name(c, name.c_str());

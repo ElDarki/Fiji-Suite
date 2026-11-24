@@ -6,7 +6,7 @@
 #include <QMenu>
 #include <QToolBar>
 #include <QVBoxLayout>
-#include <src/dialogs/name-dialog.hpp>
+#include "../view/name-dialog.hpp"
 #include <src/utils/widgets/visibility-item-widget.hpp>
 
 extern PropertiesDock *properties_dock;
@@ -310,7 +310,7 @@ void FiltersDock::RenameFilter(QListWidgetItem *item)
 	obs_source_t *f = nullptr;
 	do {
 		obs_source_release(f);
-		if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("FilterName")), name)) {
+		if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("FilterName")), name)) {
 			break;
 		}
 		auto s = obs_weak_source_get_source(source);

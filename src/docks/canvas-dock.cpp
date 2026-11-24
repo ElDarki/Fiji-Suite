@@ -1,5 +1,5 @@
 #include "../utils/fiji-events.hpp"
-#include "../dialogs/name-dialog.hpp"
+#include "../view/name-dialog.hpp"
 #include "../utils/color.hpp"
 #include "../utils/icon.hpp"
 #include "../utils/widgets/focus-scroll-spinbox.hpp"
@@ -559,7 +559,7 @@ void CanvasDock::LoadUI()
 			obs_source_t *s = nullptr;
 			do {
 				obs_source_release(s);
-				if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
+				if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
 					break;
 				}
 				s = obs_canvas_get_source_by_name(canvas, name.c_str());
@@ -675,7 +675,7 @@ void CanvasDock::LoadUI()
 		obs_source_t *s = nullptr;
 		do {
 			obs_source_release(s);
-			if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SourceName")), name)) {
+			if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SourceName")), name)) {
 				break;
 			}
 
@@ -937,7 +937,7 @@ void CanvasDock::LoadUI()
 					if (t) {
 						std::string name = obs_source_get_name(t);
 						while (true) {
-							if (!NameDialog::AskForName(
+							if (!fiji::view::NameDialog::AskForName(
 								    this, QString::fromUtf8(obs_module_text("TransitionName")),
 								    name)) {
 								obs_source_release(t);
@@ -1033,7 +1033,7 @@ void CanvasDock::LoadUI()
 				}
 				std::string name = obs_source_get_name(t);
 				while (true) {
-					if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("TransitionName")),
+					if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("TransitionName")),
 								    name)) {
 						return;
 					}
@@ -2485,7 +2485,7 @@ void CanvasDock::AddScene(QString duplicate, bool ask_name)
 	}
 	do {
 		obs_source_release(s);
-		if (ask_name && !NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
+		if (ask_name && !fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
 			break;
 		}
 		s = obs_canvas_get_source_by_name(canvas, name.c_str());
@@ -3156,7 +3156,7 @@ void CanvasDock::ShowScenesContextMenu(QListWidgetItem *widget_item)
 		obs_source_t *s = nullptr;
 		do {
 			obs_source_release(s);
-			if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
+			if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SceneName")), name)) {
 				break;
 			}
 			s = obs_canvas_get_source_by_name(canvas, name.c_str());
@@ -3445,7 +3445,7 @@ void CanvasDock::AddSceneItemMenuItems(QMenu *popup, OBSSceneItem sceneItem)
 		obs_source_t *s = nullptr;
 		do {
 			obs_source_release(s);
-			if (!NameDialog::AskForName(qobject_cast<QWidget *>(parent),
+			if (!fiji::view::NameDialog::AskForName(qobject_cast<QWidget *>(parent),
 						    QString::fromUtf8(obs_module_text("SourceName")), name)) {
 				break;
 			}

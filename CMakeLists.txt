@@ -112,8 +112,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/dialogs/config-dialog.hpp
   src/dialogs/ffmpeg-output-dialog.cpp
   src/dialogs/ffmpeg-output-dialog.hpp
-  src/dialogs/name-dialog.cpp
-  src/dialogs/name-dialog.hpp
   src/dialogs/record-output-dialog.cpp
   src/dialogs/record-output-dialog.hpp
   src/dialogs/stream-output-dialog.cpp
@@ -170,9 +168,15 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/profile-file.cpp
   src/obs/profile-file.hpp
   src/obs/request-obs-api.cpp
-  src/obs/request-obs-api.hpp
+  src/obs/request-obs-api.hpp)
+
+# The VIEW layer: Qt Widgets, no libobs (tests/view-test.cpp builds them alone).
+set(FIJI_VIEW_SOURCES
+  src/view/name-dialog.cpp
+  src/view/name-dialog.hpp
   src/view/restart-notice.cpp
   src/view/restart-notice.hpp)
+target_sources(${PROJECT_NAME} PRIVATE ${FIJI_VIEW_SOURCES})
 
 target_sources(${PROJECT_NAME} PRIVATE
   src/utils/fiji-events.hpp
@@ -240,7 +244,7 @@ if(BUILD_OUT_OF_TREE)
   # The MVC + State layers (CLAUDE.md) with Qt Core alone: every header compiles (fiji-arch-test), and the link
   # state machine, dispatcher and bridge ACL work against a fake ObsApi (fiji-core-test). Plus the include rules and
   # the bridge contract check. Build the test targets, then run them all:
-  #   cmake --build build_x86_64 --target fiji-arch-test fiji-core-test decks-engine-test && ctest --test-dir build_x86_64
+  #   cmake --build build_x86_64 --target fiji-arch-test fiji-core-test fiji-view-test decks-engine-test && ctest --test-dir build_x86_64
   add_executable(fiji-arch-test tests/arch-headers.cpp ${FIJI_CORE_SOURCES})
   target_link_libraries(fiji-arch-test PRIVATE Qt::Core)
   set_target_properties(fiji-arch-test PROPERTIES EXCLUDE_FROM_ALL ON AUTOMOC ON)
@@ -254,6 +258,12 @@ if(BUILD_OUT_OF_TREE)
   add_test(NAME architecture-headers COMMAND fiji-arch-test)
   add_test(NAME core COMMAND fiji-core-test)
   set_tests_properties(core PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
+  add_executable(fiji-view-test tests/view-test.cpp ${FIJI_VIEW_SOURCES})
+  target_link_libraries(fiji-view-test PRIVATE Qt::Core Qt::Widgets)
+  set_target_properties(fiji-view-test PROPERTIES EXCLUDE_FROM_ALL ON AUTOMOC ON)
+  add_test(NAME view COMMAND fiji-view-test)
+  # no session bus: Qt would wait for the desktop settings portal (25 s inside the Flatpak build shell)
+  set_tests_properties(view PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;DBUS_SESSION_BUS_ADDRESS=disabled:")
   if(Python3_Interpreter_FOUND)
     add_test(NAME architecture-rules COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/check-architecture.py)
   endif()

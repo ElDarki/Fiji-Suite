@@ -1,4 +1,4 @@
-#include "../dialogs/name-dialog.hpp"
+#include "../view/name-dialog.hpp"
 #include "canvas-dock.hpp"
 #include "sources-dock.hpp"
 #include <obs-module.h>
@@ -68,7 +68,7 @@ SourcesDock::SourcesDock(QWidget *parent) : QFrame(parent)
 		obs_source_t *s = nullptr;
 		do {
 			obs_source_release(s);
-			if (!NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SourceName")), name)) {
+			if (!fiji::view::NameDialog::AskForName(this, QString::fromUtf8(obs_module_text("SourceName")), name)) {
 				break;
 			}
 

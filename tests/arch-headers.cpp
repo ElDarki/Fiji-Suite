@@ -1,5 +1,6 @@
 // Architecture scaffold check (target fiji-arch-test). Includes every header of the MVC + State layers so they keep
-// compiling with Qt Core alone (no obs.h, no widgets), and pins the few constants the layers agree on.
+// compiling with Qt Core alone (no obs.h, no widgets), and pins the few constants the layers agree on. Views built on
+// widgets are compiled and tested by fiji-view-test (tests/view-test.cpp).
 // Exit code 0 means every check passed.
 
 #include "../src/bridge/bot-link.hpp"
