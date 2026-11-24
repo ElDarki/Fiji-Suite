@@ -64,12 +64,19 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           cmake --install build_x64 --config RelWithDebInfo --prefix stage
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Package
+      - name: Package (MSI installer)
+        # WiX v5 builds an .msi that installs into C:\ProgramData\obs-studio\plugins\fiji-suite (build-aux/windows).
         shell: pwsh
         run: |
           if (-not (Test-Path stage/fiji-suite/bin/64bit/fiji-suite.dll)) { throw 'fiji-suite.dll missing from the install' }
+          dotnet tool install --global wix --version 5.0.2
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           New-Item -ItemType Directory -Force out | Out-Null
-          Compress-Archive -Path stage/fiji-suite -DestinationPath "out/fiji-suite-${{ needs.version.outputs.version }}-windows-x64.zip"
+          wix build build-aux/windows/fiji-suite.wxs -arch x64 `
+            -d Version=${{ needs.version.outputs.version }} -d Stage=stage\fiji-suite `
+            -o "out/fiji-suite-${{ needs.version.outputs.version }}-windows-x64.msi"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Remove-Item out/*.wixpdb -ErrorAction SilentlyContinue
       - uses: actions/upload-artifact@v7
         with:
           name: windows

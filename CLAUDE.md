@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Fiji Suite: an OBS Studio plugin (C++17, Qt 6, libobs, OBS 31+) with extra docks (canvases, outputs, scenes, sources,
+Fiji Suite: an OBS Studio plugin (C++17, Qt 6, libobs, OBS 33+) with extra docks (canvases, outputs, scenes, sources,
 stats…), stream decks served as web pages, the Fiji Sun / Fiji Moon themes, and an optional link to the Fiji-chan
 Twitch bot (`../twitchbot`). `README.md` is the user guide; `docs/websocket.md`, `docs/decks.md` and
 `docs/architecture.md` hold the details.

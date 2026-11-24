@@ -66,7 +66,7 @@ Fiji Suite adds its own docks and menu items. It does not rearrange your OBS win
 
 ## Requirements
 
-- OBS Studio 31.1 or newer.
+- OBS Studio 33 or newer.
 - Windows 10 or 11 (64-bit), or Linux (Flatpak OBS, or OBS from the official PPA on Ubuntu 24.04).
 - macOS is not supported yet.
 
@@ -77,11 +77,12 @@ Download the file for your system from the
 
 ### Windows
 
-1. Unzip `fiji-suite-VERSION-windows-x64.zip` into `C:\ProgramData\obs-studio\plugins\`.
-2. Check that this file now exists: `C:\ProgramData\obs-studio\plugins\fiji-suite\bin\64bit\fiji-suite.dll`.
-3. Start OBS.
+1. Run `fiji-suite-VERSION-windows-x64.msi` and allow it to make changes (it installs for every user of the PC,
+   into `C:\ProgramData\obs-studio\plugins\fiji-suite`). There is nothing else to click.
+2. Start OBS.
 
-Windows or your antivirus may warn that the file is not signed. Beta builds are not signed.
+A newer installer replaces the older version by itself. Windows SmartScreen or your antivirus may warn that the
+installer is not signed (choose **More info → Run anyway**). Beta builds are not signed.
 
 ### Linux, Flatpak OBS
 
@@ -110,7 +111,8 @@ kept.
 
 ### Uninstalling
 
-- Windows: delete `C:\ProgramData\obs-studio\plugins\fiji-suite`.
+- Windows: **Settings → Apps → Installed apps → Fiji Suite → Uninstall**. (Before 0.7.0, which came as a zip:
+  delete `C:\ProgramData\obs-studio\plugins\fiji-suite`.)
 - Flatpak: `flatpak uninstall com.obsproject.Studio.Plugin.FijiSuite`.
 - Linux without Flatpak: delete `~/.config/obs-studio/plugins/fiji-suite`.
 
@@ -180,7 +182,7 @@ The version number lives in three files, which must agree: `version` in `buildsp
 1. Change the number in those three files and add a `## X.Y.Z` section to `CHANGELOG.md`.
 2. Commit, tag the commit `vX.Y.Z`, and push the commit and the tag.
 
-The GitHub workflow in `.github/workflows/release.yaml` then builds the Windows zip, the Linux tar.gz and
+The GitHub workflow in `.github/workflows/release.yaml` then builds the Windows installer (.msi), the Linux tar.gz and
 the Flatpak, and publishes a GitHub release with those files and the changelog section. It stops without
 releasing if the tag, the three version numbers or the changelog do not match. A tag with a suffix, such as
 `v1.0.0-beta1`, is published as a pre-release. Every push to `main` runs the same builds without releasing.

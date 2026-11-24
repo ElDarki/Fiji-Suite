@@ -4,6 +4,9 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 
 ## Unreleased
 
+- **Windows comes as an installer** (`.msi`): run it and the plugin is in place for every user of the PC; a newer one
+  replaces the older version, and it uninstalls from Settings → Apps.
+- **Needs OBS 33 or newer**: the Windows build now targets OBS 33.0.3, like the Linux and Flatpak builds.
 - Deck sounds follow OBS 33's audio monitoring switch (on or off), and the deprecated call is gone when built for
   OBS 33.
 - Inside: the decks follow the MVC + State layout: a deck model saved locally (the same decks.json), the deck engine as

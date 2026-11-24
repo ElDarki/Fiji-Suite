@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Windows installer for Fiji Suite (WiX v5): one double-click installs the plugin for every user of the PC into
+  C:\ProgramData\obs-studio\plugins\fiji-suite, where OBS finds it. No pages to click through; Windows asks for
+  administrator rights once. A newer version replaces the older one; uninstall from Settings > Apps.
+
+  Built by .github/workflows/release.yaml:
+    wix build build-aux/windows/fiji-suite.wxs -arch x64 -d Version=X.Y.Z -d Stage=stage\fiji-suite -o fiji-suite.msi
+  Stage is the folder the CMake install step fills (bin\64bit\fiji-suite.dll and data\...).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Fiji Suite"
+           Manufacturer="darkzeromex"
+           Version="$(Version)"
+           UpgradeCode="C70AD65B-2971-406F-BD37-79CD4F19DD38"
+           Scope="perMachine"
+           Compressed="yes">
+    <SummaryInformation Description="Fiji Suite, a plugin for OBS Studio" />
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of Fiji Suite is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/ElDarki/Fiji-Suite" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <!-- always overwrite: the folder may hold files from a zip install (before 0.7.0) that the installer would keep -->
+    <Property Id="REINSTALLMODE" Value="amus" />
+
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="ObsStudioFolder" Name="obs-studio">
+        <Directory Id="ObsPluginsFolder" Name="plugins">
+          <Directory Id="INSTALLFOLDER" Name="fiji-suite" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Plugin" Title="Fiji Suite">
+      <Files Directory="INSTALLFOLDER" Include="$(Stage)\**" />
+    </Feature>
+  </Package>
+</Wix>
