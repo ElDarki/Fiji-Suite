@@ -1,4 +1,7 @@
 #include "output-widget.hpp"
+#include "../fiji-events.hpp"
+#include "../../model/profile-model.hpp"
+#include <QJsonDocument>
 #include <obs.hpp>
 #include <obs-frontend-api.h>
 #include <obs-module.h>
@@ -929,6 +932,8 @@ bool OutputWidget::StartOutput(bool automated)
 			server = obs_data_get_string(settings, "server");
 			if (server && strlen(server)) {
 				obs_data_set_string(settings, "stream_server", server);
+				Publish();
+				server = obs_data_get_string(settings, "stream_server");
 			}
 		}
 		bool whip = strstr(server, "whip") != nullptr;
@@ -939,6 +944,8 @@ bool OutputWidget::StartOutput(bool automated)
 			key = obs_data_get_string(settings, "key");
 			if (key && strlen(key)) {
 				obs_data_set_string(settings, "stream_key", key);
+				Publish();
+				key = obs_data_get_string(settings, "stream_key");
 			}
 		}
 		if (whip) {
@@ -1368,6 +1375,14 @@ void OutputWidget::SaveSettings()
 		obs_data_set_array(settings, "chapter_hotkey", chapter_hotkey);
 		obs_data_array_release(chapter_hotkey);
 	}
+	Publish();
+}
+
+void OutputWidget::Publish()
+{
+	if (auto profile = fiji_profile(); profile && settings) {
+		profile->updateOutput(objectName(), QJsonDocument::fromJson(QByteArray(obs_data_get_json(settings))).object());
+	}
 }
 
 void OutputWidget::UpdateSettings(obs_data_t *data)
@@ -1595,6 +1610,7 @@ void OutputWidget::contextMenuEvent(QContextMenuEvent *event)
 	const auto current = GetGroup();
 	auto setGroup = [this](const QString &group) {
 		obs_data_set_string(settings, "group", group.toUtf8().constData());
+		Publish();
 		if (output_dock) {
 			output_dock->RebuildGroups();
 		}

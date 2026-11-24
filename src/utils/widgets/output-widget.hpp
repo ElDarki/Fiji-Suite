@@ -58,6 +58,8 @@ public:
 
 	void CheckActive();
 	void SaveSettings();
+	// Hands this output's settings to the profile model (after the widget changed them).
+	void Publish();
 	void UpdateSettings(obs_data_t *data);
 	bool AddChapter(const char *chapter_name);
 	bool StartOutput(std::function<void()> onStarted);

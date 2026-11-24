@@ -808,15 +808,12 @@ void open_config_dialog(int tab, const char *create_type)
 			}
 			obs_data_array_release(a);
 			obs_data_array_release(b);
-			a = obs_data_get_array(current_profile_config, "outputs");
-			b = obs_data_get_array(settings, "outputs");
-			if (!obs_data_array_equal(a, b)) {
+			// Fiji Suite's outputs: the profile model owns the list
+			const auto edited = QJsonDocument::fromJson(QByteArray(obs_data_get_json(settings))).object().value("outputs");
+			if (auto profile = fiji_profile(); profile && edited.isArray() && profile->setOutputs(edited.toArray())) {
 				outputs_changed = true;
 				check_new_canvas = true;
-				obs_data_set_array(current_profile_config, "outputs", b);
 			}
-			obs_data_array_release(a);
-			obs_data_array_release(b);
 			obs_data_release(settings);
 		} else {
 			canvas_changed = true;

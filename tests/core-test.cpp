@@ -752,8 +752,9 @@ static void test_profile_model()
 	CHECK(!profile.setMainOutputs(shown) && changes == 1); // nothing changed
 	CHECK(profile.setMainOutputs({true, true, false, false}) && changes == 2);
 	const auto owned = profile.owned();
-	CHECK(owned.size() == 4 && owned.value("main_stream_output_show").toBool() && !owned.value("main_backtrack_output_show").toBool());
-	CHECK(model::ProfileModel::ownedKeys().size() == 10);
+	CHECK(owned.size() == 5 && owned.value("main_stream_output_show").toBool() && !owned.value("main_backtrack_output_show").toBool());
+	CHECK(owned.value("outputs").toArray().isEmpty()); // the file had an (empty) list, so it is written back
+	CHECK(model::ProfileModel::ownedKeys().size() == 11);
 
 	// hotkey bindings: kept as OBS saved them, only the ones that exist are written back
 	CHECK(!profile.owned().contains("group_hotkeys"));
@@ -765,6 +766,21 @@ static void test_profile_model()
 	model::ProfileModel reloaded;
 	reloaded.load({{"multiview_over_preview_hotkey", f1}});
 	CHECK(reloaded.hotkey("multiview_over_preview_hotkey").toArray() == f1 && reloaded.hotkey("group_hotkeys").isUndefined());
+
+	// Fiji Suite's outputs: the list as the dialog saves it, and each output changing its own settings
+	CHECK(!reloaded.owned().contains("outputs")); // a profile without the key stays without it
+	model::ProfileModel own;
+	int changed = 0;
+	QObject::connect(&own, &model::ProfileModel::changed, [&changed] { changed++; });
+	own.load(fresh);
+	CHECK(own.outputs().size() == 3 && own.owned().value("outputs").toArray().size() == 3);
+	auto vertical = own.outputs().at(0).toObject();
+	vertical.insert("group", "Phones");
+	CHECK(own.updateOutput("Vertical Stream", vertical) && own.outputs().at(0).toObject().value("group") == "Phones");
+	CHECK(!own.updateOutput("Vertical Stream", vertical)); // the same again: nothing
+	CHECK(!own.updateOutput("Nope", vertical));
+	CHECK(own.setOutputs(QJsonArray{vertical}) && !own.setOutputs(QJsonArray{vertical}));
+	CHECK(own.outputs().size() == 1 && changed == 3);
 }
 
 int main(int argc, char **argv)

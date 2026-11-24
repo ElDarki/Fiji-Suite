@@ -7,6 +7,7 @@
 // place. They move onto this model one part at a time: the model owns the parts that have moved (ownedKeys()), is the
 // only thing that writes them, and the composition mirrors them into the old object for code that has not moved yet.
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
 #include <QStringList>
@@ -58,12 +59,22 @@ public:
 	QJsonValue hotkey(const QString &key) const { return hotkeys_.value(key); }
 	bool setHotkey(const QString &key, const QJsonValue &value);
 
+	// Fiji Suite's own outputs (stream, record, backtrack, virtual_cam, ffmpeg), each an object with a unique "name"
+	// and its settings (see the output dialogs).
+	QJsonArray outputs() const { return outputs_; }
+	bool setOutputs(const QJsonArray &outputs);
+	// Replaces the output with that name (an output changing its own settings: hotkeys, group, ...). False when there
+	// is no such output or nothing changed.
+	bool updateOutput(const QString &name, const QJsonObject &output);
+
 signals:
 	void changed();
 
 private:
 	MainOutputs main_;
 	QJsonObject hotkeys_;
+	QJsonArray outputs_;
+	bool hasOutputs_ = false;
 };
 
 } // namespace fiji::model

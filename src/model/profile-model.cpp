@@ -48,7 +48,33 @@ QStringList ProfileModel::ownedKeys()
 	for (const char *key : kMainKeys) {
 		keys.append(QLatin1String(key));
 	}
-	return keys + hotkeyKeys();
+	return keys + hotkeyKeys() + QStringList{"outputs"};
+}
+
+bool ProfileModel::setOutputs(const QJsonArray &outputs)
+{
+	if (hasOutputs_ && outputs == outputs_) {
+		return false;
+	}
+	outputs_ = outputs;
+	hasOutputs_ = true;
+	emit changed();
+	return true;
+}
+
+bool ProfileModel::updateOutput(const QString &name, const QJsonObject &output)
+{
+	for (int i = 0; i < outputs_.size(); i++) {
+		if (outputs_.at(i).toObject().value(QStringLiteral("name")).toString() == name) {
+			if (outputs_.at(i).toObject() == output) {
+				return false;
+			}
+			outputs_.replace(i, output);
+			emit changed();
+			return true;
+		}
+	}
+	return false;
 }
 
 QStringList ProfileModel::hotkeyKeys()
@@ -72,6 +98,8 @@ void ProfileModel::load(const QJsonObject &document)
 	// a file from before a key existed: off, as OBS's obs_data reads a missing bool
 	main_ = {document.value(QLatin1String(kMainKeys[0])).toBool(false), document.value(QLatin1String(kMainKeys[1])).toBool(false),
 		 document.value(QLatin1String(kMainKeys[2])).toBool(false), document.value(QLatin1String(kMainKeys[3])).toBool(false)};
+	hasOutputs_ = document.contains(QStringLiteral("outputs"));
+	outputs_ = document.value(QStringLiteral("outputs")).toArray();
 	hotkeys_ = {};
 	for (const auto &key : hotkeyKeys()) {
 		if (document.contains(key)) {
@@ -84,6 +112,9 @@ void ProfileModel::load(const QJsonObject &document)
 QJsonObject ProfileModel::owned() const
 {
 	QJsonObject out = hotkeys_; // only the bindings that exist: a profile without them stays without them
+	if (hasOutputs_) {
+		out.insert(QStringLiteral("outputs"), outputs_);
+	}
 	out.insert(QLatin1String(kMainKeys[0]), main_.stream);
 	out.insert(QLatin1String(kMainKeys[1]), main_.record);
 	out.insert(QLatin1String(kMainKeys[2]), main_.backtrack);

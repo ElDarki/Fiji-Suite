@@ -505,7 +505,16 @@ void OutputDock::LoadSettings()
 	mainVirtualCamEnabled = shown.virtualCam;
 	mainVirtualCamGroup->setVisible(mainVirtualCamEnabled);
 
-	auto outputs2 = obs_data_get_array(current_profile_config, "outputs");
+	// Fiji Suite's outputs, from the profile model: each widget gets a settings object of its own and reports its
+	// changes back (OutputWidget::Publish)
+	obs_data_array_t *outputs2 = nullptr;
+	{
+		OBSDataAutoRelease wrapper = obs_data_create_from_json(
+			QJsonDocument(QJsonObject{{"outputs", fiji_profile() ? fiji_profile()->outputs() : QJsonArray()}})
+				.toJson(QJsonDocument::Compact)
+				.constData());
+		outputs2 = obs_data_get_array(wrapper, "outputs");
+	}
 	for (auto it = outputWidgets.begin(); it != outputWidgets.end();) {
 		bool found = false;
 		auto count = obs_data_array_count(outputs2);
