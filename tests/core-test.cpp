@@ -797,6 +797,18 @@ static void test_profile_model()
 	CHECK(!canvases.updateCanvas(QJsonObject{{"uuid", "other"}, {"name", "Renamed"}})); // a different canvas
 	CHECK(canvases.canvas("Renamed").value("uuid") == "abc" && canvases.canvas("Nope").isEmpty() && canvases.canvas("").isEmpty());
 	CHECK(canvases.setCanvases(QJsonArray{}) && canvases.canvases().isEmpty() && canvases.owned().contains("canvas"));
+
+	// view state: layouts and such, under the keys the docks build
+	using PM = model::ProfileModel;
+	CHECK(PM::isViewKey("stats_state") && PM::isViewKey("stats_state_Live") && PM::isViewKey("Main_canvas_split_order_Live"));
+	CHECK(PM::isViewKey("video_encoder_description2") && PM::isViewKey("config_geometry") && PM::isViewKey("preview_locked"));
+	CHECK(!PM::isViewKey("canvas") && !PM::isViewKey("video_encoder_descriptionX") && !PM::isViewKey("group_hotkeys"));
+	model::ProfileModel view;
+	view.load({{"stats_state_Live", "abc"}, {"somebody_else", 1}});
+	CHECK(view.view("stats_state_Live") == "abc" && view.owned().value("stats_state_Live") == "abc");
+	CHECK(!view.owned().contains("somebody_else"));
+	CHECK(view.setView("preview_locked", true) && !view.setView("preview_locked", true) && !view.setView("not_view", 1));
+	CHECK(view.setView("stats_state_Live", QJsonValue(QJsonValue::Undefined)) && !view.owned().contains("stats_state_Live"));
 }
 
 int main(int argc, char **argv)

@@ -622,10 +622,6 @@ void OutputDock::UpdateMainStreamStatus(bool active)
 		mainStreamButton->setText("");
 		return;
 	}
-	if (!current_profile_config) {
-		return;
-	}
-
 	std::map<video_t *, std::string> canvasNames;
 	obs_enum_canvases(
 		[](void *data, obs_canvas_t *c) {
@@ -678,11 +674,10 @@ void OutputDock::UpdateMainStreamStatus(bool active)
 			}
 			obs_data_release(settings);
 
-			obs_data_set_string(current_profile_config, settingName.toUtf8().constData(),
-					    mainEncoderDescription.toUtf8().constData());
+			fiji_set_view(settingName.toStdString(), mainEncoderDescription);
 
-		} else if (found && obs_data_has_user_value(current_profile_config, settingName.toUtf8().constData())) {
-			obs_data_unset_user_value(current_profile_config, settingName.toUtf8().constData());
+		} else if (found) {
+			fiji_set_view(settingName.toStdString(), QJsonValue(QJsonValue::Undefined));
 		}
 	}
 	obs_output_release(output);

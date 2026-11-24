@@ -341,6 +341,25 @@ obs_data_array_t *hotkey_obs(const QJsonArray &keys)
 	return obs_data_get_array(wrapper, "keys");
 }
 
+QString fiji_view_string(const std::string &key)
+{
+	auto profile = fiji_profile();
+	return profile ? profile->view(QString::fromStdString(key)).toString() : QString();
+}
+
+bool fiji_view_bool(const std::string &key, bool fallback)
+{
+	auto profile = fiji_profile();
+	return profile ? profile->view(QString::fromStdString(key)).toBool(fallback) : fallback;
+}
+
+void fiji_set_view(const std::string &key, const QJsonValue &value)
+{
+	if (auto profile = fiji_profile()) {
+		profile->setView(QString::fromStdString(key), value);
+	}
+}
+
 void fiji_publish_canvas(obs_data_t *canvas_settings)
 {
 	if (auto profile = fiji_profile(); profile && canvas_settings) {
@@ -516,6 +535,16 @@ struct Core {
 			OBSDataAutoRelease owned =
 				obs_data_create_from_json(QJsonDocument(profile.owned()).toJson(QJsonDocument::Compact).constData());
 			obs_data_apply(current_profile_config, owned);
+			QStringList gone; // view state the model removed
+			for (obs_data_item_t *item = obs_data_first(current_profile_config); item; obs_data_item_next(&item)) {
+				const QString key = QString::fromUtf8(obs_data_item_get_name(item));
+				if (fiji::model::ProfileModel::isViewKey(key) && profile.view(key).isUndefined()) {
+					gone.append(key);
+				}
+			}
+			for (const auto &key : gone) {
+				obs_data_erase(current_profile_config, key.toUtf8().constData());
+			}
 		});
 		fiji::bridge::BotLink::setInstance(&bot);
 		decks.start();
@@ -791,10 +820,9 @@ void open_config_dialog(int tab, const char *create_type)
 	}
 	auto settings = obs_data_create();
 	if (current_profile_config) {
-		const char *geom = obs_data_get_string(current_profile_config, "config_geometry");
-		if (geom && strlen(geom)) {
-			QByteArray ba = QByteArray::fromBase64(QByteArray(geom));
-			configDialog->restoreGeometry(ba);
+		const QString geom = fiji_view_string("config_geometry");
+		if (!geom.isEmpty()) {
+			configDialog->restoreGeometry(QByteArray::fromBase64(geom.toUtf8()));
 		}
 		obs_data_apply(settings, current_profile_config);
 	}
@@ -838,7 +866,7 @@ void open_config_dialog(int tab, const char *create_type)
 			outputs_changed = true;
 			current_profile_config = settings;
 		}
-		obs_data_set_string(current_profile_config, "config_geometry", configDialog->saveGeometry().toBase64().constData());
+		fiji_set_view("config_geometry", QString::fromUtf8(configDialog->saveGeometry().toBase64()));
 		configDialog->SaveHotkeys();
 
 		save_current_profile_config(true);

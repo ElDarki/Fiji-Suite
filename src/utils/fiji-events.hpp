@@ -33,6 +33,11 @@ fiji::model::ProfileModel *fiji_profile();
 QJsonArray hotkey_json(obs_data_array_t *keys);
 // A canvas dock (or clone dock) hands its canvas's settings to the profile model after it changed them.
 void fiji_publish_canvas(obs_data_t *canvas_settings);
+// The profile model's view state (see ProfileModel::isViewKey), for the docks that have not moved yet.
+#include <QJsonValue>
+QString fiji_view_string(const std::string &key);
+bool fiji_view_bool(const std::string &key, bool fallback = false);
+void fiji_set_view(const std::string &key, const QJsonValue &value);
 obs_data_array_t *hotkey_obs(const QJsonArray &keys);
 fiji::state::LinkStateMachine *fiji_link_state();
 // The deck controller (src/controller/), for the deck requests; null before the module has loaded.

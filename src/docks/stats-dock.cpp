@@ -86,19 +86,16 @@ StatsDock::~StatsDock() {
 
 void StatsDock::LoadMode(QString mode)
 {
-	std::string setting_name = "stats_state_" + mode.toStdString();
-	auto state = obs_data_get_string(current_profile_config, setting_name.c_str());
-	if (state[0] == '\0') {
-		setting_name = "stats_state_" + mode.toLower().toStdString();
-		state = obs_data_get_string(current_profile_config, setting_name.c_str());
-	}
-	if (state[0] != '\0')
-		table->horizontalHeader()->restoreState(QByteArray::fromBase64(state));
+	QString state = fiji_view_string("stats_state_" + mode.toStdString());
+	if (state.isEmpty())
+		state = fiji_view_string("stats_state_" + mode.toLower().toStdString());
+	if (!state.isEmpty())
+		table->horizontalHeader()->restoreState(QByteArray::fromBase64(state.toUtf8()));
 }
 
 void StatsDock::SaveSettings(bool closing, QString mode)
 {
-	if (closing || !current_profile_config)
+	if (closing)
 		return;
 
 	auto state = table->horizontalHeader()->saveState();
@@ -115,7 +112,7 @@ void StatsDock::SaveSettings(bool closing, QString mode)
 	std::string setting_name = "stats_state";
 	if (!mode.isEmpty())
 		setting_name += "_" + mode.toStdString();
-	obs_data_set_string(current_profile_config, setting_name.c_str(), state_chars);
+	fiji_set_view(setting_name, QString::fromUtf8(state_chars));
 }
 
 OutputStatsModel::OutputStatsModel(std::function<bool()> isActiveFunc, QObject *parent) : QAbstractTableModel(parent)

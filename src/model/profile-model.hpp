@@ -77,6 +77,14 @@ public:
 	// The canvas with that name (an empty object when there is none, or the name is empty).
 	QJsonObject canvas(const QString &name) const;
 
+	// View state the docks and dialogs keep per profile: column and splitter layouts (stats_state[_<mode>],
+	// <canvas>_canvas_split[_automatic|_horizontal|_order][_<mode>]), preview_disabled, preview_locked, the settings
+	// dialog's config_geometry and the main stream's video_encoder_description<n>.
+	static bool isViewKey(const QString &key);
+	QJsonValue view(const QString &key) const { return view_.value(key); }
+	// An undefined value removes the key. False when the key is not view state or nothing changed.
+	bool setView(const QString &key, const QJsonValue &value);
+
 signals:
 	void changed();
 
@@ -87,6 +95,7 @@ private:
 	bool hasOutputs_ = false;
 	QJsonArray canvases_;
 	bool hasCanvases_ = false;
+	QJsonObject view_;
 };
 
 } // namespace fiji::model

@@ -1394,7 +1394,7 @@ void CanvasDock::SaveSettings(bool closing, QString mode)
 		~PublishOnExit() { fiji_publish_canvas(settings); }
 	} publish{settings};
 	if (!settings) {
-		if (!closing && current_profile_config) {
+		if (!closing) {
 			auto state = canvas_split->saveState();
 			auto b64 = state.toBase64();
 			auto state_chars = b64.constData();
@@ -1410,27 +1410,25 @@ void CanvasDock::SaveSettings(bool closing, QString mode)
 			if (!mode.isEmpty()) {
 				setting_name += "_" + mode.toStdString();
 			}
-			obs_data_set_string(current_profile_config, setting_name.c_str(), state_chars);
+			fiji_set_view(setting_name, QString::fromUtf8(state_chars));
 			setting_name = canvas_name + "_canvas_split_automatic";
 			if (!mode.isEmpty()) {
 				setting_name += "_" + mode.toStdString();
 			}
-			obs_data_set_bool(current_profile_config, setting_name.c_str(), canvas_split->automaticSwitching);
+			fiji_set_view(setting_name, canvas_split->automaticSwitching);
 			setting_name = canvas_name + "_canvas_split_horizontal";
 			if (!mode.isEmpty()) {
 				setting_name += "_" + mode.toStdString();
 			}
-			obs_data_set_bool(current_profile_config, setting_name.c_str(),
-					  canvas_split->orientation() == Qt::Horizontal);
+			fiji_set_view(setting_name, canvas_split->orientation() == Qt::Horizontal);
 			setting_name = canvas_name + "_canvas_split_order";
 			if (!mode.isEmpty()) {
 				setting_name += "_" + mode.toStdString();
 			}
-			obs_data_set_string(current_profile_config, setting_name.c_str(),
-					    canvas_split->savePanelOrder().toUtf8().constData());
+			fiji_set_view(setting_name, canvas_split->savePanelOrder());
 
-			obs_data_set_bool(current_profile_config, "preview_disabled", preview_disabled);
-			obs_data_set_bool(current_profile_config, "preview_locked", locked);
+			fiji_set_view("preview_disabled", preview_disabled);
+			fiji_set_view("preview_locked", locked);
 		}
 		return;
 	}
@@ -6515,6 +6513,7 @@ void CanvasDock::LoadMode(QString mode)
 	if (canvas_split) {
 		canvas_split->blockSignals(true);
 		auto state = "";
+		QByteArray profileState; // keeps the profile's string alive for `state`
 		if (settings) {
 			std::string setting_name = "canvas_split_" + mode.toStdString();
 			state = obs_data_get_string(settings, setting_name.c_str());
@@ -6533,23 +6532,21 @@ void CanvasDock::LoadMode(QString mode)
 			if (order[0] != '\0') {
 				canvas_split->restorePanelOrder(QString::fromUtf8(order));
 			}
-		} else if (current_profile_config) {
-			std::string setting_name = canvas_name + "_canvas_split_" + mode.toStdString();
-			state = obs_data_get_string(current_profile_config, setting_name.c_str());
-			if (state[0] == '\0') {
-				setting_name = canvas_name + "_canvas_split_" + mode.toLower().toStdString();
-				state = obs_data_get_string(current_profile_config, setting_name.c_str());
+		} else {
+			// the main canvas: its layout is the profile model's view state
+			profileState = fiji_view_string(canvas_name + "_canvas_split_" + mode.toStdString()).toUtf8();
+			if (profileState.isEmpty()) {
+				profileState = fiji_view_string(canvas_name + "_canvas_split_" + mode.toLower().toStdString()).toUtf8();
 			}
-			setting_name = canvas_name + "_canvas_split_automatic_" + mode.toStdString();
-			obs_data_set_default_bool(current_profile_config, setting_name.c_str(), true);
-			canvas_split->automaticSwitching = obs_data_get_bool(current_profile_config, setting_name.c_str());
-			setting_name = canvas_name + "_canvas_split_horizontal_" + mode.toStdString();
-			canvas_split->setOrientation(
-				obs_data_get_bool(current_profile_config, setting_name.c_str()) ? Qt::Horizontal : Qt::Vertical);
-			setting_name = canvas_name + "_canvas_split_order_" + mode.toStdString();
-			auto order = obs_data_get_string(current_profile_config, setting_name.c_str());
-			if (order[0] != '\0') {
-				canvas_split->restorePanelOrder(QString::fromUtf8(order));
+			state = profileState.constData();
+			canvas_split->automaticSwitching =
+				fiji_view_bool(canvas_name + "_canvas_split_automatic_" + mode.toStdString(), true);
+			canvas_split->setOrientation(fiji_view_bool(canvas_name + "_canvas_split_horizontal_" + mode.toStdString())
+							     ? Qt::Horizontal
+							     : Qt::Vertical);
+			const QString order = fiji_view_string(canvas_name + "_canvas_split_order_" + mode.toStdString());
+			if (!order.isEmpty()) {
+				canvas_split->restorePanelOrder(order);
 			}
 		}
 		if (state[0] != '\0') {

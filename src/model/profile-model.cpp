@@ -1,5 +1,7 @@
 #include "profile-model.hpp"
 
+#include <QRegularExpression>
+
 #include <QJsonArray>
 
 namespace fiji::model {
@@ -58,6 +60,29 @@ bool ProfileModel::setCanvases(const QJsonArray &canvases)
 	}
 	canvases_ = canvases;
 	hasCanvases_ = true;
+	emit changed();
+	return true;
+}
+
+bool ProfileModel::isViewKey(const QString &key)
+{
+	static const QRegularExpression encoder(QStringLiteral("^video_encoder_description\\d+$"));
+	return key == QLatin1String("stats_state") || key.startsWith(QLatin1String("stats_state_")) ||
+	       key.contains(QLatin1String("_canvas_split")) || key == QLatin1String("preview_disabled") ||
+	       key == QLatin1String("preview_locked") || key == QLatin1String("config_geometry") ||
+	       encoder.match(key).hasMatch();
+}
+
+bool ProfileModel::setView(const QString &key, const QJsonValue &value)
+{
+	if (!isViewKey(key) || view_.value(key) == value) {
+		return false;
+	}
+	if (value.isUndefined()) {
+		view_.remove(key);
+	} else {
+		view_.insert(key, value);
+	}
 	emit changed();
 	return true;
 }
@@ -144,6 +169,12 @@ void ProfileModel::load(const QJsonObject &document)
 	// a file from before a key existed: off, as OBS's obs_data reads a missing bool
 	main_ = {document.value(QLatin1String(kMainKeys[0])).toBool(false), document.value(QLatin1String(kMainKeys[1])).toBool(false),
 		 document.value(QLatin1String(kMainKeys[2])).toBool(false), document.value(QLatin1String(kMainKeys[3])).toBool(false)};
+	view_ = {};
+	for (auto it = document.begin(); it != document.end(); ++it) {
+		if (isViewKey(it.key())) {
+			view_.insert(it.key(), it.value());
+		}
+	}
 	hasCanvases_ = document.contains(QStringLiteral("canvas"));
 	canvases_ = document.value(QStringLiteral("canvas")).toArray();
 	hasOutputs_ = document.contains(QStringLiteral("outputs"));
@@ -165,6 +196,9 @@ QJsonObject ProfileModel::owned() const
 	}
 	if (hasCanvases_) {
 		out.insert(QStringLiteral("canvas"), canvases_);
+	}
+	for (auto it = view_.begin(); it != view_.end(); ++it) {
+		out.insert(it.key(), it.value());
 	}
 	out.insert(QLatin1String(kMainKeys[0]), main_.stream);
 	out.insert(QLatin1String(kMainKeys[1]), main_.record);
