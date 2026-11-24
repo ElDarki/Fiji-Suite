@@ -26,7 +26,10 @@ python3 tools/build-themes.py
 
 Releases: the version lives in `buildspec.json`, `data/manifest.json`, the Flatpak `metainfo.xml` and `CHANGELOG.md`
 (CMake refuses to configure when the first two differ). Pushing a `vX.Y.Z` tag makes CI build Windows, Linux and
-Flatpak and publish the release. Ask before committing, tagging or pushing.
+Flatpak and publish the release.
+
+Git: follow `CONTRIBUTING.md` (branches, commits, what to run before pushing, tags, and what Claude does on
+its own versus asks first).
 
 ## Architecture: MVC + State pattern. Read this before writing code.
 
