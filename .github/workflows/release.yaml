@@ -52,6 +52,7 @@ jobs:
   windows:
     name: Windows x64
     needs: version
+    timeout-minutes: 60
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v7
@@ -85,10 +86,12 @@ jobs:
   linux:
     name: Linux x86_64 (Ubuntu 24.04)
     needs: version
+    timeout-minutes: 60
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - name: Install dependencies
+        timeout-minutes: 10 # usually under a minute; a stuck package mirror fails here instead of hanging for hours
         run: |
           sudo add-apt-repository --yes ppa:obsproject/obs-studio
           sudo apt-get update
@@ -126,10 +129,12 @@ jobs:
   flatpak:
     name: Flatpak
     needs: version
+    timeout-minutes: 60
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - name: Install Flatpak and the OBS runtime
+        timeout-minutes: 20 # usually about 5 minutes
         run: |
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
