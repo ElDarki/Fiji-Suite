@@ -5,7 +5,10 @@
 #include <QTimer>
 #include "../version.h"
 #include "config-dialog.hpp"
-#include "ffmpeg-output-dialog.hpp"
+#include "../view/ffmpeg-output-dialog.hpp"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include "../obs/ffmpeg-library.hpp"
 #include "obs-module.h"
 #include "../view/record-output-dialog.hpp"
 #include "../view/text.hpp"
@@ -1710,7 +1713,12 @@ void OBSBasicSettings::AddOutput(QFormLayout *outputsLayout, obs_data_t *setting
 				break;
 			}
 		} else if (strcmp(output_type, "ffmpeg") == 0) {
-			auto outputDialog = new FfmpegOutputDialog(this, otherNames, settings);
+			fiji::obs::FfmpegLibrary ffmpeg;
+			auto outputDialog = new fiji::view::FfmpegOutputDialog(
+				this,
+				fiji::model::FfmpegOutput::fromJson(
+					QJsonDocument::fromJson(QByteArray(obs_data_get_json(settings))).object()),
+				otherNames, true, ffmpeg);
 
 			outputDialog->setWindowModality(Qt::WindowModal);
 			outputDialog->setModal(true);
@@ -1722,7 +1730,9 @@ void OBSBasicSettings::AddOutput(QFormLayout *outputsLayout, obs_data_t *setting
 
 				obs_data_set_bool(settings, "enabled", true);
 
-				outputDialog->SaveSettings(settings);
+				OBSDataAutoRelease edited = obs_data_create_from_json(
+					QJsonDocument(outputDialog->result().toJson()).toJson(QJsonDocument::Compact).constData());
+				obs_data_apply(settings, edited);
 
 				// Reload
 				LoadSettings(main_settings);
@@ -2912,7 +2922,10 @@ void OBSBasicSettings::AddFfmpeg()
 		},
 		&otherNames);
 	otherNames.removeDuplicates();
-	auto outputDialog = new FfmpegOutputDialog(this, otherNames);
+	fiji::obs::FfmpegLibrary ffmpeg;
+	fiji::model::FfmpegOutput fresh;
+	fresh.name = fiji::view::pluginText("FfmpegOutput");
+	auto outputDialog = new fiji::view::FfmpegOutputDialog(this, fresh, otherNames, false, ffmpeg);
 
 	outputDialog->setWindowModality(Qt::WindowModal);
 	outputDialog->setModal(true);
@@ -2926,7 +2939,9 @@ void OBSBasicSettings::AddFfmpeg()
 		obs_data_set_bool(s, "enabled", true);
 		obs_data_set_bool(s, "expanded", true);
 		obs_data_set_string(s, "type", "ffmpeg");
-		outputDialog->SaveSettings(s);
+		OBSDataAutoRelease created = obs_data_create_from_json(
+			QJsonDocument(outputDialog->result().toJson()).toJson(QJsonDocument::Compact).constData());
+		obs_data_apply(s, created);
 
 		obs_data_array_push_back(extra_outputs, s);
 		AddOutput(outputsLayout, s, extra_outputs, true);

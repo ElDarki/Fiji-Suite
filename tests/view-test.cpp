@@ -9,6 +9,8 @@
 #include "../src/view/record-output-dialog.hpp"
 #include "../src/view/stats-dock.hpp"
 #include "../src/view/stream-output-dialog.hpp"
+#include "../src/view/ffmpeg-output-dialog.hpp"
+#include "fake-ffmpeg.hpp"
 #include <QComboBox>
 #include <QStackedWidget>
 #include "../src/model/profile-model.hpp"
@@ -242,6 +244,34 @@ static void test_stream_output_dialog()
 	CHECK(page.key->text() == "secret" && page.confirm->isEnabled() && edit.result().server == "rtmp://eu.twitch.tv/app");
 }
 
+// The FFmpeg output dialog: formats from the catalogue, their encoders, file or URL, and the "no spaces" box.
+static void test_ffmpeg_output_dialog()
+{
+	FakeFfmpeg ffmpeg;
+	model::FfmpegOutput fresh;
+	fresh.name = "Archive";
+	view::FfmpegOutputDialog create(nullptr, fresh, {}, false, ffmpeg);
+	CHECK(create.formatBox()->count() == 3 && create.formatBox()->currentIndex() == 0); // "default", mp3, mp4
+	CHECK(!create.confirmButton()->isEnabled());
+	create.formatBox()->setCurrentIndex(2); // mp4
+	CHECK(create.result().formatName == "mp4" && create.result().extension == "mp4");
+	CHECK(create.videoEncoderBox()->count() == 2 && create.result().videoEncoder == "libx264"); // "disable" + x264
+	CHECK(create.result().audioEncoder == "aac" && create.result().audioEncoderId == 86018);
+	create.noSpaceBox()->setChecked(true);
+	CHECK(!create.result().allowSpaces);
+	create.typeBox()->setCurrentIndex(1); // to a URL
+	CHECK(!create.result().saveFile && !create.confirmButton()->isEnabled());
+	create.urlField()->setText("srt://x");
+	emit create.urlField()->textEdited("srt://x");
+	CHECK(create.confirmButton()->isEnabled());
+
+	model::FfmpegOutput saved = create.result();
+	saved.audioEncoder = "libmp3lame";
+	view::FfmpegOutputDialog edit(nullptr, saved, {}, true, ffmpeg);
+	CHECK(edit.formatBox()->currentIndex() == 2 && edit.result().audioEncoder == "libmp3lame"); // the saved one stays
+	CHECK(edit.windowTitle() == "EditFfmpegOutputWindowTitle" && edit.confirmButton()->isEnabled());
+}
+
 int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
@@ -252,6 +282,7 @@ int main(int argc, char **argv)
 	test_record_output_dialog();
 	test_stats_dock();
 	test_stream_output_dialog();
+	test_ffmpeg_output_dialog();
 	if (failures) {
 		std::fprintf(stderr, "%d check(s) failed\n", failures);
 		return 1;

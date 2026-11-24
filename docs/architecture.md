@@ -75,7 +75,8 @@ dock (`view::LiveScenesDock`, `controller::LiveScenesController`, `model::LiveSc
 port), the recording / backtrack output dialog (`view::RecordOutputDialog` over `model::RecordOutput`), and the Stats
 dock (`view::StatsDock`, `controller::StatsController`, `model::OutputStatsTable`, the `obs::StatsSource` port), and the
 stream output dialog (`view::StreamOutputDialog` over `model::StreamOutput` and `model::streamPlatforms`; OBS's server
-lists from `obs::StreamServersFor`). Views
+lists from `obs::StreamServersFor`), and the FFmpeg output dialog (`view::FfmpegOutputDialog` over
+`model::FfmpegOutput` and the `model::FfmpegCatalogue` that `obs::FfmpegLibrary` reads from FFmpeg). Views
 look their text up with `view::pluginText` / `view::obsText`, which the composition connects to OBS. Still legacy:
 the other docks and dialogs.
 

@@ -25,6 +25,7 @@
 #include "../src/controller/live-scenes-controller.hpp"
 #include "../src/model/record-output.hpp"
 #include "../src/model/stream-output.hpp"
+#include "fake-ffmpeg.hpp"
 #include "../src/controller/stats-controller.hpp"
 #include "fake-stats-source.hpp"
 
@@ -1060,6 +1061,43 @@ static void test_stream_output()
 	CHECK(!model::streamOutputValid({"Main", "", "k"}, {}));
 }
 
+// The FFmpeg output dialog's values and rules.
+static void test_ffmpeg_output()
+{
+	model::FfmpegOutput fresh;
+	CHECK(fresh.saveFile && fresh.allowSpaces && fresh.gopSize == 250 && fresh.audioMixes == 1);
+	fresh.name = "Archive";
+	fresh.formatName = "mp4";
+	fresh.audioMixes = 5;
+	const auto back = model::FfmpegOutput::fromJson(fresh.toJson());
+	CHECK(back.name == "Archive" && back.formatName == "mp4" && back.audioMixes == 5 && back.saveFile);
+	CHECK(fresh.toJson().value("format_mime_type").isString() && fresh.toJson().size() == 23);
+
+	CHECK(model::firstExtension("mp4,m4a") == "mp4" && model::firstExtension("ts") == "ts");
+	int w = 0, h = 0;
+	CHECK(model::parseScale("1280x720", w, h) && w == 1280 && h == 720 && !model::parseScale("12x", w, h));
+
+	CHECK(!model::ffmpegOutputValid(fresh, {})); // a file needs a folder, extension and filename
+	fresh.directory = "/videos";
+	fresh.extension = "mp4";
+	fresh.filename = "%CCYY";
+	CHECK(model::ffmpegOutputValid(fresh, {}) && !model::ffmpegOutputValid(fresh, {"Archive"}));
+	fresh.saveFile = false;
+	CHECK(!model::ffmpegOutputValid(fresh, {}));
+	fresh.url = "srt://x";
+	CHECK(model::ffmpegOutputValid(fresh, {}));
+
+	FakeFfmpeg ffmpeg;
+	const auto mp4 = ffmpeg.formats().at(0);
+	auto choices = model::ffmpegEncodersFor(ffmpeg, mp4, false);
+	CHECK(choices.video.size() == 1 && choices.video.at(0).isDefault && choices.video.at(0).label() == "libx264 - H.264");
+	CHECK(choices.audio.size() == 2 && choices.audio.at(0).codec.name == "aac" && choices.audio.at(0).isDefault);
+	choices = model::ffmpegEncodersFor(ffmpeg, mp4, true); // compatibility ignored: prores too
+	CHECK(choices.video.size() == 2);
+	choices = model::ffmpegEncodersFor(ffmpeg, ffmpeg.formats().at(1), false);
+	CHECK(choices.video.isEmpty() && choices.audio.size() == 1);
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -1080,6 +1118,7 @@ int main(int argc, char **argv)
 	test_record_output();
 	test_output_stats();
 	test_stream_output();
+	test_ffmpeg_output();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

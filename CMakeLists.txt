@@ -103,9 +103,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 target_sources(${PROJECT_NAME} PRIVATE
   src/dialogs/config-dialog.cpp
-  src/dialogs/config-dialog.hpp
-  src/dialogs/ffmpeg-output-dialog.cpp
-  src/dialogs/ffmpeg-output-dialog.hpp)
+  src/dialogs/config-dialog.hpp)
 
 # The MVC + State layers (CLAUDE.md).
 set(FIJI_CORE_SOURCES
@@ -134,6 +132,8 @@ set(FIJI_CORE_SOURCES
   src/model/deck-model.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
+  src/model/ffmpeg-output.cpp
+  src/model/ffmpeg-output.hpp
   src/model/live-scenes-model.cpp
   src/model/live-scenes-model.hpp
   src/model/output-stats.cpp
@@ -170,6 +170,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/look-installer.hpp
   src/obs/obs-deck-hotkeys.cpp
   src/obs/obs-deck-hotkeys.hpp
+  src/obs/ffmpeg-library.cpp
+  src/obs/ffmpeg-library.hpp
   src/obs/obs-capture-sources.cpp
   src/obs/obs-live-scenes.cpp
   src/obs/obs-live-scenes.hpp
@@ -187,6 +189,8 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 # The VIEW layer: Qt Widgets, no libobs (tests/view-test.cpp builds them alone).
 set(FIJI_VIEW_SOURCES
+  src/view/ffmpeg-output-dialog.cpp
+  src/view/ffmpeg-output-dialog.hpp
   src/view/focus-scroll-spinbox.cpp
   src/view/focus-scroll-spinbox.hpp
   src/view/capture-dock.cpp
