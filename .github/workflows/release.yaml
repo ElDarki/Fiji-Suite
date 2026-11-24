@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install dependencies
-        timeout-minutes: 10 # usually under a minute; a stuck package mirror fails here instead of hanging for hours
+        timeout-minutes: 40 # usually 1-2 minutes, but up to ~30 when Ubuntu's mirrors are slow; a stuck mirror still fails here
         run: |
           sudo add-apt-repository --yes ppa:obsproject/obs-studio
           sudo apt-get update
@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install Flatpak and the OBS runtime
-        timeout-minutes: 20 # usually about 5 minutes
+        timeout-minutes: 40 # usually 1-2 minutes, but up to ~25 when the mirrors or Flathub are slow
         run: |
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
