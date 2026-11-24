@@ -1,4 +1,6 @@
 
+#include "../utils/fiji-events.hpp"
+#include "../model/profile-model.hpp"
 #include "stats-dock.hpp"
 #include <obs-module.h>
 #include <QHeaderView>
@@ -469,26 +471,14 @@ extern obs_data_t *current_profile_config;
 QColor OutputStatsModel::canvas_color(obs_canvas_t *canvas)
 {
 	QColor color(0, 0, 0, 0);
-	if (!current_profile_config)
+	auto profile = fiji_profile();
+	if (!profile)
 		return color;
-	auto canvas_name = obs_canvas_get_name(canvas);
-	auto canvases = obs_data_get_array(current_profile_config, "canvas");
-	auto canvas_count = obs_data_array_count(canvases);
-	for (size_t i = 0; i < canvas_count; ++i) {
-		obs_data_t *c = obs_data_array_item(canvases, i);
-		if (!c)
-			continue;
-		if (strcmp(obs_data_get_string(c, "name"), canvas_name) == 0) {
-			color = color_from_int(obs_data_get_int(c, "color"));
-			color.setAlpha(255);
-			obs_data_release(c);
-			break;
-		}
-		obs_data_release(c);
+	const auto found = profile->canvas(QString::fromUtf8(obs_canvas_get_name(canvas)));
+	if (!found.isEmpty()) {
+		color = color_from_int(found.value("color").toInteger());
+		color.setAlpha(255);
 	}
-
-	obs_data_array_release(canvases);
-
 	return color;
 }
 

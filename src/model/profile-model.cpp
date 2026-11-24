@@ -62,6 +62,20 @@ bool ProfileModel::setCanvases(const QJsonArray &canvases)
 	return true;
 }
 
+QJsonObject ProfileModel::canvas(const QString &name) const
+{
+	if (name.isEmpty()) {
+		return {};
+	}
+	for (const auto &value : canvases_) {
+		const auto canvas = value.toObject();
+		if (canvas.value(QStringLiteral("name")).toString() == name) {
+			return canvas;
+		}
+	}
+	return {};
+}
+
 bool ProfileModel::updateCanvas(const QJsonObject &canvas)
 {
 	const QString uuid = canvas.value(QStringLiteral("uuid")).toString();

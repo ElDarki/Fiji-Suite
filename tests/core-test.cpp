@@ -795,6 +795,7 @@ static void test_profile_model()
 	CHECK(canvases.updateCanvas(canvas) && canvases.canvases().at(0).toObject().value("studio_mode").toBool()); // by uuid
 	CHECK(!canvases.updateCanvas(canvas));
 	CHECK(!canvases.updateCanvas(QJsonObject{{"uuid", "other"}, {"name", "Renamed"}})); // a different canvas
+	CHECK(canvases.canvas("Renamed").value("uuid") == "abc" && canvases.canvas("Nope").isEmpty() && canvases.canvas("").isEmpty());
 	CHECK(canvases.setCanvases(QJsonArray{}) && canvases.canvases().isEmpty() && canvases.owned().contains("canvas"));
 }
 

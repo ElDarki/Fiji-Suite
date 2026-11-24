@@ -1413,23 +1413,13 @@ void OutputWidget::UpdateCanvas()
 				     : canvases.values().join(", "));
 	obs_data_array_release(video_encoders);
 
-	auto canvas = obs_data_get_array(current_profile_config, "canvas");
-	count = obs_data_array_count(canvas);
-	for (size_t i = 0; i < count; i++) {
-		auto item = obs_data_array_item(canvas, i);
-		if (!item) {
-			continue;
-		}
-		auto cn = obs_data_get_string(item, "name");
-		if (cn[0] != '\0' && strcmp(cn, canvas_name) == 0) {
-			auto c = color_from_int(obs_data_get_int(item, "color"));
+	if (auto profile = fiji_profile()) {
+		const auto found = profile->canvas(QString::fromUtf8(canvas_name));
+		if (!found.isEmpty()) {
+			auto c = color_from_int(found.value("color").toInteger());
 			setStyleSheet(QString(".output-frame { border: 2px solid %1;}").arg(c.name(QColor::HexRgb)));
-			obs_data_release(item);
-			break;
 		}
-		obs_data_release(item);
 	}
-	obs_data_array_release(canvas);
 }
 
 void OutputWidget::ensure_directory(char *path)

@@ -74,6 +74,8 @@ public:
 	// Replaces the canvas with the same "uuid" (or, before it has one, the same "name"): a canvas dock changing its own
 	// settings. False when there is no such canvas or nothing changed.
 	bool updateCanvas(const QJsonObject &canvas);
+	// The canvas with that name (an empty object when there is none, or the name is empty).
+	QJsonObject canvas(const QString &name) const;
 
 signals:
 	void changed();
