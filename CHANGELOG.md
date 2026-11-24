@@ -17,6 +17,9 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 - Inside: the decks follow the MVC + State layout: a deck model saved locally (the same decks.json), the deck engine as
   the state of each key's run, one deck controller for presses from the deck pages, hotkeys, obs-websocket and the bot,
   and the OBS steps and hotkeys behind ports, with tests for the model, the store and the controller.
+- Inside: each profile's settings (fiji-suite.json: canvases, outputs, hotkeys, which OBS outputs the dock shows, dock
+  layouts) live in one profile model instead of an object every dock changed in place. The file keeps its format, and
+  keys the plugin does not know are kept. Tested without OBS.
 
 ## 0.6.0
 

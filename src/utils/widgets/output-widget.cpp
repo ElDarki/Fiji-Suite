@@ -22,7 +22,6 @@
 #include <util/config-file.h>
 #include <util/platform.h>
 
-extern obs_data_t *current_profile_config;
 extern bool isTwitchServer(QString outputServer);
 
 OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(parent), settings(output_data)

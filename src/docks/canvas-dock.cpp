@@ -1384,7 +1384,6 @@ CanvasDock::~CanvasDock()
 	transitions.clear();
 }
 
-extern obs_data_t *current_profile_config;
 
 void CanvasDock::SaveSettings(bool closing, QString mode)
 {

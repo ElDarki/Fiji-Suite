@@ -10,7 +10,6 @@
 #include <QVBoxLayout>
 #include <src/utils/color.hpp>
 
-extern obs_data_t *current_profile_config;
 extern QTabBar *modesTabBar;
 
 StatsDock::StatsDock(QWidget *parent) : QFrame(parent)
@@ -463,7 +462,6 @@ std::string OutputStatsModel::encoder_name(obs_encoder_t *encoder)
 	return name.toStdString();
 }
 
-extern obs_data_t *current_profile_config;
 
 QColor OutputStatsModel::canvas_color(obs_canvas_t *canvas)
 {

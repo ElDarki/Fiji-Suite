@@ -53,7 +53,12 @@ OBS_MODULE_USE_DEFAULT_LOCALE("fiji-suite", "en-US")
 #define DOCK_MODE "Default"
 // Per-profile configuration file.
 
-obs_data_t *current_profile_config = nullptr;
+// whether the profile model holds a profile (the plugin has loaded one, OBS is not exiting)
+static bool profile_loaded()
+{
+	auto profile = fiji_profile();
+	return profile && profile->isLoaded();
+}
 QTabBar *modesTabBar = nullptr;
 
 
@@ -90,7 +95,7 @@ void transition_start(void *, calldata_t *)
 
 void save_dock_state(QString mode)
 {
-	if (mode.isEmpty() || !current_profile_config) {
+	if (mode.isEmpty() || !profile_loaded()) {
 		return;
 	}
 	for (const auto &it : canvas_docks) {
@@ -111,7 +116,7 @@ static bool scene_collection_changing = false;
 
 void load_dock_state(QString mode)
 {
-	if (!current_profile_config) {
+	if (!profile_loaded()) {
 		return;
 	}
 	scene_collection_changing = false;
@@ -369,7 +374,7 @@ void fiji_publish_canvas(obs_data_t *canvas_settings)
 
 void save_current_profile_config(bool save_docks)
 {
-	if (!current_profile_config) {
+	if (!profile_loaded()) {
 		return;
 	}
 	const QString file = fiji::obs::CurrentProfileFile();
@@ -386,15 +391,7 @@ void save_current_profile_config(bool save_docks)
 	if (output_dock) {
 		output_dock->SaveSettings();
 	}
-	// the old settings object, with the parts the profile model owns on top (they are mirrored, so this is a check)
-	auto document = QJsonDocument::fromJson(QByteArray(obs_data_get_json(current_profile_config))).object();
-	if (auto profile = fiji_profile()) {
-		const auto owned = profile->owned();
-		for (auto it = owned.begin(); it != owned.end(); ++it) {
-			document.insert(it.key(), it.value());
-		}
-	}
-	if (!fiji::obs::SaveProfileFile(file, document)) {
+	if (!fiji::obs::SaveProfileFile(file, fiji_profile()->document())) {
 		blog(LOG_WARNING, "[Fiji Suite] Failed to save configuration file");
 	} else {
 		blog(LOG_INFO, "[Fiji Suite] Saved configuration file");
@@ -403,11 +400,11 @@ void save_current_profile_config(bool save_docks)
 
 void load_current_profile_config()
 {
-	obs_data_release(current_profile_config);
-	current_profile_config = nullptr;
-
 	const QString file = fiji::obs::CurrentProfileFile();
 	if (file.isEmpty()) {
+		if (auto profile = fiji_profile()) {
+			profile->clear();
+		}
 		return;
 	}
 	const auto loaded = fiji::obs::LoadProfileFile(file);
@@ -415,7 +412,6 @@ void load_current_profile_config()
 						     : "[Fiji Suite] No configuration file loaded");
 	const auto [document, first_create] =
 		fiji::model::withFirstRunDefaults(loaded.value_or(QJsonObject()), loaded.has_value(), fiji::obs::ProfileRecordPath());
-	current_profile_config = obs_data_create_from_json(QJsonDocument(document).toJson(QJsonDocument::Compact).constData());
 	if (auto profile = fiji_profile()) {
 		profile->load(document);
 	}
@@ -527,25 +523,6 @@ struct Core {
 	{
 		dispatcher.registerHandler(&handler);
 		dispatcher.registerHandler(&decks);
-		// the parts of the profile the model owns, copied into the old settings object for code that reads it there
-		QObject::connect(&profile, &fiji::model::ProfileModel::changed, [this] {
-			if (!current_profile_config) {
-				return;
-			}
-			OBSDataAutoRelease owned =
-				obs_data_create_from_json(QJsonDocument(profile.owned()).toJson(QJsonDocument::Compact).constData());
-			obs_data_apply(current_profile_config, owned);
-			QStringList gone; // view state the model removed
-			for (obs_data_item_t *item = obs_data_first(current_profile_config); item; obs_data_item_next(&item)) {
-				const QString key = QString::fromUtf8(obs_data_item_get_name(item));
-				if (fiji::model::ProfileModel::isViewKey(key) && profile.view(key).isUndefined()) {
-					gone.append(key);
-				}
-			}
-			for (const auto &key : gone) {
-				obs_data_erase(current_profile_config, key.toUtf8().constData());
-			}
-		});
 		fiji::bridge::BotLink::setInstance(&bot);
 		decks.start();
 	}
@@ -678,9 +655,8 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		LocalServer::Stop();
 		MultiviewDock::CloseWindows();
 		MultiviewDock::ClearAll();
-		if (current_profile_config) {
-			obs_data_release(current_profile_config);
-			current_profile_config = nullptr;
+		if (core) {
+			core->profile.clear(); // nothing is saved after this
 		}
 		if (output_dock) {
 			output_dock->Exiting();
@@ -818,13 +794,16 @@ void open_config_dialog(int tab, const char *create_type)
 
 		});
 	}
-	auto settings = obs_data_create();
-	if (current_profile_config) {
+	// the dialog edits a copy of the profile; OK hands the parts it changed back to the model
+	const bool had_profile = profile_loaded();
+	auto settings = had_profile ? obs_data_create_from_json(
+					      QJsonDocument(fiji_profile()->document()).toJson(QJsonDocument::Compact).constData())
+				    : obs_data_create();
+	if (had_profile) {
 		const QString geom = fiji_view_string("config_geometry");
 		if (!geom.isEmpty()) {
 			configDialog->restoreGeometry(QByteArray::fromBase64(geom.toUtf8()));
 		}
-		obs_data_apply(settings, current_profile_config);
 	}
 
 	configDialog->LoadSettings(settings);
@@ -838,7 +817,7 @@ void open_config_dialog(int tab, const char *create_type)
 		bool canvas_changed = false;
 		bool outputs_changed = false;
 		bool check_new_canvas = false;
-		if (current_profile_config) {
+		if (had_profile) {
 			// which of OBS's own outputs the dock shows: the profile model owns these
 			if (auto profile = fiji_profile()) {
 				outputs_changed |= profile->setMainOutputs(
@@ -864,7 +843,10 @@ void open_config_dialog(int tab, const char *create_type)
 		} else {
 			canvas_changed = true;
 			outputs_changed = true;
-			current_profile_config = settings;
+			if (auto profile = fiji_profile()) {
+				profile->load(QJsonDocument::fromJson(QByteArray(obs_data_get_json(settings))).object());
+			}
+			obs_data_release(settings);
 		}
 		fiji_set_view("config_geometry", QString::fromUtf8(configDialog->saveGeometry().toBase64()));
 		configDialog->SaveHotkeys();
@@ -1007,11 +989,6 @@ void obs_module_unload()
 	unload_obs_websocket();
 	obs_frontend_remove_save_callback(save_load, nullptr);
 	obs_frontend_remove_event_callback(frontend_event, nullptr);
-	if (current_profile_config) {
-		obs_data_release(current_profile_config);
-		current_profile_config = nullptr;
-	}
-
 	obs_frontend_remove_dock("FijiSuiteOutput");
 	obs_frontend_remove_dock("FijiSuiteProperties");
 	obs_frontend_remove_dock("FijiSuiteFilters");

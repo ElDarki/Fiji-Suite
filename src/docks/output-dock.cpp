@@ -488,7 +488,6 @@ OutputDock::~OutputDock()
 	output_dock = nullptr;
 }
 
-extern obs_data_t *current_profile_config;
 
 void OutputDock::LoadSettings()
 {

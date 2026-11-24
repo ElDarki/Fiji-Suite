@@ -3,9 +3,9 @@
 // MODEL layer: Fiji Suite's settings for the current OBS profile (fiji-suite.json in the profile folder): canvases,
 // outputs, which of OBS's own outputs the output dock shows, hotkeys, ... Qt Core only.
 //
-// The docks and dialogs used to share one obs_data_t (current_profile_config in fiji-suite.cpp) and change it in
-// place. They move onto this model one part at a time: the model owns the parts that have moved (ownedKeys()), is the
-// only thing that writes them, and the composition mirrors them into the old object for code that has not moved yet.
+// The only holder of the profile's settings: docks and dialogs read and change them here (the output widgets and canvas
+// docks keep a settings object of their own and hand their changes back). Keys the model does not know are kept as
+// they were, so document() writes back everything the file had.
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -59,6 +59,14 @@ public:
 	QJsonValue hotkey(const QString &key) const { return hotkeys_.value(key); }
 	bool setHotkey(const QString &key, const QJsonValue &value);
 
+	// The whole profile as it is saved: the parts above, plus any keys the model does not know (kept as they were).
+	// Empty when no profile is loaded.
+	QJsonObject document() const;
+	// Whether a profile is loaded (load() was called and clear() was not since).
+	bool isLoaded() const { return loaded_; }
+	// Forgets the profile (OBS is exiting).
+	void clear();
+
 	// Fiji Suite's own outputs (stream, record, backtrack, virtual_cam, ffmpeg), each an object with a unique "name"
 	// and its settings (see the output dialogs).
 	QJsonArray outputs() const { return outputs_; }
@@ -96,6 +104,8 @@ private:
 	QJsonArray canvases_;
 	bool hasCanvases_ = false;
 	QJsonObject view_;
+	QJsonObject rest_;
+	bool loaded_ = false;
 };
 
 } // namespace fiji::model

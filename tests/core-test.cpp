@@ -809,6 +809,13 @@ static void test_profile_model()
 	CHECK(!view.owned().contains("somebody_else"));
 	CHECK(view.setView("preview_locked", true) && !view.setView("preview_locked", true) && !view.setView("not_view", 1));
 	CHECK(view.setView("stats_state_Live", QJsonValue(QJsonValue::Undefined)) && !view.owned().contains("stats_state_Live"));
+
+	// the whole document: unknown keys are kept, owned ones come from the model; clear forgets the profile
+	CHECK(view.isLoaded() && view.document().value("somebody_else") == 1 && view.document().value("preview_locked") == true);
+	CHECK(!view.document().contains("stats_state_Live"));
+	view.clear();
+	CHECK(!view.isLoaded() && view.document().isEmpty());
+	CHECK(!model::ProfileModel().isLoaded());
 }
 
 int main(int argc, char **argv)

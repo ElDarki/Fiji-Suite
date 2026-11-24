@@ -69,15 +69,13 @@ local deck server.
 Also moved in 0.7.0: each output's life cycle (`state::OutputLifecycle`, fed by the output widget), starting and
 stopping outputs together (`controller::OutputsController` over the `obs::Outputs` port the output dock implements),
 and the themes (`model::themes` copies them, `obs::InstallLook` puts the fonts and themes in place,
-`view::ShowRestartNotice` asks for a restart). Still legacy: the docks and dialogs themselves, and the per-profile
-settings they share (`current_profile_config` in `fiji-suite.cpp`).
+`view::ShowRestartNotice` asks for a restart). Still legacy: the docks and dialogs themselves.
 
-The per-profile settings move onto `model::ProfileModel` one part at a time. Its first-run defaults
+The per-profile settings are `model::ProfileModel`, the only holder of them. Its first-run defaults
 (`model::withFirstRunDefaults`) and the file (`obs::LoadProfileFile`, `obs::SaveProfileFile`, fiji-suite.json in the OBS
-profile folder) are in the layers. It owns which of OBS's own outputs the output dock shows, the hotkey bindings
-(start/stop all, groups, multiview over preview), Fiji Suite's output list, the canvas list, and the docks' view state (layouts, preview lock, the
-settings dialog's size; `ProfileModel::isViewKey`). The output widgets and
-canvas docks keep a settings object of their own and hand their changes back (`OutputWidget::Publish`,
-`fiji_publish_canvas`). The parts it owns are
-mirrored into `current_profile_config` for the code that has not moved, and written over it on save; each dock that
-moves takes its part off the old object.
+profile folder) are in the layers. It holds which of OBS's own outputs the output dock shows, the hotkey bindings
+(start/stop all, groups, multiview over preview), Fiji Suite's output list, the canvas list and the docks' view state
+(layouts, preview lock, the settings dialog's size; `ProfileModel::isViewKey`), and keeps keys it does not know as they
+were. The output widgets and canvas docks keep a settings object of their own and hand their changes back
+(`OutputWidget::Publish`, `fiji_publish_canvas`); the settings dialog edits a copy of `document()` and its OK sets the
+parts it changed.

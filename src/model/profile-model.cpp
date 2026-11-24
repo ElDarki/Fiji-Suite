@@ -64,6 +64,33 @@ bool ProfileModel::setCanvases(const QJsonArray &canvases)
 	return true;
 }
 
+QJsonObject ProfileModel::document() const
+{
+	if (!loaded_) {
+		return {};
+	}
+	QJsonObject out = rest_;
+	const auto own = owned();
+	for (auto it = own.begin(); it != own.end(); ++it) {
+		out.insert(it.key(), it.value());
+	}
+	return out;
+}
+
+void ProfileModel::clear()
+{
+	main_ = {};
+	hotkeys_ = {};
+	outputs_ = {};
+	hasOutputs_ = false;
+	canvases_ = {};
+	hasCanvases_ = false;
+	view_ = {};
+	rest_ = {};
+	loaded_ = false;
+	emit changed();
+}
+
 bool ProfileModel::isViewKey(const QString &key)
 {
 	static const QRegularExpression encoder(QStringLiteral("^video_encoder_description\\d+$"));
@@ -170,11 +197,16 @@ void ProfileModel::load(const QJsonObject &document)
 	main_ = {document.value(QLatin1String(kMainKeys[0])).toBool(false), document.value(QLatin1String(kMainKeys[1])).toBool(false),
 		 document.value(QLatin1String(kMainKeys[2])).toBool(false), document.value(QLatin1String(kMainKeys[3])).toBool(false)};
 	view_ = {};
+	rest_ = {};
+	const auto owns = ownedKeys();
 	for (auto it = document.begin(); it != document.end(); ++it) {
 		if (isViewKey(it.key())) {
 			view_.insert(it.key(), it.value());
+		} else if (!owns.contains(it.key())) {
+			rest_.insert(it.key(), it.value());
 		}
 	}
+	loaded_ = true;
 	hasCanvases_ = document.contains(QStringLiteral("canvas"));
 	canvases_ = document.value(QStringLiteral("canvas")).toArray();
 	hasOutputs_ = document.contains(QStringLiteral("outputs"));
