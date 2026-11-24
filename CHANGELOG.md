@@ -2,6 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## Unreleased
+
+- Deck sounds follow OBS 33's audio monitoring switch (on or off), and the deprecated call is gone when built for
+  OBS 33.
+- Inside: the decks follow the MVC + State layout: a deck model saved locally (the same decks.json), the deck engine as
+  the state of each key's run, one deck controller for presses from the deck pages, hotkeys, obs-websocket and the bot,
+  and the OBS steps and hotkeys behind ports, with tests for the model, the store and the controller.
+
 ## 0.6.0
 
 - The link to the Fiji-chan bot speaks the new bridge contract (`BRIDGE_CONTRACT.md` 1.2): a handshake that agrees

@@ -1,5 +1,4 @@
 #include "dialogs/config-dialog.hpp"
-#include "decks/deck-manager.hpp"
 #include "decks/local-server.hpp"
 #include <QDesktopServices>
 #include <QUrl>
@@ -19,7 +18,12 @@
 #include "docks/transitions-dock.hpp"
 #include "bridge/bot-link.hpp"
 #include "controller/command-dispatcher.hpp"
+#include "controller/deck-controller.hpp"
 #include "controller/obs-command-handler.hpp"
+#include "model/deck-model.hpp"
+#include "obs/obs-data-store.hpp"
+#include "obs/obs-deck-hotkeys.hpp"
+#include "obs/obs-deck-steps.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
@@ -33,6 +37,7 @@
 #include <QApplication>
 #include <QDockWidget>
 #include <QMainWindow>
+#include <QJsonDocument>
 #include <QMap>
 #include <QMenu>
 #include <util/dstr.h>
@@ -513,14 +518,29 @@ static void log_same_sources()
 	}
 }
 
-// The MVC + State side of the plugin (CLAUDE.md), built once the UI is up: the link state machine, the dispatcher
-// that runs every bridge command on this thread, its OBS handler, and the optional bot link.
+// The MVC + State side of the plugin (CLAUDE.md), built when the module loads, on the UI thread: the link state
+// machine, the dispatcher that runs every bridge command on this thread, its OBS handler, the decks (model, steps,
+// hotkeys, controller) and the optional bot link (started once OBS has finished loading).
 namespace {
 struct Core {
 	fiji::state::LinkStateMachine link;
 	fiji::controller::CommandDispatcher dispatcher;
 	fiji::obs::RequestObsApi obs;
 	fiji::controller::ObsCommandHandler handler{obs};
+	fiji::obs::ObsDataStore store{config_folder(), [](const QString &line) {
+		blog(LOG_WARNING, "[Fiji Suite] %s", line.toUtf8().constData());
+	}};
+	fiji::model::DeckModel deckModel{store};
+	fiji::obs::ObsDeckSteps deckSteps;
+	fiji::obs::ObsDeckHotkeys deckHotkeys{&deckSteps};
+	fiji::controller::DeckController decks{deckModel, deckSteps, &deckHotkeys, [](const QString &name, const QJsonObject &data) {
+		if (!fiji_events_wanted()) {
+			return;
+		}
+		OBSDataAutoRelease d = data.isEmpty() ? nullptr
+						      : obs_data_create_from_json(QJsonDocument(data).toJson(QJsonDocument::Compact).constData());
+		fiji_emit_event(name.toUtf8().constData(), d);
+	}};
 	fiji::bridge::BotLink bot{dispatcher, link, QStringLiteral(PROJECT_VERSION),
 				  [](const QString &line) { blog(LOG_INFO, "[Fiji Suite] %s", line.toUtf8().constData()); }};
 	QString mainScene; // for scene.program's "previous"
@@ -528,7 +548,17 @@ struct Core {
 	Core()
 	{
 		dispatcher.registerHandler(&handler);
+		dispatcher.registerHandler(&decks);
 		fiji::bridge::BotLink::setInstance(&bot);
+		decks.start();
+	}
+
+	static QString config_folder()
+	{
+		char *path = obs_module_config_path("");
+		const QString folder = QString::fromUtf8(path);
+		bfree(path);
+		return folder;
 	}
 	~Core() { fiji::bridge::BotLink::setInstance(nullptr); }
 };
@@ -572,6 +602,11 @@ void main_canvas_event(enum obs_frontend_event event)
 	}
 }
 } // namespace
+
+fiji::controller::DeckController *fiji_decks()
+{
+	return core ? &core->decks : nullptr;
+}
 
 fiji::state::LinkStateMachine *fiji_link_state()
 {
@@ -618,7 +653,6 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		LocalServer::Start();
 		// The bot link runs whenever a bot address is set, independent of the remote control switch.
 		// It starts here, not earlier: the bot may ask for OBS state as soon as it is connected.
-		start_core();
 		if (auto user_config = obs_frontend_get_user_config()) {
 			const char *address = config_get_string(user_config, "FijiSuite", "BotAddress");
 			fiji_set_bot_address(QString::fromUtf8(address ? address : ""));
@@ -630,11 +664,11 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		save_current_profile_config(true);
 	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN) {
 		UpdateCheck::Stop();
-		stop_core();
-		LocalServer::Stop();
-		if (auto decks = DeckManager::Get()) {
-			decks->Shutdown();
+		if (core) {
+			core->bot.shutdown();
+			core->decks.shutdown();
 		}
+		LocalServer::Stop();
 		MultiviewDock::CloseWindows();
 		MultiviewDock::ClearAll();
 		if (current_profile_config) {
@@ -945,7 +979,7 @@ bool obs_module_load(void)
 	transitions_dock = new TransitionsDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteTransitions", obs_module_text("FijiSuiteTransitions"),
 				    transitions_dock);
-	DeckManager::Create();
+	start_core();
 	multiview_dock = new MultiviewDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteMultiview", obs_module_text("FijiSuiteMultiview"), multiview_dock);
 	return true;
@@ -978,9 +1012,8 @@ void unload_obs_websocket();
 void obs_module_unload()
 {
 	UpdateCheck::Stop();
-	stop_core();
 	LocalServer::Stop();
-	DeckManager::Destroy();
+	stop_core();
 	unload_obs_websocket();
 	obs_frontend_remove_save_callback(save_load, nullptr);
 	obs_frontend_remove_event_callback(frontend_event, nullptr);

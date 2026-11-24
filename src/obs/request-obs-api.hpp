@@ -16,13 +16,6 @@ public:
 	ObsCall runTransition(const QString &canvas) override;
 	ObsCall startOutputs(const QString &target) override;
 	ObsCall stopOutputs(const QString &target) override;
-	ObsCall decks() override;
-	ObsCall pressButton(const QString &button, const QJsonObject &vars) override;
-	ObsCall releaseButton(const QString &button) override;
-	ObsCall stopButton(const QString &button) override;
-	ObsCall saveDeck(const QJsonObject &deck) override;
-	ObsCall deleteDeck(const QString &id) override;
-	ObsCall triggers() override;
 	ObsCall webFile(const QString &name) override;
 	ObsCall look() override;
 

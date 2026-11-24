@@ -18,5 +18,10 @@ bool fiji_call_request(const char *name, obs_data_t *request, obs_data_t *respon
 namespace fiji::state {
 class LinkStateMachine;
 }
+namespace fiji::controller {
+class DeckController;
+}
 fiji::state::LinkStateMachine *fiji_link_state();
+// The deck controller (src/controller/), for the deck requests; null before the module has loaded.
+fiji::controller::DeckController *fiji_decks();
 void fiji_set_bot_address(const QString &address);

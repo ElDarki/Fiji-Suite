@@ -104,10 +104,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/transitions-dock.hpp)
 
 target_sources(${PROJECT_NAME} PRIVATE
-  src/decks/deck-manager.cpp
-  src/decks/deck-manager.hpp
-  src/decks/engine-core.cpp
-  src/decks/engine-core.hpp
   src/decks/local-server.cpp
   src/decks/local-server.hpp)
 
@@ -134,11 +130,20 @@ set(FIJI_CORE_SOURCES
   src/controller/command-dispatcher.cpp
   src/controller/command-dispatcher.hpp
   src/controller/command.hpp
+  src/controller/deck-controller.cpp
+  src/controller/deck-controller.hpp
   src/controller/obs-command-handler.cpp
   src/controller/obs-command-handler.hpp
+  src/model/deck-model.cpp
+  src/model/deck-model.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
+  src/obs/deck-ports.hpp
   src/obs/obs-api.hpp
+  src/obs/obs-data-store.cpp
+  src/obs/obs-data-store.hpp
+  src/state/deck-engine.cpp
+  src/state/deck-engine.hpp
   src/state/link-state.cpp
   src/state/link-state.hpp)
 target_sources(${PROJECT_NAME} PRIVATE
@@ -147,6 +152,10 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/bridge/bot-link.hpp
   src/bridge/link-transport.cpp
   src/bridge/link-transport.hpp
+  src/obs/obs-deck-hotkeys.cpp
+  src/obs/obs-deck-hotkeys.hpp
+  src/obs/obs-deck-steps.cpp
+  src/obs/obs-deck-steps.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp)
 
@@ -211,7 +220,7 @@ endif()
 # Unit tests for the deck engine core, which depends on Qt Core only.
 #   cmake --build build_x64 --config RelWithDebInfo --target decks-engine-test
 if(BUILD_OUT_OF_TREE)
-  add_executable(decks-engine-test tests/engine-test.cpp src/decks/engine-core.cpp)
+  add_executable(decks-engine-test tests/engine-test.cpp src/state/deck-engine.cpp)
   target_link_libraries(decks-engine-test PRIVATE Qt::Core)
   set_target_properties(decks-engine-test PROPERTIES EXCLUDE_FROM_ALL ON)
 
@@ -219,7 +228,7 @@ if(BUILD_OUT_OF_TREE)
   # state machine, dispatcher and bridge ACL work against a fake ObsApi (fiji-core-test). Plus the include rules and
   # the bridge contract check. Build the test targets, then run them all:
   #   cmake --build build_x86_64 --target fiji-arch-test fiji-core-test decks-engine-test && ctest --test-dir build_x86_64
-  add_executable(fiji-arch-test tests/arch-headers.cpp src/model/deck-model.hpp ${FIJI_CORE_SOURCES})
+  add_executable(fiji-arch-test tests/arch-headers.cpp ${FIJI_CORE_SOURCES})
   target_link_libraries(fiji-arch-test PRIVATE Qt::Core)
   set_target_properties(fiji-arch-test PROPERTIES EXCLUDE_FROM_ALL ON AUTOMOC ON)
   add_executable(fiji-core-test tests/core-test.cpp ${FIJI_CORE_SOURCES})

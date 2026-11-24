@@ -9,13 +9,18 @@
 #include "../src/bridge/link-transport.hpp"
 #include "../src/controller/command-dispatcher.hpp"
 #include "../src/controller/command.hpp"
+#include "../src/controller/deck-controller.hpp"
 #include "../src/controller/obs-command-handler.hpp"
 #include "../src/model/deck-model.hpp"
 #include "../src/model/local-store.hpp"
 #include "../src/model/obs-status.hpp"
+#include "../src/obs/deck-ports.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/obs/obs-data-store.hpp"
+#include "../src/obs/obs-deck-hotkeys.hpp"
+#include "../src/obs/obs-deck-steps.hpp"
 #include "../src/obs/request-obs-api.hpp"
+#include "../src/state/deck-engine.hpp"
 #include "../src/state/link-state.hpp"
 
 #include <cstdio>
@@ -31,6 +36,12 @@ static_assert(std::is_abstract_v<state::LinkState>, "LinkState is the State patt
 static_assert(std::is_base_of_v<model::LocalStore, obs::ObsDataStore>, "ObsDataStore implements LocalStore");
 static_assert(std::is_base_of_v<obs::ObsApi, obs::RequestObsApi>, "RequestObsApi implements the OBS port");
 static_assert(std::is_base_of_v<controller::CommandHandler, controller::ObsCommandHandler>, "a dispatcher handler");
+static_assert(std::is_base_of_v<controller::CommandHandler, controller::DeckController> &&
+		      std::is_base_of_v<decks::Host, controller::DeckController>,
+	      "the deck controller serves the dispatcher and hosts the engine");
+static_assert(std::is_abstract_v<obs::DeckSteps> && std::is_abstract_v<obs::DeckHotkeys>, "deck ports");
+static_assert(std::is_base_of_v<obs::DeckSteps, obs::ObsDeckSteps> && std::is_base_of_v<obs::DeckHotkeys, obs::ObsDeckHotkeys>,
+	      "the libobs deck adapters implement their ports");
 static_assert(std::is_base_of_v<state::LinkState, state::StandaloneState> &&
 		      std::is_base_of_v<state::LinkState, state::ConnectingState> &&
 		      std::is_base_of_v<state::LinkState, state::LinkedState>,

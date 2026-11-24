@@ -1,5 +1,8 @@
 #pragma once
 
+// STATE layer: the life cycle of deck key runs (idle, running, queued, held for a release), as one engine that
+// decides what runs when. Qt Core only; everything that touches OBS goes to a Host (the deck controller).
+
 #include <functional>
 #include <list>
 #include <QHash>

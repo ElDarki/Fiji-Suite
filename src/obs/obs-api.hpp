@@ -38,14 +38,7 @@ public:
 	virtual ObsCall startOutputs(const QString &target) = 0;
 	virtual ObsCall stopOutputs(const QString &target) = 0;
 
-	// Decks (the deck format is docs/decks.md). data as named.
-	virtual ObsCall decks() = 0;                                              // {"decks": [...]}
-	virtual ObsCall pressButton(const QString &button, const QJsonObject &vars) = 0;
-	virtual ObsCall releaseButton(const QString &button) = 0;
-	virtual ObsCall stopButton(const QString &button) = 0;                    // "all" stops everything
-	virtual ObsCall saveDeck(const QJsonObject &deck) = 0;                    // {"deck": {...}}
-	virtual ObsCall deleteDeck(const QString &id) = 0;
-	virtual ObsCall triggers() = 0;                                           // {"triggers": [...]}
+	// The deck pages' files and look (decks themselves are the DeckController's).
 	virtual ObsCall webFile(const QString &name) = 0;                         // {"content", "type"}
 	virtual ObsCall look() = 0;                                               // {"dark": bool}
 };

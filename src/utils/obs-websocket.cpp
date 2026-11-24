@@ -6,6 +6,7 @@
 #include "../version.h"
 #include "../bridge/bot-link.hpp"
 #include "../decks/local-server.hpp"
+#include "../controller/deck-controller.hpp"
 #include "fiji-events.hpp"
 #include "obs-websocket-api.h"
 #include <obs-frontend-api.h>
@@ -1036,16 +1037,142 @@ void vendor_request_stop_main(obs_data_t *request_data, obs_data_t *response_dat
 	main_output_request(request_data, response_data, false);
 }
 
-// Deck requests live with the deck manager (src/decks/deck-manager.cpp).
-void vendor_request_get_decks(obs_data_t *request_data, obs_data_t *response_data, void *);
+
+// Serves the deck pages' files (src/decks/local-server.cpp).
 void vendor_request_get_web_file(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_save_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_delete_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_press_button(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_release_button(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_stop_button(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_get_deck_state(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_get_triggers(obs_data_t *request_data, obs_data_t *response_data, void *);
+
+static OBSDataAutoRelease deck_to_obs(const QJsonObject &object)
+{
+	return obs_data_create_from_json(QJsonDocument(object).toJson(QJsonDocument::Compact).constData());
+}
+
+static QJsonObject deck_to_json(obs_data_t *data)
+{
+	return data ? QJsonDocument::fromJson(QByteArray(obs_data_get_json(data))).object() : QJsonObject();
+}
+
+// ---- deck requests (docs/websocket.md): the deck pages, obs-websocket clients and deck "request" steps.
+// Requests arrive on the caller's thread; the deck controller lives on the UI thread.
+static bool on_decks(obs_data_t *response, const std::function<void(fiji::controller::DeckController *)> &fn)
+{
+	auto manager = fiji_decks();
+	if (!manager) {
+		obs_data_set_string(response, "error", "Decks are not available");
+		obs_data_set_bool(response, "success", false);
+		return false;
+	}
+	if (QThread::currentThread() == manager->thread()) {
+		fn(manager);
+	} else {
+		QMetaObject::invokeMethod(manager, [&fn, manager] { fn(manager); }, Qt::BlockingQueuedConnection);
+	}
+	return true;
+}
+
+static void put_array(obs_data_t *response, const char *key, const QJsonArray &array)
+{
+	OBSDataAutoRelease wrapper = deck_to_obs(QJsonObject{{QLatin1String(key), array}});
+	OBSDataArrayAutoRelease value = obs_data_get_array(wrapper, key);
+	obs_data_set_array(response, key, value);
+}
+
+void vendor_request_get_decks(obs_data_t *, obs_data_t *response, void *)
+{
+	if (on_decks(response, [response](fiji::controller::DeckController *m) { put_array(response, "decks", m->decks()); })) {
+		obs_data_set_bool(response, "success", true);
+	}
+}
+
+void vendor_request_save_deck(obs_data_t *request, obs_data_t *response, void *)
+{
+	OBSDataAutoRelease deck = obs_data_get_obj(request, "deck");
+	if (!deck) {
+		obs_data_set_string(response, "error", "'deck' not set");
+		obs_data_set_bool(response, "success", false);
+		return;
+	}
+	const QJsonObject wanted = deck_to_json(deck);
+	if (on_decks(response, [&](fiji::controller::DeckController *m) {
+		    OBSDataAutoRelease saved = deck_to_obs(m->saveDeck(wanted));
+		    obs_data_set_obj(response, "deck", saved);
+	    })) {
+		obs_data_set_bool(response, "success", true);
+	}
+}
+
+void vendor_request_delete_deck(obs_data_t *request, obs_data_t *response, void *)
+{
+	const QString id = QString::fromUtf8(obs_data_get_string(request, "id"));
+	bool found = false;
+	if (!on_decks(response, [&](fiji::controller::DeckController *m) { found = m->deleteDeck(id); })) {
+		return;
+	}
+	if (!found) {
+		obs_data_set_string(response, "error", "'id' not found");
+	}
+	obs_data_set_bool(response, "success", found);
+}
+
+// press_button and fire_trigger are the same thing: "data" becomes the run's variables.
+void vendor_request_press_button(obs_data_t *request, obs_data_t *response, void *)
+{
+	const QString button = QString::fromUtf8(obs_data_get_string(request, "button"));
+	OBSDataAutoRelease data = obs_data_get_obj(request, "data");
+	decks::Variables trigger;
+	const QJsonObject values = deck_to_json(data);
+	for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+		trigger.insert(it.key(), it.value().toVariant());
+	}
+	bool started = false;
+	if (!on_decks(response, [&](fiji::controller::DeckController *m) { started = m->press(button, trigger); })) {
+		return;
+	}
+	if (!started) {
+		obs_data_set_string(response, "error", "no such button, or it is already running");
+	}
+	obs_data_set_bool(response, "success", started);
+}
+
+void vendor_request_release_button(obs_data_t *request, obs_data_t *response, void *)
+{
+	const QString button = QString::fromUtf8(obs_data_get_string(request, "button"));
+	if (on_decks(response, [&](fiji::controller::DeckController *m) { m->release(button); })) {
+		obs_data_set_bool(response, "success", true);
+	}
+}
+
+void vendor_request_stop_button(obs_data_t *request, obs_data_t *response, void *)
+{
+	const QString button = QString::fromUtf8(obs_data_get_string(request, "button"));
+	if (button.isEmpty()) {
+		obs_data_set_string(response, "error", "'button' not set (use \"all\" to stop everything)");
+		obs_data_set_bool(response, "success", false);
+		return;
+	}
+	if (on_decks(response, [&](fiji::controller::DeckController *m) { m->stop(button); })) {
+		obs_data_set_bool(response, "success", true);
+	}
+}
+
+void vendor_request_get_deck_state(obs_data_t *, obs_data_t *response, void *)
+{
+	if (on_decks(response, [response](fiji::controller::DeckController *m) {
+		    QJsonArray running; // obs_data arrays only hold objects
+		    for (const auto &button : m->running()) {
+			    running.append(QJsonObject{{QStringLiteral("button"), button}});
+		    }
+		    put_array(response, "running", running);
+	    })) {
+		obs_data_set_bool(response, "success", true);
+	}
+}
+
+void vendor_request_get_triggers(obs_data_t *, obs_data_t *response, void *)
+{
+	if (on_decks(response, [response](fiji::controller::DeckController *m) { put_array(response, "triggers", m->triggers()); })) {
+		obs_data_set_bool(response, "success", true);
+	}
+}
 
 // Every request, for OBS WebSocket clients and for the bot link alike.
 static const struct {

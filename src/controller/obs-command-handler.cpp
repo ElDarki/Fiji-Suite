@@ -30,9 +30,8 @@ CommandResult badRequest(const QString &message)
 
 QStringList ObsCommandHandler::actions() const
 {
-	return {"scene.switch", "transition.set", "transition.run", "output.start", "output.stop", "deck.list",
-		"deck.press",   "deck.fire",      "deck.release",   "deck.stop",    "deck.save",   "deck.delete",
-		"deck.file",    "look.get",       "deck.triggers",  "state.snapshot"};
+	return {"scene.switch", "transition.set", "transition.run", "output.start", "output.stop",
+		"deck.file",    "look.get",       "state.snapshot"};
 }
 
 CommandResult ObsCommandHandler::handle(const Command &command)
@@ -64,38 +63,11 @@ CommandResult ObsCommandHandler::handle(const Command &command)
 		}
 		return from(a == "output.start" ? obs_.startOutputs(text("target")) : obs_.stopOutputs(text("target")));
 	}
-	if (a == "deck.list") {
-		return from(obs_.decks());
-	}
-	if (a == "deck.press" || a == "deck.fire") {
-		if (text("button").isEmpty()) {
-			return badRequest(QStringLiteral("Which button?"));
-		}
-		return from(obs_.pressButton(text("button"), p.value("vars").toObject()));
-	}
-	if (a == "deck.release") {
-		return from(obs_.releaseButton(text("button")));
-	}
-	if (a == "deck.stop") {
-		return from(obs_.stopButton(text("button")));
-	}
-	if (a == "deck.save") {
-		if (!p.value("deck").isObject()) {
-			return badRequest(QStringLiteral("A deck is an object"));
-		}
-		return from(obs_.saveDeck(p.value("deck").toObject()));
-	}
-	if (a == "deck.delete") {
-		return from(obs_.deleteDeck(text("id")));
-	}
 	if (a == "deck.file") {
 		return from(obs_.webFile(text("name")));
 	}
 	if (a == "look.get") {
 		return from(obs_.look());
-	}
-	if (a == "deck.triggers") {
-		return from(obs_.triggers());
 	}
 	CommandResult r;
 	r.ok = false;

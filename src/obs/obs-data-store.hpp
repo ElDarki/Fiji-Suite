@@ -1,22 +1,28 @@
 #pragma once
 
-// LocalStore backed by obs_data_t JSON files in the plugin's config folder (obs_module_config_path), one file per
-// key, written with obs_data_save_json_safe. The .cpp is the only place that includes obs.h for it.
-// Scaffold: declaration only.
+// LocalStore in the plugin's config folder (obs_module_config_path, which the composition passes in): one JSON file
+// per key ("decks" -> decks.json). Each save keeps the previous file as <key>.json.bak and swaps the new one in
+// atomically, so a crash cannot truncate it. A file that cannot be read is left untouched and loads as empty.
 
 #include "../model/local-store.hpp"
+
+#include <QString>
+#include <functional>
 
 namespace fiji::obs {
 
 class ObsDataStore final : public model::LocalStore {
 public:
-	explicit ObsDataStore(QString folder);
+	explicit ObsDataStore(QString folder, std::function<void(const QString &)> log = {});
 
 	QJsonObject load(const QString &key) const override;
 	bool save(const QString &key, const QJsonObject &value) override;
 
 private:
+	QString path(const QString &key) const;
+
 	QString folder_;
+	std::function<void(const QString &)> log_;
 };
 
 } // namespace fiji::obs

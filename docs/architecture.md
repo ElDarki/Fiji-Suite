@@ -59,3 +59,9 @@ Moved so far (0.6.0): the bot link. The curl transport, the ACL and `BotLink` ar
 is `state::LinkStateMachine`; bot commands run through `controller::CommandDispatcher` and `ObsCommandHandler`; and
 `obs::RequestObsApi` reaches OBS through the plugin's request table until those calls move into it as direct libobs
 calls. `fiji-suite.cpp` builds them once OBS has finished loading.
+
+Moved in 0.7.0: the decks. `model::DeckModel` keeps them (decks.json, through `obs::ObsDataStore`); the deck engine
+(`src/state/deck-engine.*`) is the life cycle of key runs; `controller::DeckController` presses, releases and stops
+them, runs the engine's steps and serves the bridge's deck actions; the steps that act on OBS and the hotkeys are the
+`obs::DeckSteps` and `obs::DeckHotkeys` ports (`obs-deck-steps.cpp`, `obs-deck-hotkeys.cpp`). Left in `src/decks/`: the
+local deck server.
