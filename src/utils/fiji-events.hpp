@@ -20,6 +20,7 @@ class LinkStateMachine;
 }
 namespace fiji::controller {
 class DeckController;
+class LiveScenesController;
 }
 namespace fiji::model {
 class ProfileModel;
@@ -27,6 +28,8 @@ class ProfileModel;
 // The current OBS profile's Fiji Suite settings (src/model/), for the parts that have moved onto it; null before the
 // module has loaded.
 fiji::model::ProfileModel *fiji_profile();
+// The Live Scenes list (src/controller/live-scenes-controller.hpp); null before the module has loaded.
+fiji::controller::LiveScenesController *fiji_live_scenes();
 // Hotkey bindings between OBS's obs_data arrays and the profile model's JSON (fiji-suite.cpp). hotkey_obs returns a new
 // reference.
 #include <QJsonArray>

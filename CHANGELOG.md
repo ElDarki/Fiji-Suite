@@ -21,7 +21,8 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
   layouts) live in one profile model instead of an object every dock changed in place. The file keeps its format, and
   keys the plugin does not know are kept. Tested without OBS.
 - Inside: the docks and dialogs start moving into the view layer, tested with Qt and no OBS: the name dialog and the
-  Capture dock (over a capture controller and an OBS port for the capture sources).
+  Capture dock (over a capture controller and an OBS port for the capture sources), and the Live Scenes dock (a model
+  saved with the scene collection as before, a controller, and an OBS port).
 
 ## 0.6.0
 

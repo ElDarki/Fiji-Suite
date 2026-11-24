@@ -82,8 +82,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/canvas-clone-dock.hpp
   src/docks/filters-dock.cpp
   src/docks/filters-dock.hpp
-  src/docks/live-scenes-dock.cpp
-  src/docks/live-scenes-dock.hpp
   src/docks/multiview-dock.cpp
   src/docks/multiview-dock.hpp
   src/docks/output-dock.cpp
@@ -130,6 +128,8 @@ set(FIJI_CORE_SOURCES
   src/controller/deck-controller.hpp
   src/controller/obs-command-handler.cpp
   src/controller/capture-controller.cpp
+  src/controller/live-scenes-controller.cpp
+  src/controller/live-scenes-controller.hpp
   src/controller/capture-controller.hpp
   src/controller/outputs-controller.cpp
   src/controller/outputs-controller.hpp
@@ -138,6 +138,8 @@ set(FIJI_CORE_SOURCES
   src/model/deck-model.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
+  src/model/live-scenes-model.cpp
+  src/model/live-scenes-model.hpp
   src/model/profile-model.cpp
   src/model/profile-model.hpp
   src/model/theme-files.cpp
@@ -148,6 +150,7 @@ set(FIJI_CORE_SOURCES
   src/obs/obs-data-store.hpp
   src/obs/output-ports.hpp
   src/obs/capture-ports.hpp
+  src/obs/live-scenes-ports.hpp
   src/state/deck-engine.cpp
   src/state/deck-engine.hpp
   src/state/link-state.cpp
@@ -165,6 +168,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-deck-hotkeys.cpp
   src/obs/obs-deck-hotkeys.hpp
   src/obs/obs-capture-sources.cpp
+  src/obs/obs-live-scenes.cpp
+  src/obs/obs-live-scenes.hpp
   src/obs/obs-capture-sources.hpp
   src/obs/obs-deck-steps.cpp
   src/obs/obs-deck-steps.hpp
@@ -177,6 +182,8 @@ target_sources(${PROJECT_NAME} PRIVATE
 set(FIJI_VIEW_SOURCES
   src/view/capture-dock.cpp
   src/view/capture-dock.hpp
+  src/view/live-scenes-dock.cpp
+  src/view/live-scenes-dock.hpp
   src/view/name-dialog.cpp
   src/view/name-dialog.hpp
   src/view/restart-notice.cpp

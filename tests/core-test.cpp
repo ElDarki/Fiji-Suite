@@ -21,6 +21,8 @@
 #include "../src/state/output-state.hpp"
 
 #include "fake-capture-sources.hpp"
+#include "fake-live-scenes.hpp"
+#include "../src/controller/live-scenes-controller.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -860,6 +862,52 @@ static void test_capture_controller()
 	CHECK(fake.picks.size() == 1 && fake.picks.at(0).second.toString() == "notepad:1");
 }
 
+// The Live Scenes list: its order, the program entry, renames, and the scene collection round trip.
+static void test_live_scenes()
+{
+	model::LiveScenesModel list;
+	CHECK(!list.add("", "x") && list.add("A", "ua") && list.add("B", "ub") && list.add("C", "uc"));
+	list.setProgram("B", "ub");
+	CHECK(list.current() == 1);
+	CHECK(list.move(1, -1) && list.current() == 0); // the program entry moved up
+	CHECK(list.move(2, -1) && list.current() == 0); // another entry moved: program stays
+	CHECK(!list.move(0, -1) && !list.move(2, 1));
+	CHECK(list.scenes().at(0).name == "B" && list.scenes().at(1).name == "C" && list.scenes().at(2).name == "A");
+	list.renamed("C", "C2");
+	CHECK(list.scenes().at(1).name == "C2");
+	list.setProgram("Renamed A", "ua"); // found by uuid: takes the new name
+	CHECK(list.current() == 2 && list.scenes().at(2).name == "Renamed A");
+	list.setProgram("Nope", "u-nope");
+	CHECK(list.current() == -1);
+	list.setProgram("B", "ub");
+	CHECK(list.removeAt(0) && list.current() == -1); // the program entry is gone
+	CHECK(list.removeNamed("C2") && !list.removeNamed("C2") && list.scenes().size() == 1);
+	const auto saved = list.toJson();
+	CHECK(saved.size() == 1 && saved.at(0).toObject().value("uuid") == "ua");
+	model::LiveScenesModel loaded;
+	loaded.load(saved);
+	CHECK(loaded.scenes() == list.scenes() && loaded.current() == -1);
+
+	// the controller: adds what OBS has, picks put the scene on program, the collection is saved and loaded
+	FakeLiveScenes fake;
+	model::LiveScenesModel model;
+	controller::LiveScenesController scenes(model, fake);
+	scenes.start();
+	CHECK(scenes.sceneNames().size() == 3);
+	CHECK(scenes.addScene("Game") && scenes.addScene("Intro") && !scenes.addScene("Missing"));
+	scenes.pick(1);
+	CHECK(fake.shown == QStringList({"u-intro"}));
+	scenes.programChanged();
+	CHECK(model.current() == 1);
+	CHECK(fake.listener.save().size() == 2);
+	fake.listener.load(QJsonArray{QJsonObject{{"name", "Outro"}, {"uuid", "u-outro"}}});
+	CHECK(model.scenes().size() == 1 && model.current() == -1); // Intro is on program, not in the loaded list
+	fake.listener.renamed("Outro", "The End"); // from a libobs thread: queued
+	CHECK(model.scenes().at(0).name == "Outro");
+	QCoreApplication::processEvents();
+	CHECK(model.scenes().at(0).name == "The End");
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -876,6 +924,7 @@ int main(int argc, char **argv)
 	test_theme_files();
 	test_profile_model();
 	test_capture_controller();
+	test_live_scenes();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

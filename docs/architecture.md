@@ -70,8 +70,9 @@ Also moved in 0.7.0: each output's life cycle (`state::OutputLifecycle`, fed by 
 stopping outputs together (`controller::OutputsController` over the `obs::Outputs` port the output dock implements),
 and the themes (`model::themes` copies them, `obs::InstallLook` puts the fonts and themes in place,
 `view::ShowRestartNotice` asks for a restart), the name dialog (`view::NameDialog`) and the Capture dock
-(`view::CaptureDock` over `controller::CaptureController` and the `obs::CaptureSources` port). Still legacy: the
-other docks and dialogs.
+(`view::CaptureDock` over `controller::CaptureController` and the `obs::CaptureSources` port), and the Live Scenes
+dock (`view::LiveScenesDock`, `controller::LiveScenesController`, `model::LiveScenesModel`, the `obs::LiveScenesObs`
+port). Still legacy: the other docks and dialogs.
 
 The per-profile settings are `model::ProfileModel`, the only holder of them. Its first-run defaults
 (`model::withFirstRunDefaults`) and the file (`obs::LoadProfileFile`, `obs::SaveProfileFile`, fiji-suite.json in the OBS

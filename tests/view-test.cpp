@@ -4,6 +4,9 @@
 #include "../src/view/capture-dock.hpp"
 #include "../src/view/name-dialog.hpp"
 #include "fake-capture-sources.hpp"
+#include "fake-live-scenes.hpp"
+#include "../src/view/live-scenes-dock.hpp"
+#include <QListWidget>
 #include "../src/view/restart-notice.hpp"
 
 #include <QApplication>
@@ -72,12 +75,42 @@ static void test_capture_dock()
 	CHECK(dock.rows().size() == 1 && !dock.rows().contains("u1"));
 }
 
+// The Live Scenes dock shows the model, selects the program entry, and picking an entry puts it on program.
+static void test_live_scenes_dock()
+{
+	FakeLiveScenes fake;
+	model::LiveScenesModel model;
+	controller::LiveScenesController scenes(model, fake);
+	scenes.start();
+	scenes.addScene("Intro");
+	view::LiveScenesDock dock(scenes, {"Add", "Remove", "Up", "Down"});
+	CHECK(dock.list()->count() == 1 && dock.list()->currentRow() == -1);
+
+	QMenu menu;
+	dock.fillAddMenu(menu);
+	CHECK(menu.actions().size() == 3);
+	menu.actions().at(1)->trigger(); // Game
+	CHECK(dock.list()->count() == 2 && dock.list()->item(1)->text() == "Game");
+
+	dock.list()->setCurrentRow(1); // the user picks Game
+	CHECK(fake.shown == QStringList({"u-game"}));
+	scenes.programChanged(); // OBS reports it
+	CHECK(dock.list()->currentRow() == 1 && dock.list()->item(1)->isSelected());
+	CHECK(fake.shown.size() == 1); // showing the model did not pick again
+
+	dock.moveCurrent(-1);
+	CHECK(dock.list()->item(0)->text() == "Game" && dock.list()->currentRow() == 0);
+	dock.removeCurrent();
+	CHECK(dock.list()->count() == 1 && dock.list()->item(0)->text() == "Intro");
+}
+
 int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
 	test_name_dialog();
 	test_restart_notice();
 	test_capture_dock();
+	test_live_scenes_dock();
 	if (failures) {
 		std::fprintf(stderr, "%d check(s) failed\n", failures);
 		return 1;

@@ -9,7 +9,9 @@
 #include "obs/obs-capture-sources.hpp"
 #include "controller/capture-controller.hpp"
 #include "docks/filters-dock.hpp"
-#include "docks/live-scenes-dock.hpp"
+#include "view/live-scenes-dock.hpp"
+#include "obs/obs-live-scenes.hpp"
+#include "controller/live-scenes-controller.hpp"
 #include "docks/multiview-dock.hpp"
 #include "docks/output-dock.hpp"
 #include "docks/properties-dock.hpp"
@@ -69,7 +71,6 @@ OutputDock *output_dock = nullptr;
 PropertiesDock *properties_dock = nullptr;
 FiltersDock *filters_dock = nullptr;
 TransformDock *transform_dock = nullptr;
-LiveScenesDock *live_scenes_dock = nullptr;
 CanvasDock *component_dock = nullptr;
 StatsDock *stats_dock = nullptr;
 ScenesDock *scenes_dock = nullptr;
@@ -87,9 +88,17 @@ static bool finished_loading = false;
 // Themes installed for the first time when this OBS started (they show up after a restart).
 static int themes_added = 0;
 
+// OBS's program scene changed (from any thread): the Live Scenes list follows on the UI thread.
+static void live_scenes_program_changed()
+{
+	if (auto scenes = fiji_live_scenes()) {
+		QMetaObject::invokeMethod(scenes, [scenes] { scenes->programChanged(); }, Qt::QueuedConnection);
+	}
+}
+
 void transition_start(void *, calldata_t *)
 {
-	QMetaObject::invokeMethod(live_scenes_dock, "MainSceneChanged", Qt::QueuedConnection);
+	live_scenes_program_changed();
 	for (const auto &it : canvas_docks) {
 		QMetaObject::invokeMethod(it, "MainSceneChanged", Qt::QueuedConnection);
 	}
@@ -507,6 +516,9 @@ struct Core {
 	}};
 	fiji::model::DeckModel deckModel{store};
 	fiji::model::ProfileModel profile;
+	fiji::model::LiveScenesModel liveScenesModel;
+	fiji::obs::ObsLiveScenes liveScenesObs;
+	fiji::controller::LiveScenesController liveScenes{liveScenesModel, liveScenesObs};
 	fiji::obs::ObsCaptureSources captureSources;
 	fiji::controller::CaptureController captures{captureSources};
 	fiji::obs::ObsDeckSteps deckSteps;
@@ -530,6 +542,7 @@ struct Core {
 		fiji::bridge::BotLink::setInstance(&bot);
 		decks.start();
 		captures.start();
+		liveScenes.start();
 	}
 
 	static QString config_folder()
@@ -585,6 +598,11 @@ void main_canvas_event(enum obs_frontend_event event)
 fiji::model::ProfileModel *fiji_profile()
 {
 	return core ? &core->profile : nullptr;
+}
+
+fiji::controller::LiveScenesController *fiji_live_scenes()
+{
+	return core ? &core->liveScenes : nullptr;
 }
 
 fiji::controller::DeckController *fiji_decks()
@@ -703,9 +721,7 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		}
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED || event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED) {
 		main_canvas_event(event);
-		if (live_scenes_dock) {
-			QMetaObject::invokeMethod(live_scenes_dock, "MainSceneChanged", Qt::QueuedConnection);
-		}
+		live_scenes_program_changed();
 		if (scenes_dock) {
 			QMetaObject::invokeMethod(scenes_dock, "MainSceneChanged", Qt::QueuedConnection);
 		}
@@ -943,8 +959,6 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteFilters", obs_module_text("FijiSuiteFilters"), filters_dock);
 	transform_dock = new TransformDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteTransform", obs_module_text("FijiSuiteTransform"), transform_dock);
-	live_scenes_dock = new LiveScenesDock(main_window);
-	obs_frontend_add_dock_by_id("FijiSuiteLiveScenes", obs_module_text("FijiSuiteLiveScenes"), live_scenes_dock);
 	stats_dock = new StatsDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteStats", obs_module_text("FijiSuiteStats"), stats_dock);
 	scenes_dock = new ScenesDock(main_window);
@@ -958,6 +972,13 @@ bool obs_module_load(void)
 	// the Capture dock: a view over the capture controller (game and window capture sources)
 	auto capture_dock = new fiji::view::CaptureDock(core->captures, QString::fromUtf8(obs_module_text("Config")), main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteCapture", obs_module_text("FijiSuiteCapture"), capture_dock);
+	auto locale = [](const char *key) {
+		return QString::fromUtf8(obs_frontend_get_locale_string(key));
+	};
+	auto live_scenes_dock = new fiji::view::LiveScenesDock(
+		core->liveScenes, {locale("Add"), locale("RemoveScene"), locale("MoveSceneUp"), locale("MoveSceneDown")},
+		main_window);
+	obs_frontend_add_dock_by_id("FijiSuiteLiveScenes", obs_module_text("FijiSuiteLiveScenes"), live_scenes_dock);
 	multiview_dock = new MultiviewDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteMultiview", obs_module_text("FijiSuiteMultiview"), multiview_dock);
 	return true;

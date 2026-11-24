@@ -1,7 +1,9 @@
 
 #include "../docks/canvas-clone-dock.hpp"
 #include "../docks/canvas-dock.hpp"
-#include "../docks/live-scenes-dock.hpp"
+#include "../controller/live-scenes-controller.hpp"
+#include <QJsonDocument>
+#include <QJsonObject>
 #include "../docks/output-dock.hpp"
 #include "../version.h"
 #include "../bridge/bot-link.hpp"
@@ -54,7 +56,6 @@ void vendor_request_get_link(obs_data_t *, obs_data_t *response_data, void *)
 extern std::list<CanvasDock *> canvas_docks;
 extern std::list<CanvasCloneDock *> canvas_clone_docks;
 extern OutputDock *output_dock;
-extern LiveScenesDock *live_scenes_dock;
 
 void vendor_request_version(obs_data_t *request_data, obs_data_t *response_data, void *)
 {
@@ -503,15 +504,18 @@ void vendor_request_dock_hide(obs_data_t *request_data, obs_data_t *response_dat
 void vendor_request_get_live_scenes(obs_data_t *request_data, obs_data_t *response_data, void *)
 {
 	UNUSED_PARAMETER(request_data);
-	if (!live_scenes_dock) {
+	auto scenes = fiji_live_scenes();
+	if (!scenes) {
 		obs_data_set_string(response_data, "error", "Live Scenes dock not available");
 		obs_data_set_bool(response_data, "success", false);
 		return;
 	}
-	auto sa = live_scenes_dock->GetLiveScenesArray();
+	// the model's list (safe to read from this thread), through a one-key wrapper
+	OBSDataAutoRelease wrapper = obs_data_create_from_json(
+		QJsonDocument(QJsonObject{{"live_scenes", scenes->model().toJson()}}).toJson(QJsonDocument::Compact).constData());
+	OBSDataArrayAutoRelease sa = obs_data_get_array(wrapper, "live_scenes");
 	obs_data_set_bool(response_data, "success", true);
 	obs_data_set_array(response_data, "live_scenes", sa);
-	obs_data_array_release(sa);
 }
 
 void vendor_request_live_scenes_add(obs_data_t *request_data, obs_data_t *response_data, void *)
@@ -522,13 +526,14 @@ void vendor_request_live_scenes_add(obs_data_t *request_data, obs_data_t *respon
 		obs_data_set_bool(response_data, "success", false);
 		return;
 	}
-	if (!live_scenes_dock) {
+	auto scenes = fiji_live_scenes();
+	if (!scenes) {
 		obs_data_set_string(response_data, "error", "Live Scenes dock not available");
 		obs_data_set_bool(response_data, "success", false);
 		return;
 	}
 	auto sn = QString::fromUtf8(scene_name);
-	QMetaObject::invokeMethod(live_scenes_dock, [sn] { live_scenes_dock->AddLiveScene(sn); });
+	QMetaObject::invokeMethod(scenes, [scenes, sn] { scenes->addScene(sn); });
 	obs_data_set_bool(response_data, "success", true);
 }
 
@@ -540,13 +545,14 @@ void vendor_request_live_scenes_remove(obs_data_t *request_data, obs_data_t *res
 		obs_data_set_bool(response_data, "success", false);
 		return;
 	}
-	if (!live_scenes_dock) {
+	auto scenes = fiji_live_scenes();
+	if (!scenes) {
 		obs_data_set_string(response_data, "error", "Live Scenes dock not available");
 		obs_data_set_bool(response_data, "success", false);
 		return;
 	}
 	auto sn = QString::fromUtf8(scene_name);
-	QMetaObject::invokeMethod(live_scenes_dock, [sn] { live_scenes_dock->RemoveLiveScene(sn); });
+	QMetaObject::invokeMethod(scenes, [scenes, sn] { scenes->removeNamed(sn); });
 	obs_data_set_bool(response_data, "success", true);
 }
 
