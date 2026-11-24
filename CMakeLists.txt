@@ -105,9 +105,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/dialogs/config-dialog.cpp
   src/dialogs/config-dialog.hpp
   src/dialogs/ffmpeg-output-dialog.cpp
-  src/dialogs/ffmpeg-output-dialog.hpp
-  src/dialogs/stream-output-dialog.cpp
-  src/dialogs/stream-output-dialog.hpp)
+  src/dialogs/ffmpeg-output-dialog.hpp)
 
 # The MVC + State layers (CLAUDE.md).
 set(FIJI_CORE_SOURCES
@@ -142,6 +140,8 @@ set(FIJI_CORE_SOURCES
   src/model/output-stats.hpp
   src/model/record-output.cpp
   src/model/record-output.hpp
+  src/model/stream-output.cpp
+  src/model/stream-output.hpp
   src/model/profile-model.cpp
   src/model/profile-model.hpp
   src/model/theme-files.cpp
@@ -175,6 +175,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-live-scenes.hpp
   src/obs/obs-stats-source.cpp
   src/obs/obs-stats-source.hpp
+  src/obs/stream-service-files.cpp
+  src/obs/stream-service-files.hpp
   src/obs/obs-capture-sources.hpp
   src/obs/obs-deck-steps.cpp
   src/obs/obs-deck-steps.hpp
@@ -199,6 +201,10 @@ set(FIJI_VIEW_SOURCES
   src/view/restart-notice.hpp
   src/view/stats-dock.cpp
   src/view/stats-dock.hpp
+  src/view/stream-key-input.cpp
+  src/view/stream-key-input.hpp
+  src/view/stream-output-dialog.cpp
+  src/view/stream-output-dialog.hpp
   src/view/text.cpp
   src/view/text.hpp)
 target_sources(${PROJECT_NAME} PRIVATE ${FIJI_VIEW_SOURCES})
@@ -222,7 +228,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/scene-list-widget-item.cpp
   src/utils/widgets/slider-ignore-scroll.cpp
   src/utils/widgets/source-tree.cpp
-  src/utils/widgets/stream-key-input.cpp
   src/utils/widgets/switching-splitter.cpp
   src/utils/widgets/projector.cpp
   src/utils/widgets/qt-display.cpp
@@ -242,7 +247,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/scene-list-widget-item.hpp
   src/utils/widgets/slider-ignore-scroll.hpp
   src/utils/widgets/source-tree.hpp
-  src/utils/widgets/stream-key-input.hpp
   src/utils/widgets/switching-splitter.hpp
   src/utils/widgets/projector.hpp
   src/utils/widgets/qt-display.hpp

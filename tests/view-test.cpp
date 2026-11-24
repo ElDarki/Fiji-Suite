@@ -8,6 +8,9 @@
 #include "../src/view/live-scenes-dock.hpp"
 #include "../src/view/record-output-dialog.hpp"
 #include "../src/view/stats-dock.hpp"
+#include "../src/view/stream-output-dialog.hpp"
+#include <QComboBox>
+#include <QStackedWidget>
 #include "../src/model/profile-model.hpp"
 #include "fake-stats-source.hpp"
 #include <QHeaderView>
@@ -199,6 +202,46 @@ static void test_stats_dock()
 	CHECK(table.rows().isEmpty()); // hidden: the table empties
 }
 
+// The stream output dialog: platforms first, each page's server kind, the key rule, and editing an existing output.
+static void test_stream_output_dialog()
+{
+	auto servers = [](const QString &service) {
+		return service == "Twitch" ? QList<model::StreamServer>{{"Default", "rtmp://live.twitch.tv/app"}, {"EU", "rtmp://eu.twitch.tv/app"}}
+					   : QList<model::StreamServer>{};
+	};
+	view::StreamOutputDialog create(nullptr, {"Taken"}, servers);
+	CHECK(create.pages()->count() == 9 && create.pages()->currentIndex() == 0);
+	create.choosePlatform("twitch");
+	auto twitch = create.page("twitch");
+	CHECK(create.pages()->currentIndex() == 1 && twitch.serverList && twitch.serverList->count() == 2);
+	CHECK(create.result().name == "TwitchOutput" && create.result().server == "rtmp://live.twitch.tv/app");
+	CHECK(!twitch.confirm->isEnabled()); // no key yet
+	twitch.key->setText("live_123");
+	emit twitch.key->textEdited("live_123");
+	CHECK(twitch.confirm->isEnabled());
+	twitch.serverList->setCurrentIndex(1);
+	CHECK(create.result().server == "rtmp://eu.twitch.tv/app");
+
+	create.choosePlatform("kick"); // a fixed server
+	auto kick = create.page("kick");
+	CHECK(kick.serverField && !kick.serverField->isEnabled() && create.result().server.contains("live-video.net"));
+	CHECK(create.result().key.isEmpty()); // each page has its own fields
+
+	create.choosePlatform("custom");
+	auto custom = create.page("custom");
+	custom.serverField->setText("srt://example:9000");
+	emit custom.serverField->textEdited("srt://example:9000");
+	CHECK(custom.confirm->isEnabled()); // SRT needs no key
+	custom.name->setText("Taken");
+	emit custom.name->textEdited("Taken");
+	CHECK(!custom.confirm->isEnabled());
+
+	view::StreamOutputDialog edit(nullptr, {"Main", "rtmp://eu.twitch.tv/app", "secret"}, {}, servers);
+	auto page = edit.page("twitch");
+	CHECK(edit.windowTitle() == "EditStreamOutputWindowTitle" && page.serverList && page.serverList->currentIndex() == 1);
+	CHECK(page.key->text() == "secret" && page.confirm->isEnabled() && edit.result().server == "rtmp://eu.twitch.tv/app");
+}
+
 int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
@@ -208,6 +251,7 @@ int main(int argc, char **argv)
 	test_live_scenes_dock();
 	test_record_output_dialog();
 	test_stats_dock();
+	test_stream_output_dialog();
 	if (failures) {
 		std::fprintf(stderr, "%d check(s) failed\n", failures);
 		return 1;

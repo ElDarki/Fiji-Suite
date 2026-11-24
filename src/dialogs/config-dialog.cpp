@@ -9,7 +9,8 @@
 #include "obs-module.h"
 #include "../view/record-output-dialog.hpp"
 #include "../view/text.hpp"
-#include "stream-output-dialog.hpp"
+#include "../view/stream-output-dialog.hpp"
+#include "../obs/stream-service-files.hpp"
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
@@ -1730,10 +1731,12 @@ void OBSBasicSettings::AddOutput(QFormLayout *outputsLayout, obs_data_t *setting
 			delete outputDialog;
 
 		} else {
-			auto outputDialog =
-				new StreamOutputDialog(this, QString::fromUtf8(obs_data_get_string(settings, "name")),
-						       QString::fromUtf8(obs_data_get_string(settings, "stream_server")),
-						       QString::fromUtf8(obs_data_get_string(settings, "stream_key")), otherNames);
+			auto outputDialog = new fiji::view::StreamOutputDialog(
+				this,
+				{QString::fromUtf8(obs_data_get_string(settings, "name")),
+				 QString::fromUtf8(obs_data_get_string(settings, "stream_server")),
+				 QString::fromUtf8(obs_data_get_string(settings, "stream_key"))},
+				otherNames, fiji::obs::StreamServersFor);
 
 			outputDialog->setWindowModality(Qt::WindowModal);
 			outputDialog->setModal(true);
@@ -1745,9 +1748,10 @@ void OBSBasicSettings::AddOutput(QFormLayout *outputsLayout, obs_data_t *setting
 
 				obs_data_set_bool(settings, "enabled", true);
 				// Set the info from the output dialog
-				obs_data_set_string(settings, "name", outputDialog->outputName.toUtf8().constData());
-				obs_data_set_string(settings, "stream_server", outputDialog->outputServer.toUtf8().constData());
-				obs_data_set_string(settings, "stream_key", outputDialog->outputKey.toUtf8().constData());
+				const auto edited = outputDialog->result();
+				obs_data_set_string(settings, "name", edited.name.toUtf8().constData());
+				obs_data_set_string(settings, "stream_server", edited.server.toUtf8().constData());
+				obs_data_set_string(settings, "stream_key", edited.key.toUtf8().constData());
 
 				// Reload
 				LoadSettings(main_settings);
@@ -2796,7 +2800,7 @@ void OBSBasicSettings::AddStream()
 		},
 		&otherNames);
 	otherNames.removeDuplicates();
-	auto outputDialog = new StreamOutputDialog(this, otherNames);
+	auto outputDialog = new fiji::view::StreamOutputDialog(this, otherNames, fiji::obs::StreamServersFor);
 
 	outputDialog->setWindowModality(Qt::WindowModal);
 	outputDialog->setModal(true);
@@ -2810,9 +2814,10 @@ void OBSBasicSettings::AddStream()
 		obs_data_set_bool(s, "enabled", true);
 		obs_data_set_bool(s, "expanded", true);
 		obs_data_set_string(s, "type", "stream");
-		obs_data_set_string(s, "name", outputDialog->outputName.toUtf8().constData());
-		obs_data_set_string(s, "stream_server", outputDialog->outputServer.toUtf8().constData());
-		obs_data_set_string(s, "stream_key", outputDialog->outputKey.toUtf8().constData());
+		const auto created = outputDialog->result();
+		obs_data_set_string(s, "name", created.name.toUtf8().constData());
+		obs_data_set_string(s, "stream_server", created.server.toUtf8().constData());
+		obs_data_set_string(s, "stream_key", created.key.toUtf8().constData());
 		obs_data_array_push_back(extra_outputs, s);
 		AddOutput(outputsLayout, s, extra_outputs, true);
 		obs_data_release(s);

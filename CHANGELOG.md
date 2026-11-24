@@ -29,7 +29,8 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
   Capture dock (over a capture controller and an OBS port for the capture sources), and the Live Scenes dock (a model
   saved with the scene collection as before, a controller, and an OBS port), and the recording / backtrack output dialog
   (one dialog for new and edited outputs, its rules in a model), and the Stats dock (a table model fed once a second
-  by a controller over an OBS port). Views get their text through `view::text`.
+  by a controller over an OBS port), and the stream output dialog (one page for every platform, built from a
+  platform list in a model, instead of eight copies). Views get their text through `view::text`.
 
 ## 0.6.0
 

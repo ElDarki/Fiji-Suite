@@ -2,7 +2,8 @@
 
 #include <QLineEdit>
 
-class StreamKeyInput : public QLineEdit 
+// VIEW: a stream key field; it tells when it gains or loses focus (the dialog shows the key only while it has focus).
+class StreamKeyInput : public QLineEdit
 {
 	Q_OBJECT
 	

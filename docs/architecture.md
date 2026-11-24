@@ -73,7 +73,9 @@ and the themes (`model::themes` copies them, `obs::InstallLook` puts the fonts a
 (`view::CaptureDock` over `controller::CaptureController` and the `obs::CaptureSources` port), and the Live Scenes
 dock (`view::LiveScenesDock`, `controller::LiveScenesController`, `model::LiveScenesModel`, the `obs::LiveScenesObs`
 port), the recording / backtrack output dialog (`view::RecordOutputDialog` over `model::RecordOutput`), and the Stats
-dock (`view::StatsDock`, `controller::StatsController`, `model::OutputStatsTable`, the `obs::StatsSource` port). Views
+dock (`view::StatsDock`, `controller::StatsController`, `model::OutputStatsTable`, the `obs::StatsSource` port), and the
+stream output dialog (`view::StreamOutputDialog` over `model::StreamOutput` and `model::streamPlatforms`; OBS's server
+lists from `obs::StreamServersFor`). Views
 look their text up with `view::pluginText` / `view::obsText`, which the composition connects to OBS. Still legacy:
 the other docks and dialogs.
 

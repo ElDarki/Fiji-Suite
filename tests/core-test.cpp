@@ -24,6 +24,7 @@
 #include "fake-live-scenes.hpp"
 #include "../src/controller/live-scenes-controller.hpp"
 #include "../src/model/record-output.hpp"
+#include "../src/model/stream-output.hpp"
 #include "../src/controller/stats-controller.hpp"
 #include "fake-stats-source.hpp"
 
@@ -1030,6 +1031,35 @@ static void test_output_stats()
 	CHECK(source.samples == 1 && shownTable.rows().isEmpty());
 }
 
+// The stream output dialog's platforms, server lists and rules.
+static void test_stream_output()
+{
+	CHECK(model::streamPlatforms().size() == 8 && model::streamPlatforms().at(0).id == "twitch");
+	CHECK(model::streamPlatformFor("rtmp://live.twitch.tv/app") == "twitch");
+	CHECK(model::streamPlatformFor("rtmps://ingest.global-contribute.live-video.net/app") == "twitch");
+	CHECK(model::streamPlatformFor("rtmps://fa723fc1b171.global-contribute.live-video.net") == "kick");
+	CHECK(model::streamPlatformFor("rtmp://a.rtmp.youtube.com/live2") == "youtube");
+	CHECK(model::streamPlatformFor("rtmps://rtmp-api.facebook.com:443/rtmp/") == "facebook");
+	CHECK(model::streamPlatformFor("rtmp://livepush.trovo.live/live/") == "trovo");
+	CHECK(model::streamPlatformFor("rtmp://example.org/live") == "custom");
+	CHECK(model::streamPlatform("kick").serverKind == model::StreamPlatform::Server::Fixed && model::streamPlatform("nope").id == "custom");
+
+	const QJsonObject services{{"services", QJsonArray{QJsonObject{{"name", "Other"}},
+							    QJsonObject{{"name", "YouTube - RTMPS"},
+									{"servers", QJsonArray{QJsonObject{{"name", "Primary"}, {"url", "rtmps://yt/a"}}}}}}}};
+	CHECK(model::serversOf(services, "YouTube - RTMPS") == QList<model::StreamServer>({{"Primary", "rtmps://yt/a"}}));
+	CHECK(model::serversOf(services, "Missing").isEmpty());
+	const auto ingests = model::twitchIngests(
+		QJsonObject{{"ingests", QJsonArray{QJsonObject{{"name", "EU"}, {"url_template", "rtmp://eu.twitch.tv/app/{stream_key}"}}}}});
+	CHECK(ingests.size() == 2 && ingests.at(0).name == "Default" && ingests.at(1).url == "rtmp://eu.twitch.tv/app");
+
+	CHECK(model::serverWithoutKey("https://x/whip") && model::serverWithoutKey("SRT://x") && !model::serverWithoutKey("rtmp://x"));
+	CHECK(!model::streamOutputValid({"Main", "rtmp://x", ""}, {}));
+	CHECK(model::streamOutputValid({"Main", "srt://x", ""}, {}));
+	CHECK(model::streamOutputValid({"Main", "rtmp://x", "k"}, {}) && !model::streamOutputValid({"Main", "rtmp://x", "k"}, {"Main"}));
+	CHECK(!model::streamOutputValid({"Main", "", "k"}, {}));
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -1049,6 +1079,7 @@ int main(int argc, char **argv)
 	test_live_scenes();
 	test_record_output();
 	test_output_stats();
+	test_stream_output();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;
