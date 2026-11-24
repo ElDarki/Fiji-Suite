@@ -753,7 +753,18 @@ static void test_profile_model()
 	CHECK(profile.setMainOutputs({true, true, false, false}) && changes == 2);
 	const auto owned = profile.owned();
 	CHECK(owned.size() == 4 && owned.value("main_stream_output_show").toBool() && !owned.value("main_backtrack_output_show").toBool());
-	CHECK(model::ProfileModel::ownedKeys().size() == 4);
+	CHECK(model::ProfileModel::ownedKeys().size() == 10);
+
+	// hotkey bindings: kept as OBS saved them, only the ones that exist are written back
+	CHECK(!profile.owned().contains("group_hotkeys"));
+	const QJsonArray f1{QJsonObject{{"key", "OBS_KEY_F1"}}};
+	CHECK(profile.setHotkey("start_all_outputs_hotkey", f1) && !profile.setHotkey("start_all_outputs_hotkey", f1));
+	CHECK(!profile.setHotkey("someone_elses_hotkey", f1)); // not one of the profile's
+	CHECK(profile.setHotkey("group_hotkeys", QJsonObject{{"Phones", QJsonObject{{"start", f1}, {"stop", QJsonArray{}}}}}));
+	CHECK(profile.owned().value("start_all_outputs_hotkey").toArray() == f1 && profile.owned().contains("group_hotkeys"));
+	model::ProfileModel reloaded;
+	reloaded.load({{"multiview_over_preview_hotkey", f1}});
+	CHECK(reloaded.hotkey("multiview_over_preview_hotkey").toArray() == f1 && reloaded.hotkey("group_hotkeys").isUndefined());
 }
 
 int main(int argc, char **argv)

@@ -51,11 +51,19 @@ public:
 	// True when something changed (then `changed` was emitted).
 	bool setMainOutputs(const MainOutputs &outputs);
 
+	// Hotkey bindings, as OBS saves them (JSON arrays; "group_hotkeys" is {group: {"start": [...], "stop": [...]}}).
+	// Keys: start_all_outputs_hotkey, stop_all_outputs_hotkey, start_all_streams_hotkey, start_all_recordings_hotkey,
+	// multiview_over_preview_hotkey, group_hotkeys.
+	static QStringList hotkeyKeys();
+	QJsonValue hotkey(const QString &key) const { return hotkeys_.value(key); }
+	bool setHotkey(const QString &key, const QJsonValue &value);
+
 signals:
 	void changed();
 
 private:
 	MainOutputs main_;
+	QJsonObject hotkeys_;
 };
 
 } // namespace fiji::model

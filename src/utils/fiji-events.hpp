@@ -27,6 +27,11 @@ class ProfileModel;
 // The current OBS profile's Fiji Suite settings (src/model/), for the parts that have moved onto it; null before the
 // module has loaded.
 fiji::model::ProfileModel *fiji_profile();
+// Hotkey bindings between OBS's obs_data arrays and the profile model's JSON (fiji-suite.cpp). hotkey_obs returns a new
+// reference.
+#include <QJsonArray>
+QJsonArray hotkey_json(obs_data_array_t *keys);
+obs_data_array_t *hotkey_obs(const QJsonArray &keys);
 fiji::state::LinkStateMachine *fiji_link_state();
 // The deck controller (src/controller/), for the deck requests; null before the module has loaded.
 fiji::controller::DeckController *fiji_decks();

@@ -2,6 +2,7 @@
 
 #include "../model/profile-model.hpp"
 #include "../utils/fiji-events.hpp"
+#include <QJsonDocument>
 
 #include "../version.h"
 #include <obs-frontend-api.h>
@@ -551,17 +552,21 @@ void OutputDock::LoadSettings()
 	spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	mainLayout->addWidget(spacer);
 
-	auto start_hotkey = obs_data_get_array(current_profile_config, "start_all_outputs_hotkey");
-	auto stop_hotkey = obs_data_get_array(current_profile_config, "stop_all_outputs_hotkey");
+	// the bindings live in the profile model
+	auto binding = [](const char *key) {
+		return hotkey_obs(fiji_profile() ? fiji_profile()->hotkey(QLatin1String(key)).toArray() : QJsonArray());
+	};
+	auto start_hotkey = binding("start_all_outputs_hotkey");
+	auto stop_hotkey = binding("stop_all_outputs_hotkey");
 	obs_hotkey_pair_load(StartStopHotkey, start_hotkey, stop_hotkey);
 	obs_data_array_release(start_hotkey);
 	obs_data_array_release(stop_hotkey);
 
-	auto stream_hotkey = obs_data_get_array(current_profile_config, "start_all_streams_hotkey");
+	auto stream_hotkey = binding("start_all_streams_hotkey");
 	obs_hotkey_load(StartStreamHotkey, stream_hotkey);
 	obs_data_array_release(stream_hotkey);
 
-	auto record_hotkey = obs_data_get_array(current_profile_config, "start_all_recordings_hotkey");
+	auto record_hotkey = binding("start_all_recordings_hotkey");
 	obs_hotkey_load(StartRecordHotkey, record_hotkey);
 	obs_data_array_release(record_hotkey);
 
@@ -575,24 +580,26 @@ void OutputDock::SaveSettings()
 		(*it)->SaveSettings();
 	}
 
+	auto profile = fiji_profile();
+	if (!profile) {
+		return;
+	}
 	if (StartStopHotkey != OBS_INVALID_HOTKEY_PAIR_ID) {
 		obs_data_array_t *start_hotkey = nullptr;
 		obs_data_array_t *stop_hotkey = nullptr;
 		obs_hotkey_pair_save(StartStopHotkey, &start_hotkey, &stop_hotkey);
-		obs_data_set_array(current_profile_config, "start_all_outputs_hotkey", start_hotkey);
-		obs_data_set_array(current_profile_config, "stop_all_outputs_hotkey", stop_hotkey);
+		profile->setHotkey(QStringLiteral("start_all_outputs_hotkey"), hotkey_json(start_hotkey));
+		profile->setHotkey(QStringLiteral("stop_all_outputs_hotkey"), hotkey_json(stop_hotkey));
 		obs_data_array_release(start_hotkey);
 		obs_data_array_release(stop_hotkey);
 	}
 	if (StartStreamHotkey != OBS_INVALID_HOTKEY_ID) {
-		obs_data_array_t *stream_hotkey = obs_hotkey_save(StartStreamHotkey);
-		obs_data_set_array(current_profile_config, "start_all_streams_hotkey", stream_hotkey);
-		obs_data_array_release(stream_hotkey);
+		OBSDataArrayAutoRelease stream_hotkey = obs_hotkey_save(StartStreamHotkey);
+		profile->setHotkey(QStringLiteral("start_all_streams_hotkey"), hotkey_json(stream_hotkey));
 	}
 	if (StartRecordHotkey != OBS_INVALID_HOTKEY_ID) {
-		obs_data_array_t *record_hotkey = obs_hotkey_save(StartRecordHotkey);
-		obs_data_set_array(current_profile_config, "start_all_recordings_hotkey", record_hotkey);
-		obs_data_array_release(record_hotkey);
+		OBSDataArrayAutoRelease record_hotkey = obs_hotkey_save(StartRecordHotkey);
+		profile->setHotkey(QStringLiteral("start_all_recordings_hotkey"), hotkey_json(record_hotkey));
 	}
 }
 
@@ -1053,14 +1060,12 @@ bool OutputDock::active(const QString &id) const
 
 void OutputDock::SaveGroupHotkeys()
 {
-	if (!current_profile_config || groupRows.empty()) {
+	auto profile = fiji_profile();
+	if (!profile || groupRows.empty()) {
 		return;
 	}
-	OBSDataAutoRelease hotkeys = obs_data_get_obj(current_profile_config, "group_hotkeys");
-	if (!hotkeys) {
-		hotkeys = obs_data_create();
-		obs_data_set_obj(current_profile_config, "group_hotkeys", hotkeys);
-	}
+	// {group: {"start": [...], "stop": [...]}}, kept for groups that are gone too (they may come back)
+	auto hotkeys = profile->hotkey(QStringLiteral("group_hotkeys")).toObject();
 	for (auto &g : groupRows) {
 		if (g.hotkey == OBS_INVALID_HOTKEY_PAIR_ID) {
 			continue;
@@ -1068,13 +1073,11 @@ void OutputDock::SaveGroupHotkeys()
 		obs_data_array_t *start = nullptr;
 		obs_data_array_t *stop = nullptr;
 		obs_hotkey_pair_save(g.hotkey, &start, &stop);
-		OBSDataAutoRelease h = obs_data_create();
-		obs_data_set_array(h, "start", start);
-		obs_data_set_array(h, "stop", stop);
-		obs_data_set_obj(hotkeys, g.name.toUtf8().constData(), h);
+		hotkeys.insert(g.name, QJsonObject{{"start", hotkey_json(start)}, {"stop", hotkey_json(stop)}});
 		obs_data_array_release(start);
 		obs_data_array_release(stop);
 	}
+	profile->setHotkey(QStringLiteral("group_hotkeys"), hotkeys);
 }
 
 void OutputDock::ClearGroupRows()
@@ -1094,7 +1097,13 @@ void OutputDock::RebuildGroups()
 {
 	SaveGroupHotkeys();
 	ClearGroupRows();
-	OBSDataAutoRelease hotkeys = current_profile_config ? obs_data_get_obj(current_profile_config, "group_hotkeys") : nullptr;
+	// the saved group bindings, from the profile model, as OBS reads them
+	OBSDataAutoRelease hotkeys =
+		fiji_profile() ? obs_data_create_from_json(
+					 QJsonDocument(fiji_profile()->hotkey(QStringLiteral("group_hotkeys")).toObject())
+						 .toJson(QJsonDocument::Compact)
+						 .constData())
+			       : nullptr;
 	const auto groups = GetGroups();
 	for (const auto &name : groups) {
 		groupRows.emplace_back();

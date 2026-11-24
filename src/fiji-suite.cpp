@@ -314,6 +314,21 @@ void load_canvas(bool check_new_canvas)
 	MultiviewDock::RebuildAll();
 }
 
+// Hotkey bindings between OBS (obs_data arrays) and the profile model (JSON), via a one-key wrapper object.
+QJsonArray hotkey_json(obs_data_array_t *keys)
+{
+	OBSDataAutoRelease wrapper = obs_data_create();
+	obs_data_set_array(wrapper, "keys", keys);
+	return QJsonDocument::fromJson(QByteArray(obs_data_get_json(wrapper))).object().value("keys").toArray();
+}
+
+obs_data_array_t *hotkey_obs(const QJsonArray &keys)
+{
+	OBSDataAutoRelease wrapper = obs_data_create_from_json(
+		QJsonDocument(QJsonObject{{"keys", keys}}).toJson(QJsonDocument::Compact).constData());
+	return obs_data_get_array(wrapper, "keys");
+}
+
 void save_current_profile_config(bool save_docks)
 {
 	if (!current_profile_config) {
@@ -326,9 +341,9 @@ void save_current_profile_config(bool save_docks)
 	if (save_docks) {
 		save_dock_state(QStringLiteral(DOCK_MODE));
 	}
-	if (multiview_over_preview_hotkey != OBS_INVALID_HOTKEY_ID) {
+	if (multiview_over_preview_hotkey != OBS_INVALID_HOTKEY_ID && fiji_profile()) {
 		OBSDataArrayAutoRelease keys = obs_hotkey_save(multiview_over_preview_hotkey);
-		obs_data_set_array(current_profile_config, "multiview_over_preview_hotkey", keys);
+		fiji_profile()->setHotkey(QStringLiteral("multiview_over_preview_hotkey"), hotkey_json(keys));
 	}
 	if (output_dock) {
 		output_dock->SaveSettings();
@@ -370,8 +385,11 @@ void load_current_profile_config()
 
 	load_outputs();
 
-	OBSDataArrayAutoRelease overPreviewKeys = obs_data_get_array(current_profile_config, "multiview_over_preview_hotkey");
-	obs_hotkey_load(multiview_over_preview_hotkey, overPreviewKeys);
+	if (auto profile = fiji_profile()) {
+		OBSDataArrayAutoRelease overPreviewKeys =
+			hotkey_obs(profile->hotkey(QStringLiteral("multiview_over_preview_hotkey")).toArray());
+		obs_hotkey_load(multiview_over_preview_hotkey, overPreviewKeys);
+	}
 
 	QMetaObject::invokeMethod(
 		modesTabBar, [] { load_dock_state(QStringLiteral(DOCK_MODE)); }, Qt::QueuedConnection);
@@ -476,10 +494,9 @@ struct Core {
 			if (!current_profile_config) {
 				return;
 			}
-			const auto owned = profile.owned();
-			for (auto it = owned.begin(); it != owned.end(); ++it) {
-				obs_data_set_bool(current_profile_config, it.key().toUtf8().constData(), it.value().toBool());
-			}
+			OBSDataAutoRelease owned =
+				obs_data_create_from_json(QJsonDocument(profile.owned()).toJson(QJsonDocument::Compact).constData());
+			obs_data_apply(current_profile_config, owned);
 		});
 		fiji::bridge::BotLink::setInstance(&bot);
 		decks.start();

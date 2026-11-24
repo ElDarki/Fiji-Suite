@@ -48,7 +48,23 @@ QStringList ProfileModel::ownedKeys()
 	for (const char *key : kMainKeys) {
 		keys.append(QLatin1String(key));
 	}
-	return keys;
+	return keys + hotkeyKeys();
+}
+
+QStringList ProfileModel::hotkeyKeys()
+{
+	return {"start_all_outputs_hotkey",   "stop_all_outputs_hotkey",       "start_all_streams_hotkey",
+		"start_all_recordings_hotkey", "multiview_over_preview_hotkey", "group_hotkeys"};
+}
+
+bool ProfileModel::setHotkey(const QString &key, const QJsonValue &value)
+{
+	if (!hotkeyKeys().contains(key) || hotkeys_.value(key) == value) {
+		return false;
+	}
+	hotkeys_.insert(key, value);
+	emit changed();
+	return true;
 }
 
 void ProfileModel::load(const QJsonObject &document)
@@ -56,15 +72,23 @@ void ProfileModel::load(const QJsonObject &document)
 	// a file from before a key existed: off, as OBS's obs_data reads a missing bool
 	main_ = {document.value(QLatin1String(kMainKeys[0])).toBool(false), document.value(QLatin1String(kMainKeys[1])).toBool(false),
 		 document.value(QLatin1String(kMainKeys[2])).toBool(false), document.value(QLatin1String(kMainKeys[3])).toBool(false)};
+	hotkeys_ = {};
+	for (const auto &key : hotkeyKeys()) {
+		if (document.contains(key)) {
+			hotkeys_.insert(key, document.value(key));
+		}
+	}
 	emit changed();
 }
 
 QJsonObject ProfileModel::owned() const
 {
-	return {{QLatin1String(kMainKeys[0]), main_.stream},
-		{QLatin1String(kMainKeys[1]), main_.record},
-		{QLatin1String(kMainKeys[2]), main_.backtrack},
-		{QLatin1String(kMainKeys[3]), main_.virtualCam}};
+	QJsonObject out = hotkeys_; // only the bindings that exist: a profile without them stays without them
+	out.insert(QLatin1String(kMainKeys[0]), main_.stream);
+	out.insert(QLatin1String(kMainKeys[1]), main_.record);
+	out.insert(QLatin1String(kMainKeys[2]), main_.backtrack);
+	out.insert(QLatin1String(kMainKeys[3]), main_.virtualCam);
+	return out;
 }
 
 bool ProfileModel::setMainOutputs(const MainOutputs &outputs)
