@@ -65,3 +65,9 @@ Moved in 0.7.0: the decks. `model::DeckModel` keeps them (decks.json, through `o
 them, runs the engine's steps and serves the bridge's deck actions; the steps that act on OBS and the hotkeys are the
 `obs::DeckSteps` and `obs::DeckHotkeys` ports (`obs-deck-steps.cpp`, `obs-deck-hotkeys.cpp`). Left in `src/decks/`: the
 local deck server.
+
+Also moved in 0.7.0: each output's life cycle (`state::OutputLifecycle`, fed by the output widget), starting and
+stopping outputs together (`controller::OutputsController` over the `obs::Outputs` port the output dock implements),
+and the themes (`model::themes` copies them, `obs::InstallLook` puts the fonts and themes in place,
+`view::ShowRestartNotice` asks for a restart). Still legacy: the docks and dialogs themselves, and the per-profile
+settings they share (`current_profile_config` in `fiji-suite.cpp`).

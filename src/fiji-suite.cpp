@@ -29,7 +29,8 @@
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
 #include "utils/update-check.hpp"
-#include "utils/fiji-look.hpp"
+#include "obs/look-installer.hpp"
+#include "view/restart-notice.hpp"
 #include "version.h"
 #include <obs-frontend-api.h>
 #include <obs.hpp>
@@ -75,6 +76,8 @@ extern std::list<CanvasCloneDock *> canvas_clone_docks;
 
 
 static bool finished_loading = false;
+// Themes installed for the first time when this OBS started (they show up after a restart).
+static int themes_added = 0;
 
 void transition_start(void *, calldata_t *)
 {
@@ -628,7 +631,12 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 	}
 	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 		finished_loading = true;
-		FijiLook::ShowRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()));
+		if (themes_added > 0) { // OBS lists new themes only when it starts
+			themes_added = 0;
+			fiji::view::ShowRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()),
+						      QString::fromUtf8(obs_module_text("ThemesAddedTitle")),
+						      QString::fromUtf8(obs_module_text("ThemesAddedText")));
+		}
 		log_same_sources();
 		struct obs_frontend_source_list transitions = {};
 		obs_frontend_get_transitions(&transitions);
@@ -906,7 +914,7 @@ bool obs_module_load(void)
 	obs_register_source(&component_info);
 
 	// Her fonts, and the Fiji Sun / Fiji Moon themes copied where OBS looks for them.
-	FijiLook::Install();
+	themes_added = fiji::obs::InstallLook();
 
 	obs_frontend_add_event_callback(frontend_event, nullptr);
 

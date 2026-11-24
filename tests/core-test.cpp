@@ -10,6 +10,7 @@
 #include "../src/controller/outputs-controller.hpp"
 #include "../src/model/deck-model.hpp"
 #include "../src/model/local-store.hpp"
+#include "../src/model/theme-files.hpp"
 #include "../src/obs/deck-ports.hpp"
 #include "../src/obs/obs-data-store.hpp"
 #include "../src/controller/obs-command-handler.hpp"
@@ -21,6 +22,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QDir>
+#include <QFileInfo>
 #include <QSet>
 #include <QFile>
 #include <QTemporaryDir>
@@ -675,6 +677,49 @@ static void test_outputs_controller()
 	CHECK((o.stopped == QStringList{"main:record", "Twitch", "TikTok", "YouTube Shorts"}));
 }
 
+// ---- the themes as files ------------------------------------------------------------------------------
+static void write(const QString &file, const QByteArray &content)
+{
+	QDir().mkpath(QFileInfo(file).absolutePath());
+	QFile f(file);
+	if (f.open(QIODevice::WriteOnly)) {
+		f.write(content);
+	}
+}
+
+static QByteArray read(const QString &file)
+{
+	QFile f(file);
+	return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray("(missing)");
+}
+
+static void test_theme_files()
+{
+	namespace fs = std::filesystem;
+	QTemporaryDir dir;
+	const QString from = dir.path() + "/plugin/themes", to = dir.path() + "/obs-studio/themes";
+	write(from + "/Fiji_Sun.obt", "sun");
+	write(from + "/Fiji_Moon.obt", "moon");
+	write(from + "/FijiSun/check.svg", "<svg/>");
+	write(from + "/notes.txt", "not a theme");
+	write(to + "/Fiji_Sun.ovt", "the 0.4.0 style"); // retired: removed
+	write(to + "/Someone_Else.obt", "theirs");      // not ours: untouched
+	int added = -1;
+	const fs::path src = from.toStdString(), dst = to.toStdString();
+	CHECK(model::themes::CopyThemes(src, dst, &added) == 3 && added == 2); // icons are written but are not themes
+	CHECK(read(to + "/Fiji_Sun.obt") == "sun" && read(to + "/FijiSun/check.svg") == "<svg/>");
+	CHECK(read(to + "/notes.txt") == "(missing)" && read(to + "/Fiji_Sun.ovt") == "(missing)");
+	CHECK(read(to + "/Someone_Else.obt") == "theirs");
+	CHECK(model::themes::CopyThemes(src, dst, &added) == 0 && added == 0); // nothing changed: nothing written
+	write(from + "/Fiji_Moon.obt", "moon 2");
+	CHECK(model::themes::CopyThemes(src, dst, &added) == 1 && added == 0 && read(to + "/Fiji_Moon.obt") == "moon 2");
+	CHECK(model::themes::CopyThemes(fs::path(dir.path().toStdString()) / "nowhere", dst) == 0);
+	CHECK(model::themes::UserThemesDir("/home/a/.config/obs-studio/plugin_config/fiji-suite/") ==
+	      fs::path("/home/a/.config/obs-studio/themes"));
+	CHECK(model::themes::UserThemesDir("/home/a/.config/obs-studio/plugin_config/fiji-suite") ==
+	      fs::path("/home/a/.config/obs-studio/themes"));
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -688,6 +733,7 @@ int main(int argc, char **argv)
 	test_deck_controller();
 	test_output_lifecycle();
 	test_outputs_controller();
+	test_theme_files();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;
