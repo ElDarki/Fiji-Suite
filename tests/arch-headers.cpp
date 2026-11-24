@@ -20,6 +20,7 @@
 #include "../src/model/local-store.hpp"
 #include "../src/model/obs-status.hpp"
 #include "../src/model/profile-model.hpp"
+#include "../src/model/record-output.hpp"
 #include "../src/model/theme-files.hpp"
 #include "../src/obs/capture-ports.hpp"
 #include "../src/obs/deck-ports.hpp"

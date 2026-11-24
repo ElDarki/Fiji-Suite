@@ -72,7 +72,9 @@ and the themes (`model::themes` copies them, `obs::InstallLook` puts the fonts a
 `view::ShowRestartNotice` asks for a restart), the name dialog (`view::NameDialog`) and the Capture dock
 (`view::CaptureDock` over `controller::CaptureController` and the `obs::CaptureSources` port), and the Live Scenes
 dock (`view::LiveScenesDock`, `controller::LiveScenesController`, `model::LiveScenesModel`, the `obs::LiveScenesObs`
-port). Still legacy: the other docks and dialogs.
+port), and the recording / backtrack output dialog (`view::RecordOutputDialog` over `model::RecordOutput`). Views
+look their text up with `view::pluginText` / `view::obsText`, which the composition connects to OBS. Still legacy:
+the other docks and dialogs.
 
 The per-profile settings are `model::ProfileModel`, the only holder of them. Its first-run defaults
 (`model::withFirstRunDefaults`) and the file (`obs::LoadProfileFile`, `obs::SaveProfileFile`, fiji-suite.json in the OBS

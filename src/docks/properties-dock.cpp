@@ -20,7 +20,7 @@
 #include <src/utils/color.hpp>
 #include <src/utils/widgets/slider-ignore-scroll.hpp>
 #include <src/utils/widgets/double-slider.hpp>
-#include <src/utils/widgets/focus-scroll-spinbox.hpp>
+#include "../view/focus-scroll-spinbox.hpp"
 
 extern FiltersDock *filters_dock;
 extern TransformDock *transform_dock;

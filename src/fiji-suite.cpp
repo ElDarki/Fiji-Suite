@@ -3,6 +3,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include "view/name-dialog.hpp"
+#include "view/text.hpp"
 #include "docks/canvas-clone-dock.hpp"
 #include "docks/canvas-dock.hpp"
 #include "view/capture-dock.hpp"
@@ -902,6 +903,10 @@ bool obs_module_load(void)
 	themes_added = fiji::obs::InstallLook();
 
 	obs_frontend_add_event_callback(frontend_event, nullptr);
+
+	// views look their text up through these (src/view/text.hpp)
+	fiji::view::setTranslators([](const char *key) { return QString::fromUtf8(obs_module_text(key)); },
+				   [](const char *key) { return QString::fromUtf8(obs_frontend_get_locale_string(key)); });
 
 	const auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
 

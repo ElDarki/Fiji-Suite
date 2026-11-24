@@ -108,8 +108,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/dialogs/config-dialog.hpp
   src/dialogs/ffmpeg-output-dialog.cpp
   src/dialogs/ffmpeg-output-dialog.hpp
-  src/dialogs/record-output-dialog.cpp
-  src/dialogs/record-output-dialog.hpp
   src/dialogs/stream-output-dialog.cpp
   src/dialogs/stream-output-dialog.hpp)
 
@@ -140,6 +138,8 @@ set(FIJI_CORE_SOURCES
   src/model/obs-status.hpp
   src/model/live-scenes-model.cpp
   src/model/live-scenes-model.hpp
+  src/model/record-output.cpp
+  src/model/record-output.hpp
   src/model/profile-model.cpp
   src/model/profile-model.hpp
   src/model/theme-files.cpp
@@ -180,14 +180,20 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 # The VIEW layer: Qt Widgets, no libobs (tests/view-test.cpp builds them alone).
 set(FIJI_VIEW_SOURCES
+  src/view/focus-scroll-spinbox.cpp
+  src/view/focus-scroll-spinbox.hpp
   src/view/capture-dock.cpp
   src/view/capture-dock.hpp
   src/view/live-scenes-dock.cpp
   src/view/live-scenes-dock.hpp
   src/view/name-dialog.cpp
   src/view/name-dialog.hpp
+  src/view/record-output-dialog.cpp
+  src/view/record-output-dialog.hpp
   src/view/restart-notice.cpp
-  src/view/restart-notice.hpp)
+  src/view/restart-notice.hpp
+  src/view/text.cpp
+  src/view/text.hpp)
 target_sources(${PROJECT_NAME} PRIVATE ${FIJI_VIEW_SOURCES})
 
 target_sources(${PROJECT_NAME} PRIVATE
@@ -202,7 +208,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/accessible-alignment-selector.cpp
   src/utils/widgets/alignment-selector.cpp
   src/utils/widgets/double-slider.cpp
-  src/utils/widgets/focus-scroll-spinbox.cpp
   src/utils/widgets/hotkey-edit.cpp
   src/utils/widgets/locked-checkbox.cpp
   src/utils/widgets/output-widget.cpp
@@ -223,7 +228,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/accessible-alignment-selector.hpp
   src/utils/widgets/alignment-selector.hpp
   src/utils/widgets/double-slider.hpp
-  src/utils/widgets/focus-scroll-spinbox.hpp
   src/utils/widgets/hotkey-edit.hpp
   src/utils/widgets/locked-checkbox.hpp
   src/utils/widgets/output-widget.hpp

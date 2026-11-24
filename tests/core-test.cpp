@@ -23,6 +23,7 @@
 #include "fake-capture-sources.hpp"
 #include "fake-live-scenes.hpp"
 #include "../src/controller/live-scenes-controller.hpp"
+#include "../src/model/record-output.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -908,6 +909,36 @@ static void test_live_scenes()
 	CHECK(model.scenes().at(0).name == "The End");
 }
 
+// The recording / backtrack output dialog's rules.
+static void test_record_output()
+{
+	const auto fresh = model::newRecordOutput(true, "Backtrack", "%CCYY");
+	CHECK(fresh.backtrack && fresh.filename == "%CCYY Backtrack" && fresh.maxTimeSec == 30 && fresh.format == "hybrid_mp4");
+	CHECK(model::newRecordOutput(false, "Rec", "%CCYY").maxTimeSec == 0);
+	CHECK(model::recordFormats().size() == 9 && model::recordFormats().at(1) == "hybrid_mp4");
+
+	// the filename follows the name until the user writes their own
+	CHECK(model::filenameFollowingName("%CCYY Rec", "%CCYY", "Rec", "Game") == "%CCYY Game");
+	CHECK(model::filenameFollowingName("%CCYY", "%CCYY", "Rec", "Game") == "%CCYY Game");
+	CHECK(model::filenameFollowingName("", "%CCYY", "Rec", "Game") == "%CCYY Game");
+	CHECK(model::filenameFollowingName("my file", "%CCYY", "Rec", "Game") == "my file");
+
+	CHECK(model::safeFilename("a:b<c>?", "windows") == "abc" && model::safeFilename("a:b<c>", "mac") == "ab<c>");
+	CHECK(model::safeFilename("a:b", "") == "a:b");
+
+	model::RecordOutput ok = model::newRecordOutput(false, "Rec", "%CCYY");
+	CHECK(!model::recordOutputValid(ok, {})); // no folder yet
+	ok.path = "/videos";
+	CHECK(model::recordOutputValid(ok, {"Other"}) && !model::recordOutputValid(ok, {"Rec"}));
+	auto back = fresh;
+	back.path = "/videos";
+	CHECK(model::recordOutputValid(back, {}));
+	back.maxTimeSec = 0;
+	CHECK(!model::recordOutputValid(back, {})); // a backtrack needs a limit
+	back.maxSizeMb = 500;
+	CHECK(model::recordOutputValid(back, {}));
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -925,6 +956,7 @@ int main(int argc, char **argv)
 	test_profile_model();
 	test_capture_controller();
 	test_live_scenes();
+	test_record_output();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

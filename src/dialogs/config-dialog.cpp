@@ -7,7 +7,8 @@
 #include "config-dialog.hpp"
 #include "ffmpeg-output-dialog.hpp"
 #include "obs-module.h"
-#include "record-output-dialog.hpp"
+#include "../view/record-output-dialog.hpp"
+#include "../view/text.hpp"
 #include "stream-output-dialog.hpp"
 #include <QCheckBox>
 #include <QColorDialog>
@@ -37,7 +38,7 @@
 #include <QSignalBlocker>
 #include <src/docks/canvas-dock.hpp>
 #include <src/utils/color.hpp>
-#include <src/utils/widgets/focus-scroll-spinbox.hpp>
+#include "../view/focus-scroll-spinbox.hpp"
 #include <sstream>
 #include <util/config-file.h>
 #include <util/dstr.h>
@@ -1658,13 +1659,15 @@ void OBSBasicSettings::AddOutput(QFormLayout *outputsLayout, obs_data_t *setting
 
 		auto output_type = obs_data_get_string(settings, "type");
 		if (strcmp(output_type, "record") == 0 || strcmp(output_type, "backtrack") == 0) {
-			auto outputDialog = new RecordOutputDialog(this, QString::fromUtf8(obs_data_get_string(settings, "name")),
-								   QString::fromUtf8(obs_data_get_string(settings, "path")),
-								   QString::fromUtf8(obs_data_get_string(settings, "filename")),
-								   QString::fromUtf8(obs_data_get_string(settings, "format")),
-								   obs_data_get_int(settings, "max_size_mb"),
-								   obs_data_get_int(settings, "max_time_sec"), otherNames,
-								   strcmp(output_type, "backtrack") == 0);
+			fiji::model::RecordOutput current;
+			current.backtrack = strcmp(output_type, "backtrack") == 0;
+			current.name = QString::fromUtf8(obs_data_get_string(settings, "name"));
+			current.path = QString::fromUtf8(obs_data_get_string(settings, "path"));
+			current.filename = QString::fromUtf8(obs_data_get_string(settings, "filename"));
+			current.format = QString::fromUtf8(obs_data_get_string(settings, "format"));
+			current.maxSizeMb = obs_data_get_int(settings, "max_size_mb");
+			current.maxTimeSec = obs_data_get_int(settings, "max_time_sec");
+			auto outputDialog = new fiji::view::RecordOutputDialog(this, current, otherNames, true);
 
 			outputDialog->setWindowModality(Qt::WindowModal);
 			outputDialog->setModal(true);
@@ -1676,12 +1679,13 @@ void OBSBasicSettings::AddOutput(QFormLayout *outputsLayout, obs_data_t *setting
 
 				obs_data_set_bool(settings, "enabled", true);
 				// Set the info from the output dialog
-				obs_data_set_string(settings, "name", outputDialog->outputName.toUtf8().constData());
-				obs_data_set_string(settings, "path", outputDialog->recordPath.toUtf8().constData());
-				obs_data_set_string(settings, "filename", outputDialog->filenameFormat.toUtf8().constData());
-				obs_data_set_string(settings, "format", outputDialog->fileFormat.toUtf8().constData());
-				obs_data_set_int(settings, "max_size_mb", outputDialog->maxSize);
-				obs_data_set_int(settings, "max_time_sec", outputDialog->maxTime);
+				const auto edited = outputDialog->result();
+				obs_data_set_string(settings, "name", edited.name.toUtf8().constData());
+				obs_data_set_string(settings, "path", edited.path.toUtf8().constData());
+				obs_data_set_string(settings, "filename", edited.filename.toUtf8().constData());
+				obs_data_set_string(settings, "format", edited.format.toUtf8().constData());
+				obs_data_set_int(settings, "max_size_mb", edited.maxSizeMb);
+				obs_data_set_int(settings, "max_time_sec", edited.maxTimeSec);
 
 				// Reload
 				LoadSettings(main_settings);
@@ -2827,7 +2831,11 @@ void OBSBasicSettings::AddRecord(bool backtrack)
 		},
 		&otherNames);
 	otherNames.removeDuplicates();
-	auto outputDialog = new RecordOutputDialog(this, otherNames, backtrack);
+	auto outputDialog = new fiji::view::RecordOutputDialog(
+		this,
+		fiji::model::newRecordOutput(backtrack, fiji::view::pluginText(backtrack ? "BacktrackOutput" : "RecordOutput"),
+					     fiji::view::RecordOutputDialog::filenamePatterns().first()),
+		otherNames, false);
 
 	outputDialog->setWindowModality(Qt::WindowModal);
 	outputDialog->setModal(true);
@@ -2841,12 +2849,13 @@ void OBSBasicSettings::AddRecord(bool backtrack)
 		obs_data_set_bool(s, "enabled", true);
 		obs_data_set_bool(s, "expanded", true);
 		obs_data_set_string(s, "type", backtrack ? "backtrack" : "record");
-		obs_data_set_string(s, "name", outputDialog->outputName.toUtf8().constData());
-		obs_data_set_string(s, "path", outputDialog->recordPath.toUtf8().constData());
-		obs_data_set_string(s, "filename", outputDialog->filenameFormat.toUtf8().constData());
-		obs_data_set_string(s, "format", outputDialog->fileFormat.toUtf8().constData());
-		obs_data_set_int(s, "max_size_mb", outputDialog->maxSize);
-		obs_data_set_int(s, "max_time_sec", outputDialog->maxTime);
+		const auto created = outputDialog->result();
+		obs_data_set_string(s, "name", created.name.toUtf8().constData());
+		obs_data_set_string(s, "path", created.path.toUtf8().constData());
+		obs_data_set_string(s, "filename", created.filename.toUtf8().constData());
+		obs_data_set_string(s, "format", created.format.toUtf8().constData());
+		obs_data_set_int(s, "max_size_mb", created.maxSizeMb);
+		obs_data_set_int(s, "max_time_sec", created.maxTimeSec);
 		obs_data_array_push_back(extra_outputs, s);
 		AddOutput(outputsLayout, s, extra_outputs, true);
 		obs_data_release(s);

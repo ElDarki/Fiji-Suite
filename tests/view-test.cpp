@@ -6,6 +6,11 @@
 #include "fake-capture-sources.hpp"
 #include "fake-live-scenes.hpp"
 #include "../src/view/live-scenes-dock.hpp"
+#include "../src/view/record-output-dialog.hpp"
+#include <QCheckBox>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSpinBox>
 #include <QListWidget>
 #include "../src/view/restart-notice.hpp"
 
@@ -104,6 +109,43 @@ static void test_live_scenes_dock()
 	CHECK(dock.list()->count() == 1 && dock.list()->item(0)->text() == "Intro");
 }
 
+// The recording output dialog: create needs a folder, the filename follows the name, splitting off saves no limits.
+static void test_record_output_dialog()
+{
+	const QString pattern = view::RecordOutputDialog::filenamePatterns().first();
+	view::RecordOutputDialog create(nullptr, model::newRecordOutput(false, "Recording", pattern), {"Taken"}, false);
+	CHECK(create.windowTitle() == "NewRecordOutputWindowTitle" && create.confirmButton()->text() == "CreateRecordOutput");
+	CHECK(create.filenameField()->text() == pattern + " Recording");
+	CHECK(!create.confirmButton()->isEnabled()); // no folder
+	create.nameField()->setText("Game");
+	emit create.nameField()->textEdited("Game");
+	CHECK(create.filenameField()->text() == pattern + " Game" && create.result().filename == pattern + " Game");
+	create.nameField()->setText("Taken");
+	emit create.nameField()->textEdited("Taken");
+	CHECK(!create.confirmButton()->isEnabled());
+
+	model::RecordOutput existing;
+	existing.name = "Rec";
+	existing.path = "/videos";
+	existing.filename = "my file";
+	existing.format = "mkv";
+	existing.maxTimeSec = 600;
+	view::RecordOutputDialog edit(nullptr, existing, {}, true);
+	CHECK(edit.windowTitle() == "EditRecordOutputWindowTitle" && edit.confirmButton()->isEnabled());
+	CHECK(edit.splitBox()->isChecked() && edit.maxTimeBox()->isEnabled() && edit.result().format == "mkv");
+	edit.splitBox()->setChecked(false);
+	CHECK(!edit.maxTimeBox()->isEnabled() && edit.result().maxTimeSec == 0);
+	emit edit.nameField()->textEdited("Rec 2");
+	CHECK(edit.filenameField()->text() == "my file"); // the user's own filename stays
+
+	model::RecordOutput back = model::newRecordOutput(true, "Backtrack", pattern);
+	back.path = "/videos";
+	view::RecordOutputDialog backtrack(nullptr, back, {}, false);
+	CHECK(!backtrack.splitBox() && backtrack.confirmButton()->isEnabled() && backtrack.maxTimeBox()->value() == 30);
+	backtrack.maxTimeBox()->setValue(0);
+	CHECK(!backtrack.confirmButton()->isEnabled());
+}
+
 int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
@@ -111,6 +153,7 @@ int main(int argc, char **argv)
 	test_restart_notice();
 	test_capture_dock();
 	test_live_scenes_dock();
+	test_record_output_dialog();
 	if (failures) {
 		std::fprintf(stderr, "%d check(s) failed\n", failures);
 		return 1;

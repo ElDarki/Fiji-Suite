@@ -126,7 +126,7 @@ int (*av_codec_is_encoder)(const AVCodec *codec) = NULL;
 #include <QLabel>
 #include <QSpinBox>
 #include <QScrollArea>
-#include "../utils/widgets/focus-scroll-spinbox.hpp"
+#include "../view/focus-scroll-spinbox.hpp"
 #include <util/platform.h>
 
 FfmpegOutputDialog::FfmpegOutputDialog(QDialog *parent, QStringList _otherNames, obs_data_t *settings)

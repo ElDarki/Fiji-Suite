@@ -2,7 +2,7 @@
 #include "../view/name-dialog.hpp"
 #include "../utils/color.hpp"
 #include "../utils/icon.hpp"
-#include "../utils/widgets/focus-scroll-spinbox.hpp"
+#include "../view/focus-scroll-spinbox.hpp"
 #include "../utils/widgets/scene-list-widget-item.hpp"
 #include "../utils/widgets/source-tree.hpp"
 #include "canvas-dock.hpp"

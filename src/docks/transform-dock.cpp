@@ -1,7 +1,7 @@
 #include "../utils/icon.hpp"
 #include "../utils/widgets/locked-checkbox.hpp"
 #include "../utils/widgets/visibility-checkbox.hpp"
-#include "../utils/widgets/focus-scroll-spinbox.hpp"
+#include "../view/focus-scroll-spinbox.hpp"
 #include "properties-dock.hpp"
 #include "transform-dock.hpp"
 #include <graphics/matrix4.h>

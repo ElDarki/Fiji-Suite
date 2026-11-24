@@ -1,6 +1,8 @@
 #pragma once
 
-#include<QSpinBox>
+// VIEW: spin boxes that only take the mouse wheel when they have focus (so scrolling a form scrolls the form).
+
+#include <QSpinBox>
 #include <QDoubleSpinBox>
 
 class FocusScrollSpinBox : public QSpinBox {

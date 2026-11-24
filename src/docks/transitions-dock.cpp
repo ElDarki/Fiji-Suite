@@ -1,5 +1,5 @@
 #include "../view/name-dialog.hpp"
-#include "../utils/widgets/focus-scroll-spinbox.hpp"
+#include "../view/focus-scroll-spinbox.hpp"
 #include "transitions-dock.hpp"
 #include <obs.hpp>
 #include <obs-frontend-api.h>

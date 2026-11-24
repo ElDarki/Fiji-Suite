@@ -17,7 +17,7 @@
 #include <QVBoxLayout>
 #include <QWidgetAction>
 #include <src/utils/obs-websocket-api.h>
-#include <src/utils/widgets/focus-scroll-spinbox.hpp>
+#include "../view/focus-scroll-spinbox.hpp"
 #include <src/utils/widgets/scene-list-widget-item.hpp>
 
 void fiji_emit_event(const char *event, obs_data_t *data);
