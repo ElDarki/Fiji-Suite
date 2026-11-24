@@ -5,6 +5,7 @@
 #include "../src/bridge/bridge-acl.hpp"
 #include "../src/bridge/catalogue.hpp"
 #include "../src/bridge/envelope.hpp"
+#include "../src/controller/capture-controller.hpp"
 #include "../src/controller/command-dispatcher.hpp"
 #include "../src/controller/deck-controller.hpp"
 #include "../src/controller/outputs-controller.hpp"
@@ -18,6 +19,8 @@
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
 #include "../src/state/output-state.hpp"
+
+#include "fake-capture-sources.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -818,6 +821,45 @@ static void test_profile_model()
 	CHECK(!model::ProfileModel().isLoaded());
 }
 
+// The capture controller: libobs's reports (from any thread) arrive queued, in order, as signals and a list.
+static void test_capture_controller()
+{
+	CHECK(controller::captureText("game.exe", "Level 1") == "[game.exe]: Level 1");
+	CHECK(controller::captureText("", "Notepad") == "Notepad" && controller::captureText("", "").isEmpty());
+
+	FakeCaptureSources fake;
+	controller::CaptureController captures(fake);
+	captures.start();
+	captures.start();
+	CHECK(fake.listens == 1);
+	QStringList seen;
+	QObject::connect(&captures, &controller::CaptureController::added, [&seen](const controller::CaptureEntry &e) { seen << "added " + e.name; });
+	QObject::connect(&captures, &controller::CaptureController::changed,
+			 [&seen](const controller::CaptureEntry &e) { seen << "changed " + e.name + " " + e.capture; });
+	QObject::connect(&captures, &controller::CaptureController::removed, [&seen](const QString &uuid) { seen << "removed " + uuid; });
+
+	fake.listener.added("u1", "Game");
+	CHECK(captures.entries().isEmpty()); // queued: nothing until the event loop runs
+	fake.listener.hooked("u1", "game.exe", "Level 1");
+	fake.listener.renamed("u1", "Game 2");
+	fake.listener.added("u1", "Game"); // twice: once
+	fake.listener.renamed("nope", "x"); // unknown: ignored
+	QCoreApplication::processEvents();
+	CHECK(captures.entries().size() == 1 && captures.entries().at(0).name == "Game 2");
+	CHECK(captures.entries().at(0).capture == "[game.exe]: Level 1");
+	fake.listener.hooked("u1", "", "");
+	fake.listener.removed("u1");
+	QCoreApplication::processEvents();
+	CHECK(captures.entries().isEmpty());
+	CHECK(seen == QStringList({"added Game", "changed Game [game.exe]: Level 1", "changed Game 2 [game.exe]: Level 1",
+				   "changed Game 2 ", "removed u1"}));
+
+	fake.windowsOf["u2"] = {{"Notepad", QString("notepad:1")}};
+	CHECK(captures.windows("u2").size() == 1);
+	captures.pickWindow("u2", QString("notepad:1"));
+	CHECK(fake.picks.size() == 1 && fake.picks.at(0).second.toString() == "notepad:1");
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -833,6 +875,7 @@ int main(int argc, char **argv)
 	test_outputs_controller();
 	test_theme_files();
 	test_profile_model();
+	test_capture_controller();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

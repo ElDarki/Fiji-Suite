@@ -5,7 +5,9 @@
 #include "view/name-dialog.hpp"
 #include "docks/canvas-clone-dock.hpp"
 #include "docks/canvas-dock.hpp"
-#include "docks/capture-dock.hpp"
+#include "view/capture-dock.hpp"
+#include "obs/obs-capture-sources.hpp"
+#include "controller/capture-controller.hpp"
 #include "docks/filters-dock.hpp"
 #include "docks/live-scenes-dock.hpp"
 #include "docks/multiview-dock.hpp"
@@ -505,6 +507,8 @@ struct Core {
 	}};
 	fiji::model::DeckModel deckModel{store};
 	fiji::model::ProfileModel profile;
+	fiji::obs::ObsCaptureSources captureSources;
+	fiji::controller::CaptureController captures{captureSources};
 	fiji::obs::ObsDeckSteps deckSteps;
 	fiji::obs::ObsDeckHotkeys deckHotkeys{&deckSteps};
 	fiji::controller::DeckController decks{deckModel, deckSteps, &deckHotkeys, [](const QString &name, const QJsonObject &data) {
@@ -525,6 +529,7 @@ struct Core {
 		dispatcher.registerHandler(&decks);
 		fiji::bridge::BotLink::setInstance(&bot);
 		decks.start();
+		captures.start();
 	}
 
 	static QString config_folder()
@@ -940,8 +945,6 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteTransform", obs_module_text("FijiSuiteTransform"), transform_dock);
 	live_scenes_dock = new LiveScenesDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteLiveScenes", obs_module_text("FijiSuiteLiveScenes"), live_scenes_dock);
-	auto capture_dock = new CaptureDock(main_window);
-	obs_frontend_add_dock_by_id("FijiSuiteCapture", obs_module_text("FijiSuiteCapture"), capture_dock);
 	stats_dock = new StatsDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteStats", obs_module_text("FijiSuiteStats"), stats_dock);
 	scenes_dock = new ScenesDock(main_window);
@@ -952,6 +955,9 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteTransitions", obs_module_text("FijiSuiteTransitions"),
 				    transitions_dock);
 	start_core();
+	// the Capture dock: a view over the capture controller (game and window capture sources)
+	auto capture_dock = new fiji::view::CaptureDock(core->captures, QString::fromUtf8(obs_module_text("Config")), main_window);
+	obs_frontend_add_dock_by_id("FijiSuiteCapture", obs_module_text("FijiSuiteCapture"), capture_dock);
 	multiview_dock = new MultiviewDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteMultiview", obs_module_text("FijiSuiteMultiview"), multiview_dock);
 	return true;

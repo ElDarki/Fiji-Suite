@@ -80,8 +80,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/canvas-dock.hpp
   src/docks/canvas-clone-dock.cpp
   src/docks/canvas-clone-dock.hpp
-  src/docks/capture-dock.cpp
-  src/docks/capture-dock.hpp
   src/docks/filters-dock.cpp
   src/docks/filters-dock.hpp
   src/docks/live-scenes-dock.cpp
@@ -131,6 +129,8 @@ set(FIJI_CORE_SOURCES
   src/controller/deck-controller.cpp
   src/controller/deck-controller.hpp
   src/controller/obs-command-handler.cpp
+  src/controller/capture-controller.cpp
+  src/controller/capture-controller.hpp
   src/controller/outputs-controller.cpp
   src/controller/outputs-controller.hpp
   src/controller/obs-command-handler.hpp
@@ -147,6 +147,7 @@ set(FIJI_CORE_SOURCES
   src/obs/obs-data-store.cpp
   src/obs/obs-data-store.hpp
   src/obs/output-ports.hpp
+  src/obs/capture-ports.hpp
   src/state/deck-engine.cpp
   src/state/deck-engine.hpp
   src/state/link-state.cpp
@@ -163,6 +164,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/look-installer.hpp
   src/obs/obs-deck-hotkeys.cpp
   src/obs/obs-deck-hotkeys.hpp
+  src/obs/obs-capture-sources.cpp
+  src/obs/obs-capture-sources.hpp
   src/obs/obs-deck-steps.cpp
   src/obs/obs-deck-steps.hpp
   src/obs/profile-file.cpp
@@ -172,6 +175,8 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 # The VIEW layer: Qt Widgets, no libobs (tests/view-test.cpp builds them alone).
 set(FIJI_VIEW_SOURCES
+  src/view/capture-dock.cpp
+  src/view/capture-dock.hpp
   src/view/name-dialog.cpp
   src/view/name-dialog.hpp
   src/view/restart-notice.cpp
@@ -189,7 +194,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/accessible-alignment-cell.cpp
   src/utils/widgets/accessible-alignment-selector.cpp
   src/utils/widgets/alignment-selector.cpp
-  src/utils/widgets/capture-widget.cpp
   src/utils/widgets/double-slider.cpp
   src/utils/widgets/focus-scroll-spinbox.cpp
   src/utils/widgets/hotkey-edit.cpp
@@ -211,7 +215,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/accessible-alignment-cell.hpp
   src/utils/widgets/accessible-alignment-selector.hpp
   src/utils/widgets/alignment-selector.hpp
-  src/utils/widgets/capture-widget.hpp
   src/utils/widgets/double-slider.hpp
   src/utils/widgets/focus-scroll-spinbox.hpp
   src/utils/widgets/hotkey-edit.hpp
@@ -258,7 +261,7 @@ if(BUILD_OUT_OF_TREE)
   add_test(NAME architecture-headers COMMAND fiji-arch-test)
   add_test(NAME core COMMAND fiji-core-test)
   set_tests_properties(core PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
-  add_executable(fiji-view-test tests/view-test.cpp ${FIJI_VIEW_SOURCES})
+  add_executable(fiji-view-test tests/view-test.cpp ${FIJI_VIEW_SOURCES} ${FIJI_CORE_SOURCES})
   target_link_libraries(fiji-view-test PRIVATE Qt::Core Qt::Widgets)
   set_target_properties(fiji-view-test PROPERTIES EXCLUDE_FROM_ALL ON AUTOMOC ON)
   add_test(NAME view COMMAND fiji-view-test)
