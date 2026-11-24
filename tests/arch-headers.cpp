@@ -10,6 +10,7 @@
 #include "../src/controller/command-dispatcher.hpp"
 #include "../src/controller/command.hpp"
 #include "../src/controller/deck-controller.hpp"
+#include "../src/controller/outputs-controller.hpp"
 #include "../src/controller/obs-command-handler.hpp"
 #include "../src/model/deck-model.hpp"
 #include "../src/model/local-store.hpp"
@@ -41,6 +42,7 @@ static_assert(std::is_base_of_v<controller::CommandHandler, controller::DeckCont
 		      std::is_base_of_v<decks::Host, controller::DeckController>,
 	      "the deck controller serves the dispatcher and hosts the engine");
 static_assert(std::is_abstract_v<state::OutputState>, "OutputState is the State pattern's base");
+static_assert(std::is_abstract_v<obs::Outputs>, "the outputs port");
 static_assert(std::is_abstract_v<obs::DeckSteps> && std::is_abstract_v<obs::DeckHotkeys>, "deck ports");
 static_assert(std::is_base_of_v<obs::DeckSteps, obs::ObsDeckSteps> && std::is_base_of_v<obs::DeckHotkeys, obs::ObsDeckHotkeys>,
 	      "the libobs deck adapters implement their ports");

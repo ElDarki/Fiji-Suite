@@ -25,6 +25,8 @@ void open_config_dialog(int tab, const char *create_type);
 
 OutputDock::OutputDock(QWidget *parent) : QFrame(parent)
 {
+	outputs = new fiji::controller::OutputsController(
+		*this, [](const QString &line) { blog(LOG_INFO, "[Fiji Suite] %s", line.toUtf8().constData()); }, this);
 
 	auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
@@ -738,34 +740,6 @@ bool OutputDock::AddChapterToOutput(const char *output_name, const char *chapter
 	return false;
 }
 
-void OutputDock::StartNextOutput()
-{
-	if (outputsToStart.empty()) {
-		return;
-	}
-	if (outputStarting >= outputsToStart.size()) {
-		outputStarting = 0;
-	}
-	auto startedAt = outputStarting;
-	while (true) {
-		auto action = std::next(outputsToStart.begin(), outputStarting);
-		if ((*action)([this] { QMetaObject::invokeMethod(this, [this] { StartNextOutput(); }, Qt::QueuedConnection); })) {
-			outputsToStart.erase(action);
-			break;
-		}
-		outputStarting++;
-		if (outputStarting >= outputsToStart.size()) {
-			outputStarting = 0;
-		}
-		if (outputStarting == startedAt) {
-			blog(LOG_WARNING, "[Fiji Suite] went through all outputs and %zu could not be started",
-			     outputsToStart.size());
-			outputsToStart.clear();
-			break;
-		}
-	}
-}
-
 void OutputDock::frontend_event(enum obs_frontend_event event, void *private_data)
 {
 	auto dock = static_cast<OutputDock *>(private_data);
@@ -840,9 +814,14 @@ void OutputDock::frontend_event(enum obs_frontend_event event, void *private_dat
 	}
 }
 
+static fiji::controller::OutputsController::Which which_of(bool streamOnly, bool recordOnly)
+{
+	using Which = fiji::controller::OutputsController::Which;
+	return streamOnly ? Which::Streams : recordOnly ? Which::Recordings : Which::All;
+}
+
 void OutputDock::StartAll(bool streamOnly, bool recordOnly)
 {
-	outputsToStart.clear();
 	if (mainStreamEnabled && !recordOnly) {
 		bool warnBeforeStreamStart =
 			config_get_bool(obs_frontend_get_user_config(), "BasicWindow", "WarnBeforeStartingStream");
@@ -855,94 +834,12 @@ void OutputDock::StartAll(bool streamOnly, bool recordOnly)
 				return;
 			}
 		}
-
-		outputsToStart.push_back([this](std::function<void()> onStarted) {
-			if (obs_frontend_streaming_active()) {
-				blog(LOG_INFO, "[Fiji Suite] Skipped starting main stream, already active");
-				onStarted();
-				return true;
-			}
-			this->mainStreamOnStarted = onStarted;
-			obs_frontend_streaming_start();
-			return true;
-		});
 	}
-	if (mainRecordEnabled && !streamOnly) {
-		outputsToStart.push_back([this](std::function<void()> onStarted) {
-			if (obs_frontend_recording_active()) {
-				blog(LOG_INFO, "[Fiji Suite] Skipped starting main recording, already active");
-				onStarted();
-				return true;
-			}
-			this->mainRecordOnStarted = onStarted;
-			obs_frontend_recording_start();
-			auto output = obs_frontend_get_recording_output();
-			if (!output) {
-				blog(LOG_INFO, "[Fiji Suite] No main recording output found");
-				this->mainRecordOnStarted = nullptr;
-				onStarted();
-			}
-			obs_output_release(output);
-			return true;
-		});
-	}
-	if (mainBacktrackEnabled && !streamOnly) {
-		outputsToStart.push_back([this](std::function<void()> onStarted) {
-			if (obs_frontend_replay_buffer_active()) {
-				blog(LOG_INFO, "[Fiji Suite] Skipped starting main replay buffer, already active");
-				onStarted();
-				return true;
-			}
-			this->mainBacktrackOnStarted = onStarted;
-			obs_frontend_replay_buffer_start();
-			auto output = obs_frontend_get_replay_buffer_output();
-			if (!output) {
-				blog(LOG_INFO, "[Fiji Suite] No main replay buffer output found");
-				this->mainBacktrackOnStarted = nullptr;
-				onStarted();
-			}
-			obs_output_release(output);
-			return true;
-		});
-	}
-	if (mainVirtualCamEnabled && !streamOnly && !recordOnly) {
-		outputsToStart.push_back([this](std::function<void()> onStarted) {
-			if (obs_frontend_virtualcam_active()) {
-				blog(LOG_INFO, "[Fiji Suite] Skipped starting main virtual camera, already active");
-				onStarted();
-				return true;
-			}
-			this->mainVirtualCamOnStarted = onStarted;
-			obs_frontend_start_virtualcam();
-			auto output = obs_frontend_get_virtualcam_output();
-			if (!output) {
-				blog(LOG_INFO, "[Fiji Suite] No main virtual camera output found");
-				this->mainVirtualCamOnStarted = nullptr;
-				onStarted();
-			}
-			obs_output_release(output);
-			return true;
-		});
-	}
-	for (auto &ow : outputWidgets) {
-		if (streamOnly && !ow->IsStream()) {
-			continue;
-		}
-		if (recordOnly && !ow->IsRecord()) {
-			continue;
-		}
-		outputsToStart.push_back([this, ow](std::function<void()> onStarted) { return ow->StartOutput(onStarted); });
-	}
-	if (outputsToStart.empty()) {
-		return;
-	}
-	blog(LOG_INFO, "[Fiji Suite] Starting %zu outputs", outputsToStart.size());
-	StartNextOutput();
+	outputs->startAll(which_of(streamOnly, recordOnly));
 }
 
 void OutputDock::StopAll(bool streamOnly, bool recordOnly)
 {
-	outputsToStart.clear();
 	bool warnStream = config_get_bool(obs_frontend_get_user_config(), "BasicWindow", "WarnBeforeStoppingStream");
 	bool warnRecord = config_get_bool(obs_frontend_get_user_config(), "BasicWindow", "WarnBeforeStoppingRecord");
 	if (warnStream && mainStreamEnabled && !recordOnly && obs_frontend_streaming_active() && isVisible()) {
@@ -962,27 +859,7 @@ void OutputDock::StopAll(bool streamOnly, bool recordOnly)
 		}
 	}
 
-	if (mainStreamEnabled && !recordOnly && obs_frontend_streaming_active()) {
-		obs_frontend_streaming_stop();
-	}
-	if (mainRecordEnabled && !streamOnly && obs_frontend_recording_active()) {
-		obs_frontend_recording_stop();
-	}
-	if (mainBacktrackEnabled && !streamOnly && obs_frontend_replay_buffer_active()) {
-		obs_frontend_replay_buffer_stop();
-	}
-	if (mainVirtualCamEnabled && !streamOnly && !recordOnly && obs_frontend_virtualcam_active()) {
-		obs_frontend_stop_virtualcam();
-	}
-	for (auto &ow : outputWidgets) {
-		if (streamOnly && !ow->IsStream()) {
-			continue;
-		}
-		if (recordOnly && !ow->IsRecord()) {
-			continue;
-		}
-		ow->StopOutput();
-	}
+	outputs->stopAll(which_of(streamOnly, recordOnly));
 }
 
 std::vector<OutputState> OutputDock::GetOutputStates() const
@@ -1037,44 +914,137 @@ std::vector<OutputState> OutputDock::GetOutputStates() const
 
 QStringList OutputDock::GetGroups() const
 {
-	QStringList groups;
-	for (const auto &ow : outputWidgets) {
-		const auto group = ow->GetGroup();
-		if (!group.isEmpty() && !groups.contains(group)) {
-			groups.append(group);
-		}
-	}
-	return groups;
-}
-
-void OutputDock::StartOutputs(const std::function<bool(OutputWidget *)> &filter)
-{
-	outputsToStart.clear();
-	for (auto &ow : outputWidgets) {
-		if (filter(ow)) {
-			outputsToStart.push_back([ow](std::function<void()> onStarted) { return ow->StartOutput(onStarted); });
-		}
-	}
-	if (outputsToStart.empty()) {
-		return;
-	}
-	blog(LOG_INFO, "[Fiji Suite] Starting %zu outputs", outputsToStart.size());
-	StartNextOutput();
+	return outputs->groups();
 }
 
 void OutputDock::StartGroup(const QString &group)
 {
-	StartOutputs([&group](OutputWidget *ow) { return ow->GetGroup() == group; });
+	outputs->startGroup(group);
 }
 
 void OutputDock::StopGroup(const QString &group)
 {
-	outputsToStart.clear();
-	for (auto &ow : outputWidgets) {
-		if (ow->GetGroup() == group) {
-			ow->StopOutput();
+	outputs->stopGroup(group);
+}
+
+// ---------------------------------------------------------------------- fiji::obs::Outputs
+OutputWidget *OutputDock::WidgetNamed(const QString &name) const
+{
+	for (const auto &ow : outputWidgets) {
+		if (ow->objectName() == name) {
+			return ow;
 		}
 	}
+	return nullptr;
+}
+
+QList<fiji::obs::OutputEntry> OutputDock::list() const
+{
+	QList<fiji::obs::OutputEntry> all;
+	// OBS's own outputs, when the streamer shows them in the dock: the stream counts as a stream, the recording and the
+	// replay buffer as recordings, the virtual camera as neither
+	if (mainStreamEnabled) {
+		all.append({QStringLiteral("main:stream"), QString(), true, true, false});
+	}
+	if (mainRecordEnabled) {
+		all.append({QStringLiteral("main:record"), QString(), true, false, true});
+	}
+	if (mainBacktrackEnabled) {
+		all.append({QStringLiteral("main:backtrack"), QString(), true, false, true});
+	}
+	if (mainVirtualCamEnabled) {
+		all.append({QStringLiteral("main:virtual_cam"), QString(), true, false, false});
+	}
+	for (const auto &ow : outputWidgets) {
+		all.append({ow->objectName(), ow->GetGroup(), false, ow->IsStream(), ow->IsRecord()});
+	}
+	return all;
+}
+
+bool OutputDock::start(const QString &id, std::function<void()> onStarted)
+{
+	if (id == QStringLiteral("main:stream")) {
+		if (obs_frontend_streaming_active()) {
+			blog(LOG_INFO, "[Fiji Suite] Skipped starting main stream, already active");
+			onStarted();
+			return true;
+		}
+		mainStreamOnStarted = onStarted;
+		obs_frontend_streaming_start();
+		return true;
+	}
+	// the recording, replay buffer and virtual camera: OBS may not have one set up
+	struct Main {
+		const char *id;
+		const char *label;
+		bool (*isActive)();
+		void (*begin)();
+		obs_output_t *(*get)();
+		std::function<void()> *onStarted;
+	};
+	const Main mains[] = {
+		{"main:record", "recording", obs_frontend_recording_active, obs_frontend_recording_start,
+		 obs_frontend_get_recording_output, &mainRecordOnStarted},
+		{"main:backtrack", "replay buffer", obs_frontend_replay_buffer_active, obs_frontend_replay_buffer_start,
+		 obs_frontend_get_replay_buffer_output, &mainBacktrackOnStarted},
+		{"main:virtual_cam", "virtual camera", obs_frontend_virtualcam_active, obs_frontend_start_virtualcam,
+		 obs_frontend_get_virtualcam_output, &mainVirtualCamOnStarted},
+	};
+	for (const auto &m : mains) {
+		if (id != QLatin1String(m.id)) {
+			continue;
+		}
+		if (m.isActive()) {
+			blog(LOG_INFO, "[Fiji Suite] Skipped starting main %s, already active", m.label);
+			onStarted();
+			return true;
+		}
+		*m.onStarted = onStarted;
+		m.begin();
+		obs_output_t *output = m.get();
+		if (!output) {
+			blog(LOG_INFO, "[Fiji Suite] No main %s output found", m.label);
+			*m.onStarted = nullptr;
+			onStarted();
+		}
+		obs_output_release(output);
+		return true;
+	}
+	auto ow = WidgetNamed(id);
+	return ow && ow->StartOutput(onStarted);
+}
+
+void OutputDock::stop(const QString &id)
+{
+	if (id == QStringLiteral("main:stream")) {
+		obs_frontend_streaming_stop();
+	} else if (id == QStringLiteral("main:record")) {
+		obs_frontend_recording_stop();
+	} else if (id == QStringLiteral("main:backtrack")) {
+		obs_frontend_replay_buffer_stop();
+	} else if (id == QStringLiteral("main:virtual_cam")) {
+		obs_frontend_stop_virtualcam();
+	} else if (auto ow = WidgetNamed(id)) {
+		ow->StopOutput();
+	}
+}
+
+bool OutputDock::active(const QString &id) const
+{
+	if (id == QStringLiteral("main:stream")) {
+		return obs_frontend_streaming_active();
+	}
+	if (id == QStringLiteral("main:record")) {
+		return obs_frontend_recording_active();
+	}
+	if (id == QStringLiteral("main:backtrack")) {
+		return obs_frontend_replay_buffer_active();
+	}
+	if (id == QStringLiteral("main:virtual_cam")) {
+		return obs_frontend_virtualcam_active();
+	}
+	auto ow = WidgetNamed(id);
+	return ow && ow->IsActive();
 }
 
 void OutputDock::SaveGroupHotkeys()
@@ -1177,17 +1147,7 @@ void OutputDock::RebuildGroups()
 void OutputDock::UpdateGroupStatus()
 {
 	for (auto &g : groupRows) {
-		int members = 0;
-		int live = 0;
-		for (const auto &ow : outputWidgets) {
-			if (ow->GetGroup() != g.name) {
-				continue;
-			}
-			members++;
-			if (ow->IsActive()) {
-				live++;
-			}
-		}
+		const auto [live, members] = outputs->groupStatus(g.name);
 		const auto text = QString::fromUtf8(obs_module_text("GroupStatus")).arg(g.name).arg(live).arg(members);
 		if (g.label->text() != text) {
 			g.label->setText(text);

@@ -12,6 +12,8 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
   events say when a start or stop was asked for (`output_starting`, `output_stopping`; docs/websocket.md).
 - Deck sounds follow OBS 33's audio monitoring switch (on or off), and the deprecated call is gone when built for
   OBS 33.
+- Inside: starting and stopping outputs together (all, streams, recordings, groups, one after another) is one
+  outputs controller, tested without OBS.
 - Inside: the decks follow the MVC + State layout: a deck model saved locally (the same decks.json), the deck engine as
   the state of each key's run, one deck controller for presses from the deck pages, hotkeys, obs-websocket and the bot,
   and the OBS steps and hotkeys behind ports, with tests for the model, the store and the controller.

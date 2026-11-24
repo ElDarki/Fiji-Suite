@@ -133,6 +133,8 @@ set(FIJI_CORE_SOURCES
   src/controller/deck-controller.cpp
   src/controller/deck-controller.hpp
   src/controller/obs-command-handler.cpp
+  src/controller/outputs-controller.cpp
+  src/controller/outputs-controller.hpp
   src/controller/obs-command-handler.hpp
   src/model/deck-model.cpp
   src/model/deck-model.hpp
@@ -142,6 +144,7 @@ set(FIJI_CORE_SOURCES
   src/obs/obs-api.hpp
   src/obs/obs-data-store.cpp
   src/obs/obs-data-store.hpp
+  src/obs/output-ports.hpp
   src/state/deck-engine.cpp
   src/state/deck-engine.hpp
   src/state/link-state.cpp

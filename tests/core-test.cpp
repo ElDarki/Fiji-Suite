@@ -7,6 +7,7 @@
 #include "../src/bridge/envelope.hpp"
 #include "../src/controller/command-dispatcher.hpp"
 #include "../src/controller/deck-controller.hpp"
+#include "../src/controller/outputs-controller.hpp"
 #include "../src/model/deck-model.hpp"
 #include "../src/model/local-store.hpp"
 #include "../src/obs/deck-ports.hpp"
@@ -20,6 +21,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QDir>
+#include <QSet>
 #include <QFile>
 #include <QTemporaryDir>
 #include <QThread>
@@ -590,6 +592,89 @@ static void test_output_lifecycle()
 	CHECK(state::outputStateName(OutputStateId::STOPPING) == "STOPPING");
 }
 
+// ---- starting and stopping outputs together --------------------------------------------------------------
+class FakeOutputs final : public obs::Outputs {
+public:
+	QList<obs::OutputEntry> entries;
+	QSet<QString> live;
+	QSet<QString> refuse;                 // these cannot even try to start
+	QStringList started, stopped;
+	QHash<QString, std::function<void()>> pendingStarts; // onStarted callbacks not called yet
+
+	QList<obs::OutputEntry> list() const override { return entries; }
+	bool start(const QString &id, std::function<void()> onStarted) override
+	{
+		if (refuse.contains(id)) {
+			return false;
+		}
+		started.append(id);
+		pendingStarts.insert(id, onStarted);
+		return true;
+	}
+	void stop(const QString &id) override
+	{
+		stopped.append(id);
+		live.remove(id);
+	}
+	bool active(const QString &id) const override { return live.contains(id); }
+	void goesLive(const QString &id)
+	{
+		live.insert(id);
+		pendingStarts.take(id)();
+	}
+};
+
+static void test_outputs_controller()
+{
+	FakeOutputs o;
+	o.entries = {{"main:stream", "", true, true, false},     {"main:record", "", true, false, true},
+		     {"main:virtual_cam", "", true, false, false}, {"Twitch", "Main", false, true, false},
+		     {"TikTok", "Phones", false, true, false},     {"YouTube Shorts", "Phones", false, true, false},
+		     {"Local copy", "", false, false, true}};
+	QStringList log;
+	controller::OutputsController c(o, [&log](const QString &line) { log.append(line); });
+
+	CHECK((c.groups() == QStringList{"Main", "Phones"}));
+	c.startGroup("Phones"); // one at a time: the second waits for the first
+	CHECK((o.started == QStringList{"TikTok"}) && c.waiting() == 1);
+	o.goesLive("TikTok");
+	settle();
+	CHECK((o.started == QStringList{"TikTok", "YouTube Shorts"}) && c.waiting() == 0);
+	o.goesLive("YouTube Shorts");
+	settle();
+	CHECK(c.groupStatus("Phones") == std::make_pair(2, 2) && c.groupStatus("Main") == std::make_pair(0, 1));
+
+	c.stopGroup("Phones");
+	CHECK((o.stopped == QStringList{"TikTok", "YouTube Shorts"}) && c.groupStatus("Phones").first == 0);
+
+	o.started.clear();
+	o.refuse = {"main:stream"}; // skipped and tried again after the others
+	c.startAll(controller::OutputsController::Which::Streams);
+	CHECK((o.started == QStringList{"Twitch"})); // the virtual camera and recordings are not streams
+	o.goesLive("Twitch");
+	settle();
+	o.goesLive("TikTok");
+	settle();
+	o.goesLive("YouTube Shorts");
+	settle();
+	CHECK((o.started == QStringList{"Twitch", "TikTok", "YouTube Shorts"}) && c.waiting() == 0);
+	CHECK(log.last().contains("could not be started")); // a whole round with only the refused one left
+
+	o.started.clear();
+	o.refuse.clear();
+	c.startAll(controller::OutputsController::Which::Recordings);
+	CHECK((o.started == QStringList{"main:record"}) && c.waiting() == 1);
+	c.stopAll(controller::OutputsController::Which::Recordings); // a stop drops what was still waiting
+	CHECK(c.waiting() == 0);
+	o.goesLive("main:record");
+	settle();
+	CHECK((o.started == QStringList{"main:record"})); // nothing more starts after the stop
+
+	o.stopped.clear();
+	c.stopAll(); // only what is live is stopped
+	CHECK((o.stopped == QStringList{"main:record", "Twitch", "TikTok", "YouTube Shorts"}));
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -602,6 +687,7 @@ int main(int argc, char **argv)
 	test_store_on_disk();
 	test_deck_controller();
 	test_output_lifecycle();
+	test_outputs_controller();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

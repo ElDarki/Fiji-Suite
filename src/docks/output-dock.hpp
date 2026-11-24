@@ -9,6 +9,8 @@
 #include <QPushButton>
 #include <QTimer>
 #include <src/utils/widgets/output-widget.hpp>
+#include "../controller/outputs-controller.hpp"
+#include "../obs/output-ports.hpp"
 
 // A snapshot of one output for the multiview and remote control. `main` marks OBS's own
 // stream / record / replay / virtual camera outputs; their canvas is empty.
@@ -28,7 +30,9 @@ struct OutputState {
 	int droppedFrames = 0;
 };
 
-class OutputDock : public QFrame {
+// The output dock: its widgets, and the obs::Outputs port over OBS's own outputs and Fiji Suite's, which the
+// OutputsController (src/controller/) starts and stops together.
+class OutputDock : public QFrame, public fiji::obs::Outputs {
 	Q_OBJECT
 
 private:
@@ -63,8 +67,8 @@ private:
 
 	std::vector<OutputWidget *> outputWidgets;
 
-	std::list<std::function<bool(std::function<void()>)>> outputsToStart;
-	size_t outputStarting = 0;
+	fiji::controller::OutputsController *outputs = nullptr;
+	OutputWidget *WidgetNamed(const QString &name) const;
 
 	obs_hotkey_pair_id StartStopHotkey = OBS_INVALID_HOTKEY_PAIR_ID;
 	obs_hotkey_id StartStreamHotkey = OBS_INVALID_HOTKEY_ID;
@@ -89,12 +93,10 @@ private:
 	void SaveGroupHotkeys();
 	void ClearGroupRows();
 	void UpdateGroupStatus();
-	void StartOutputs(const std::function<bool(OutputWidget *)> &filter);
 
 private slots:
 	void StartAll(bool streamOnly, bool recordOnly);
 	void StopAll(bool streamOnly, bool recordOnly);
-	void StartNextOutput();
 
 public:
 	OutputDock(QWidget *parent = nullptr);
@@ -109,6 +111,12 @@ public:
 	std::vector<OutputState> GetOutputStates() const;
 	QStringList GetGroups() const;
 	void RebuildGroups();
+
+	// fiji::obs::Outputs
+	QList<fiji::obs::OutputEntry> list() const override;
+	bool start(const QString &id, std::function<void()> onStarted) override;
+	void stop(const QString &id) override;
+	bool active(const QString &id) const override;
 
 public slots:
 	void StartGroup(const QString &group);
