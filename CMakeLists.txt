@@ -92,8 +92,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/scenes-dock.hpp
   src/docks/sources-dock.cpp
   src/docks/sources-dock.hpp
-  src/docks/stats-dock.cpp
-  src/docks/stats-dock.hpp
   src/docks/transform-dock.cpp
   src/docks/transform-dock.hpp
   src/docks/transitions-dock.cpp
@@ -128,6 +126,8 @@ set(FIJI_CORE_SOURCES
   src/controller/capture-controller.cpp
   src/controller/live-scenes-controller.cpp
   src/controller/live-scenes-controller.hpp
+  src/controller/stats-controller.cpp
+  src/controller/stats-controller.hpp
   src/controller/capture-controller.hpp
   src/controller/outputs-controller.cpp
   src/controller/outputs-controller.hpp
@@ -138,6 +138,8 @@ set(FIJI_CORE_SOURCES
   src/model/obs-status.hpp
   src/model/live-scenes-model.cpp
   src/model/live-scenes-model.hpp
+  src/model/output-stats.cpp
+  src/model/output-stats.hpp
   src/model/record-output.cpp
   src/model/record-output.hpp
   src/model/profile-model.cpp
@@ -151,6 +153,7 @@ set(FIJI_CORE_SOURCES
   src/obs/output-ports.hpp
   src/obs/capture-ports.hpp
   src/obs/live-scenes-ports.hpp
+  src/obs/stats-ports.hpp
   src/state/deck-engine.cpp
   src/state/deck-engine.hpp
   src/state/link-state.cpp
@@ -170,6 +173,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-capture-sources.cpp
   src/obs/obs-live-scenes.cpp
   src/obs/obs-live-scenes.hpp
+  src/obs/obs-stats-source.cpp
+  src/obs/obs-stats-source.hpp
   src/obs/obs-capture-sources.hpp
   src/obs/obs-deck-steps.cpp
   src/obs/obs-deck-steps.hpp
@@ -192,6 +197,8 @@ set(FIJI_VIEW_SOURCES
   src/view/record-output-dialog.hpp
   src/view/restart-notice.cpp
   src/view/restart-notice.hpp
+  src/view/stats-dock.cpp
+  src/view/stats-dock.hpp
   src/view/text.cpp
   src/view/text.hpp)
 target_sources(${PROJECT_NAME} PRIVATE ${FIJI_VIEW_SOURCES})

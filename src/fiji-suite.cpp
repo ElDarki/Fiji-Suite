@@ -18,7 +18,9 @@
 #include "docks/properties-dock.hpp"
 #include "docks/scenes-dock.hpp"
 #include "docks/sources-dock.hpp"
-#include "docks/stats-dock.hpp"
+#include "view/stats-dock.hpp"
+#include "obs/obs-stats-source.hpp"
+#include "controller/stats-controller.hpp"
 #include "docks/transform-dock.hpp"
 #include "docks/transitions-dock.hpp"
 #include "bridge/bot-link.hpp"
@@ -73,7 +75,7 @@ PropertiesDock *properties_dock = nullptr;
 FiltersDock *filters_dock = nullptr;
 TransformDock *transform_dock = nullptr;
 CanvasDock *component_dock = nullptr;
-StatsDock *stats_dock = nullptr;
+fiji::view::StatsDock *stats_dock = nullptr;
 ScenesDock *scenes_dock = nullptr;
 SourcesDock *sources_dock = nullptr;
 TransitionsDock *transitions_dock = nullptr;
@@ -520,6 +522,16 @@ struct Core {
 	fiji::model::LiveScenesModel liveScenesModel;
 	fiji::obs::ObsLiveScenes liveScenesObs;
 	fiji::controller::LiveScenesController liveScenes{liveScenesModel, liveScenesObs};
+	fiji::model::OutputStatsTable statsTable{
+		[](const char *key) { return QString::fromUtf8(obs_module_text(key)); },
+		[this](const QString &canvas) {
+			const auto found = profile.canvas(canvas);
+			return found.isEmpty() ? QVariant() : QVariant(found.value("color").toInteger());
+		},
+		{QString::fromUtf8(obs_module_text("BuiltinRecord")), QString::fromUtf8(obs_module_text("BuiltinStream")),
+		 QString::fromUtf8(obs_module_text("BuiltinVirtualCamera"))}};
+	fiji::obs::ObsStatsSource statsSource;
+	fiji::controller::StatsController stats{statsTable, statsSource};
 	fiji::obs::ObsCaptureSources captureSources;
 	fiji::controller::CaptureController captures{captureSources};
 	fiji::obs::ObsDeckSteps deckSteps;
@@ -544,6 +556,7 @@ struct Core {
 		decks.start();
 		captures.start();
 		liveScenes.start();
+		stats.start();
 	}
 
 	static QString config_folder()
@@ -964,8 +977,6 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteFilters", obs_module_text("FijiSuiteFilters"), filters_dock);
 	transform_dock = new TransformDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteTransform", obs_module_text("FijiSuiteTransform"), transform_dock);
-	stats_dock = new StatsDock(main_window);
-	obs_frontend_add_dock_by_id("FijiSuiteStats", obs_module_text("FijiSuiteStats"), stats_dock);
 	scenes_dock = new ScenesDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteScenes", obs_module_text("FijiSuiteScenes"), scenes_dock);
 	sources_dock = new SourcesDock(main_window);
@@ -984,6 +995,8 @@ bool obs_module_load(void)
 		core->liveScenes, {locale("Add"), locale("RemoveScene"), locale("MoveSceneUp"), locale("MoveSceneDown")},
 		main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteLiveScenes", obs_module_text("FijiSuiteLiveScenes"), live_scenes_dock);
+	stats_dock = new fiji::view::StatsDock(core->stats, &core->profile, main_window);
+	obs_frontend_add_dock_by_id("FijiSuiteStats", obs_module_text("FijiSuiteStats"), stats_dock);
 	multiview_dock = new MultiviewDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteMultiview", obs_module_text("FijiSuiteMultiview"), multiview_dock);
 	return true;

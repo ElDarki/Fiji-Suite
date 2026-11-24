@@ -10,6 +10,8 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 - The recording and backtrack output dialog: a new output saves the filename it shows (the pattern followed by the
   output's name, not the bare pattern), and editing an output with no filename or format fills in the defaults
   instead of leaving them empty.
+- The Stats dock's rates no longer start with a spike (an output that was already running showed its whole total as
+  its first second), and its graphs are drawn from each rate's last minutes, scaled to what is shown.
 - Each Fiji Suite output reports its real state: starting, live, reconnecting, stopping, stopped or failed. The bot and
   obs-websocket clients now hear about a start when the output is actually live, not when it was asked for, and two new
   events say when a start or stop was asked for (`output_starting`, `output_stopping`; docs/websocket.md).
@@ -26,7 +28,8 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 - Inside: the docks and dialogs start moving into the view layer, tested with Qt and no OBS: the name dialog and the
   Capture dock (over a capture controller and an OBS port for the capture sources), and the Live Scenes dock (a model
   saved with the scene collection as before, a controller, and an OBS port), and the recording / backtrack output dialog
-  (one dialog for new and edited outputs, its rules in a model). Views get their text through `view::text`.
+  (one dialog for new and edited outputs, its rules in a model), and the Stats dock (a table model fed once a second
+  by a controller over an OBS port). Views get their text through `view::text`.
 
 ## 0.6.0
 

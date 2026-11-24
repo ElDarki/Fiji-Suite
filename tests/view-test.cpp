@@ -7,6 +7,12 @@
 #include "fake-live-scenes.hpp"
 #include "../src/view/live-scenes-dock.hpp"
 #include "../src/view/record-output-dialog.hpp"
+#include "../src/view/stats-dock.hpp"
+#include "../src/model/profile-model.hpp"
+#include "fake-stats-source.hpp"
+#include <QHeaderView>
+#include <QPixmap>
+#include <QTableView>
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QPushButton>
@@ -146,6 +152,53 @@ static void test_record_output_dialog()
 	CHECK(!backtrack.confirmButton()->isEnabled());
 }
 
+// The Stats dock: shows the table, hides the columns that start hidden, keeps its layout in the profile, paints.
+static void test_stats_dock()
+{
+	FakeStatsSource source;
+	model::StatsEncoder video{1, "x264", 100, true, true, 10, 1280, 720};
+	model::StatsOutput out;
+	out.id = 10;
+	out.name = "Fiji Suite Output Main";
+	out.active = true;
+	out.videoEncoders = {1};
+	source.next.encoders = {video};
+	source.next.outputs = {out};
+	source.next.canvases = {{"Main", 100, 0, 10, 1280, 720}};
+	model::OutputStatsTable table({}, [](const QString &) { return QVariant(qint64(0xff00ff00)); });
+	controller::StatsController stats(table, source);
+	model::ProfileModel profile;
+	profile.load({});
+	view::StatsDock dock(stats, &profile);
+	dock.resize(900, 300);
+	dock.show();
+	stats.tick();
+	source.next.encoders[0].encodedFrames = 40;
+	stats.tick();
+	CHECK(dock.table()->model()->rowCount() == 1);
+	CHECK(dock.table()->isColumnHidden(model::OutputStatsTable::EncoderName) &&
+	      !dock.table()->isColumnHidden(model::OutputStatsTable::EncoderFps));
+
+	QMenu menu;
+	dock.fillHeaderMenu(menu, 0);
+	CHECK(menu.actions().size() == 2 + model::OutputStatsTable::ColumnCount); // Sort, separator, one per column
+
+	dock.table()->setColumnHidden(model::OutputStatsTable::EncoderName, false);
+	dock.SaveSettings(false, "Live");
+	CHECK(!profile.view("stats_state_Live").toString().isEmpty());
+	dock.table()->setColumnHidden(model::OutputStatsTable::EncoderName, true);
+	dock.LoadMode("live"); // falls back to the mode's other spelling
+	dock.LoadMode("Live");
+	CHECK(!dock.table()->isColumnHidden(model::OutputStatsTable::EncoderName));
+
+	QPixmap canvas(dock.size()); // the graphs, colour lines and grouped header paint without trouble
+	dock.render(&canvas);
+
+	dock.hide();
+	stats.tick();
+	CHECK(table.rows().isEmpty()); // hidden: the table empties
+}
+
 int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
@@ -154,6 +207,7 @@ int main(int argc, char **argv)
 	test_capture_dock();
 	test_live_scenes_dock();
 	test_record_output_dialog();
+	test_stats_dock();
 	if (failures) {
 		std::fprintf(stderr, "%d check(s) failed\n", failures);
 		return 1;

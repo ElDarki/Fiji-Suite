@@ -24,6 +24,8 @@
 #include "fake-live-scenes.hpp"
 #include "../src/controller/live-scenes-controller.hpp"
 #include "../src/model/record-output.hpp"
+#include "../src/controller/stats-controller.hpp"
+#include "fake-stats-source.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -939,6 +941,95 @@ static void test_record_output()
 	CHECK(model::recordOutputValid(back, {}));
 }
 
+// The Stats table: rows for active encoders and outputs, rates per tick, canvases, history, and stopped outputs.
+static void test_output_stats()
+{
+	CHECK(model::displayOutputName("Fiji Suite Output Vertical", {}) == "Vertical");
+	CHECK(model::displayOutputName("adv_stream", {"Rec", "Stream", "Cam"}) == "Stream");
+	CHECK(model::displayOutputName("virtualcam_output", {"Rec", "Stream", "Cam"}) == "Cam");
+	CHECK(model::displayOutputName("decklink_output", {}) == "decklink output");
+	CHECK(model::displayEncoderName("Fiji Suite Video Vertical") == "Vertical" && model::displayEncoderName("a_b") == "a b");
+
+	model::StatsSnapshot s;
+	model::StatsEncoder video{1, "Fiji Suite Video Main", 100, true, true, 1000, 1920, 1080};
+	model::StatsEncoder audio{2, "aac", 0, false, true, 0, 0, 0};
+	model::StatsOutput stream;
+	stream.id = 10;
+	stream.name = "simple_stream";
+	stream.active = true;
+	stream.videoEncoders = {1};
+	stream.totalBytes = 1000000;
+	stream.totalFrames = 500;
+	model::StatsCanvas canvas{"Vertical", 100, 2, 3000, 1080, 1920};
+	s.encoders = {video, audio};
+	s.outputs = {stream};
+	s.canvases = {canvas};
+
+	model::OutputStatsTable table({}, [](const QString &name) { return name == "Vertical" ? QVariant(qint64(0xff0000ff)) : QVariant(); });
+	int inserted = 0;
+	QObject::connect(&table, &QAbstractItemModel::rowsInserted, [&inserted](const QModelIndex &, int a, int b) { inserted += b - a + 1; });
+	table.update(s);
+	CHECK(table.rows().size() == 1 && inserted == 1); // one row: the video encoder, joined by its output; audio has none
+	const auto &row = table.rows().at(0);
+	CHECK(row.output == 10 && row.outputName == "BuiltinStream" && row.encoderName == "Main");
+	CHECK(row.hasCanvas && row.canvasName == "Vertical" && row.canvasColor.toLongLong() == 0xff0000ff);
+	CHECK(row.encodedWidth == 1920 && row.canvasWidth == 1080);
+
+	// a second later: rates are the differences
+	s.encoders[0].encodedFrames = 1030;
+	s.outputs[0].totalBytes = 1000000 + 750000; // 6000 kb/s
+	s.outputs[0].totalFrames = 530;
+	s.canvases[0].totalFrames = 3030;
+	table.update(s);
+	CHECK(table.rows().size() == 1);
+	CHECK(table.rows().at(0).encodedFps == 30 && table.rows().at(0).outputFps == 30 && table.rows().at(0).canvasFps == 30);
+	CHECK(table.rows().at(0).outputBitrate == 6000);
+	CHECK(table.rows().at(0).outputFpsHistory.size() == 2 && table.rows().at(0).outputFpsHistory.last() == 30);
+	CHECK(table.data(table.index(0, model::OutputStatsTable::OutputBitrate), Qt::DisplayRole).toUInt() == 6000);
+	CHECK(table.data(table.index(0, model::OutputStatsTable::EncoderResolution), Qt::DisplayRole).toString() == "1920x1080");
+	CHECK(table.data(table.index(0, model::OutputStatsTable::OutputFps), model::OutputStatsTable::GraphRole)
+		      .value<QList<quint32>>()
+		      .size() == 2);
+	CHECK(!table.data(table.index(0, model::OutputStatsTable::OutputName), model::OutputStatsTable::GraphRole).isValid());
+	CHECK(table.headerData(1, Qt::Horizontal).toString() == "Output\nFPS");
+
+	// the output and encoder stop: the row stays with its totals, its rates drop to 0
+	s.encoders.clear();
+	s.outputs.clear();
+	table.update(s);
+	CHECK(table.rows().size() == 1 && table.rows().at(0).outputFps == 0 && table.rows().at(0).outputFrames == 530);
+
+	// a raw (not encoded) output gets its own row with its video
+	model::StatsOutput raw;
+	raw.id = 20;
+	raw.name = "virtualcam_output";
+	raw.active = true;
+	raw.encoded = false;
+	raw.video = 100;
+	s.outputs = {raw};
+	table.update(s);
+	CHECK(table.rows().size() == 2 && table.rows().at(1).video == 100 && table.rows().at(1).hasCanvas);
+	s.outputs[0].totalFrames = 9000; // already running: its first rate is not its whole total
+	model::OutputStatsTable late;
+	late.update(s);
+	s.outputs[0].totalFrames = 9030;
+	late.update(s);
+	CHECK(late.rows().size() == 1 && late.rows().at(0).outputFps == 30);
+
+	// the controller samples only while shown, and empties the table when not
+	FakeStatsSource source;
+	source.next = s;
+	model::OutputStatsTable shownTable;
+	controller::StatsController stats(shownTable, source);
+	bool shown = true;
+	stats.setShown([&shown] { return shown; });
+	stats.tick();
+	CHECK(source.samples == 1 && shownTable.rows().size() == 1);
+	shown = false;
+	stats.tick();
+	CHECK(source.samples == 1 && shownTable.rows().isEmpty());
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -957,6 +1048,7 @@ int main(int argc, char **argv)
 	test_capture_controller();
 	test_live_scenes();
 	test_record_output();
+	test_output_stats();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;
