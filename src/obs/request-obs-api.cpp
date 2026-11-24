@@ -91,7 +91,8 @@ model::ObsSnapshot RequestObsApi::snapshot()
 		s.outputs.append(model::OutputStatus{o.value("name").toString(), o.value("type").toString(),
 						     o.value("canvas").toString(), o.value("group").toString(),
 						     o.value("main").toBool(), o.value("active").toBool(),
-						     o.value("reconnecting").toBool(), qint64(o.value("uptime").toDouble()),
+						     o.value("reconnecting").toBool(), o.value("state").toString(),
+						     qint64(o.value("uptime").toDouble()),
 						     qint64(o.value("dropped_frames").toDouble()),
 						     qint64(o.value("total_frames").toDouble())});
 	}

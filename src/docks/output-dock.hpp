@@ -21,6 +21,7 @@ struct OutputState {
 	bool main = false;
 	bool active = false;
 	bool reconnecting = false;
+	QString state; // the life cycle's state (IDLE, STARTING, ...); empty for OBS's own outputs
 	QDateTime startTime;
 	uint64_t totalBytes = 0;
 	int totalFrames = 0;

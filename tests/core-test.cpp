@@ -14,6 +14,7 @@
 #include "../src/controller/obs-command-handler.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
+#include "../src/state/output-state.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -57,8 +58,8 @@ public:
 		model::ObsSnapshot s;
 		s.canvases = {model::CanvasState{"Main", true, "Gameplay", "", false, {"Gameplay", "BRB"}, {"Fade"}},
 			      model::CanvasState{"Vertical", false, "Camera", "Full", true, {"Camera", "Full"}, {}}};
-		s.outputs = {model::OutputStatus{"Stream", "stream", "", "", true, true, false, 90, 3, 1000},
-			     model::OutputStatus{"TikTok", "rtmp", "Vertical", "Phones", false, false, false, 0, 0, 0}};
+		s.outputs = {model::OutputStatus{"Stream", "stream", "", "", true, true, false, "", 90, 3, 1000},
+			     model::OutputStatus{"TikTok", "rtmp", "Vertical", "Phones", false, false, false, "", 0, 0, 0}};
 		s.decks = {model::DeckSummary{"d1", "Stream", 15}};
 		s.running = {"b7"};
 		return s;
@@ -323,6 +324,12 @@ static void test_acl()
 	CHECK(state.value("error").toString() == "Disconnected" && !state.contains("code"));
 	acl.onPluginEvent("output_reconnecting", {{"output", "TikTok"}});
 	CHECK(wire.last("EVENT", "output.state").value("payload").toObject().value("state").toString() == "RECONNECTING");
+	acl.onPluginEvent("output_starting", {{"output", "TikTok"}, {"state", "STARTING"}});
+	CHECK(wire.last("EVENT", "output.state").value("payload").toObject().value("state").toString() == "STARTING");
+	acl.onPluginEvent("output_stopping", {{"output", "TikTok"}});
+	CHECK(wire.last("EVENT", "output.state").value("payload").toObject().value("state").toString() == "STOPPING");
+	acl.onPluginEvent("stop_output", {{"output", "TikTok"}, {"state", "IDLE"}, {"last_error", "ignored when idle"}});
+	CHECK(!wire.last("EVENT", "output.state").value("payload").toObject().contains("error"));
 	acl.onPluginEvent("switch_scene", {{"canvas", "Vertical"}, {"new_scene", "Full"}, {"old_scene", "Camera"}, {"width", 1080}});
 	const auto program = wire.last("EVENT", "scene.program").value("payload").toObject();
 	CHECK(program.value("scene").toString() == "Full" && program.value("previous").toString() == "Camera" && !program.contains("width"));
@@ -543,6 +550,46 @@ static void test_deck_controller()
 	CHECK(deck.handle(Command{"deck.triggers", {}, controller::CommandSource::Bridge, {}}).ok);
 }
 
+// ---- an output's life cycle ------------------------------------------------------------------------
+static void test_output_lifecycle()
+{
+	using state::OutputStateId;
+	state::OutputLifecycle out;
+	QStringList seen;
+	QObject::connect(&out, &state::OutputLifecycle::changed,
+			 [&seen](OutputStateId now, OutputStateId before, const QString &error) {
+				 seen.append(state::outputStateName(before) + ">" + state::outputStateName(now) +
+					     (error.isEmpty() ? QString() : "(" + error + ")"));
+			 });
+	CHECK(out.state() == OutputStateId::IDLE && !out.running());
+	out.reconnected(); // ignored: not a transition from IDLE
+	out.stopped("noise");
+	CHECK(seen.isEmpty());
+	out.startRequested();
+	out.started();
+	out.started(); // libobs repeats itself: nothing new
+	out.reconnecting();
+	out.reconnected();
+	out.stopRequested();
+	out.stopped();
+	CHECK((seen == QStringList{"IDLE>STARTING", "STARTING>ACTIVE", "ACTIVE>RECONNECTING", "RECONNECTING>ACTIVE",
+				   "ACTIVE>STOPPING", "STOPPING>IDLE"}));
+	seen.clear();
+	out.startRequested();
+	out.stopped("Could not connect"); // the start failed
+	CHECK(out.state() == OutputStateId::FAILED && out.lastError() == "Could not connect");
+	out.startRequested(); // try again: the old error is gone
+	CHECK(out.lastError().isEmpty());
+	out.started();
+	out.reconnecting();
+	out.stopped("Disconnected"); // dropped while reconnecting
+	out.started(); // OBS started it some other way
+	CHECK((seen == QStringList{"IDLE>STARTING", "STARTING>FAILED(Could not connect)", "FAILED>STARTING",
+				   "STARTING>ACTIVE", "ACTIVE>RECONNECTING", "RECONNECTING>FAILED(Disconnected)",
+				   "FAILED>ACTIVE"}));
+	CHECK(state::outputStateName(OutputStateId::STOPPING) == "STOPPING");
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -554,6 +601,7 @@ int main(int argc, char **argv)
 	test_deck_model();
 	test_store_on_disk();
 	test_deck_controller();
+	test_output_lifecycle();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

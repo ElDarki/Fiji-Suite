@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <QDateTime>
 
+#include "../../state/output-state.hpp"
+
 class OutputWidget : public QFrame {
 	Q_OBJECT
 private:
@@ -22,6 +24,11 @@ private:
 
 	QTimer activeTimer;
 	QDateTime startTime;
+	// The output's life cycle (IDLE, STARTING, ACTIVE, RECONNECTING, STOPPING, FAILED); its changes are the output
+	// events obs-websocket clients, the deck pages and the bot get.
+	fiji::state::OutputLifecycle lifecycle;
+	long long lastStopCode = 0;
+	void LifecycleChanged(fiji::state::OutputStateId now, fiji::state::OutputStateId before, const QString &error);
 
 	obs_hotkey_pair_id StartStopHotkey = OBS_INVALID_HOTKEY_PAIR_ID;
 	obs_hotkey_pair_id PauseHotkey = OBS_INVALID_HOTKEY_PAIR_ID;
@@ -63,4 +70,5 @@ public:
 	QString GetServer() const;
 	bool IsActive() const;
 	QDateTime GetStartTime() const { return startTime; }
+	fiji::state::OutputStateId GetState() const { return lifecycle.state(); }
 };

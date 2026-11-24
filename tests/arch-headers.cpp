@@ -22,6 +22,7 @@
 #include "../src/obs/request-obs-api.hpp"
 #include "../src/state/deck-engine.hpp"
 #include "../src/state/link-state.hpp"
+#include "../src/state/output-state.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -39,6 +40,7 @@ static_assert(std::is_base_of_v<controller::CommandHandler, controller::ObsComma
 static_assert(std::is_base_of_v<controller::CommandHandler, controller::DeckController> &&
 		      std::is_base_of_v<decks::Host, controller::DeckController>,
 	      "the deck controller serves the dispatcher and hosts the engine");
+static_assert(std::is_abstract_v<state::OutputState>, "OutputState is the State pattern's base");
 static_assert(std::is_abstract_v<obs::DeckSteps> && std::is_abstract_v<obs::DeckHotkeys>, "deck ports");
 static_assert(std::is_base_of_v<obs::DeckSteps, obs::ObsDeckSteps> && std::is_base_of_v<obs::DeckHotkeys, obs::ObsDeckHotkeys>,
 	      "the libobs deck adapters implement their ports");

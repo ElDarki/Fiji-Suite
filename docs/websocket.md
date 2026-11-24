@@ -122,9 +122,11 @@ Events arrive as standard `VendorEvent` messages with `vendorName` `fiji-suite`;
 | `switch_scene` | `canvas`, `old_scene`, `new_scene`, `width`, `height`: the canvas output changed scene |
 | `preview_scene_changed` | same fields, for the scene selected in the canvas dock (the preview in studio mode) |
 | `studio_mode_changed` | `canvas`, `enabled` |
-| `start_output` | `output` |
-| `stop_output` | `output`, `code`, `last_error` (when there was one) |
-| `output_reconnecting` / `output_reconnected` | `output` |
+| `output_starting` | `output`, `state`: a start was asked for (since 0.7.0) |
+| `start_output` | `output`, `state`: the output is live (before 0.7.0 this came when the start was asked for) |
+| `output_reconnecting` / `output_reconnected` | `output`, `state` |
+| `output_stopping` | `output`, `state`: a stop was asked for (since 0.7.0) |
+| `stop_output` | `output`, `state` (`IDLE`, or `FAILED` with an error), `code`, `last_error` (when there was one) |
 | `outputs_changed` | the output list was edited in settings |
 | `canvas_changed` | the canvas list was edited in settings |
 | `scene_added` / `scene_removed` | `canvas`, `name`, `uuid` |

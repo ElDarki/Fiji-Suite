@@ -44,6 +44,7 @@ QJsonObject ObsSnapshot::toJson() const
 				     {"main", x.main},
 				     {"active", x.active},
 				     {"reconnecting", x.reconnecting},
+				     {"state", x.state},
 				     {"uptime", double(x.uptime)},
 				     {"droppedFrames", double(x.droppedFrames)},
 				     {"totalFrames", double(x.totalFrames)}});
@@ -69,8 +70,8 @@ ObsSnapshot ObsSnapshot::fromJson(const QJsonObject &json)
 		s.outputs.append(OutputStatus{x.value("name").toString(), x.value("kind").toString(),
 					      x.value("canvas").toString(), x.value("group").toString(),
 					      x.value("main").toBool(), x.value("active").toBool(),
-					      x.value("reconnecting").toBool(), qint64(x.value("uptime").toDouble()),
-					      qint64(x.value("droppedFrames").toDouble()),
+					      x.value("reconnecting").toBool(), x.value("state").toString(),
+					      qint64(x.value("uptime").toDouble()), qint64(x.value("droppedFrames").toDouble()),
 					      qint64(x.value("totalFrames").toDouble())});
 	}
 	for (const auto &v : json.value("decks").toArray()) {

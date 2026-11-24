@@ -982,6 +982,9 @@ void vendor_request_get_status(obs_data_t *, obs_data_t *response_data, void *)
 				obs_data_set_bool(o, "main", s.main);
 				obs_data_set_bool(o, "active", s.active);
 				obs_data_set_bool(o, "reconnecting", s.reconnecting);
+				if (!s.state.isEmpty()) {
+					obs_data_set_string(o, "state", s.state.toUtf8().constData());
+				}
 				obs_data_set_int(o, "uptime", s.active && s.startTime.isValid() ? s.startTime.secsTo(now) : 0);
 				obs_data_set_int(o, "total_frames", s.totalFrames);
 				obs_data_set_int(o, "dropped_frames", s.droppedFrames);

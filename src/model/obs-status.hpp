@@ -28,6 +28,7 @@ struct OutputStatus {
 	bool main = false; // one of OBS's own outputs
 	bool active = false;
 	bool reconnecting = false;
+	QString state; // IDLE, STARTING, ACTIVE, RECONNECTING, STOPPING or FAILED when known; else from active/reconnecting
 	qint64 uptime = 0; // seconds
 	qint64 droppedFrames = 0;
 	qint64 totalFrames = 0;

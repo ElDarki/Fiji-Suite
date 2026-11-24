@@ -1028,6 +1028,7 @@ std::vector<OutputState> OutputDock::GetOutputStates() const
 		s.group = ow->GetGroup();
 		s.server = ow->GetServer();
 		s.startTime = ow->GetStartTime();
+		s.state = fiji::state::outputStateName(ow->GetState());
 		fill(s, ow->GetOutput());
 		states.push_back(s);
 	}

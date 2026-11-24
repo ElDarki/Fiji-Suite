@@ -25,6 +25,7 @@ extern bool isTwitchServer(QString outputServer);
 OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(parent), settings(output_data)
 {
 	obs_data_addref(settings);
+	connect(&lifecycle, &fiji::state::OutputLifecycle::changed, this, &OutputWidget::LifecycleChanged);
 	auto nameChars = obs_data_get_string(settings, "name");
 	auto name = QString::fromUtf8(nameChars);
 
@@ -257,6 +258,7 @@ OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(pa
 				blog(LOG_INFO, "[Fiji Suite] stop %s output clicked '%s'", output_type,
 				     obs_data_get_string(settings, "name"));
 
+				lifecycle.stopRequested();
 				obs_queue_task(
 					OBS_TASK_GRAPHICS, [](void *param) { obs_output_stop((obs_output_t *)param); }, output,
 					false);
@@ -374,6 +376,7 @@ void OutputWidget::output_start(void *data, calldata_t *calldata)
 		this_->onStarted();
 		this_->onStarted = nullptr;
 	}
+	QMetaObject::invokeMethod(this_, [this_] { this_->lifecycle.started(); }, Qt::QueuedConnection);
 	if (this_->outputButton->isChecked()) {
 		return;
 	}
@@ -448,17 +451,8 @@ void OutputWidget::output_stop(void *data, calldata_t *calldata)
 				}
 				obs_output_release(this_->output);
 				this_->output = nullptr;
-				if (fiji_events_wanted()) {
-					const auto d = obs_data_create();
-					obs_data_set_string(d, "output", this_->objectName().toUtf8().constData());
-					if (!last_error.empty()) {
-						obs_data_set_string(d, "last_error", last_error.c_str());
-					}
-					obs_data_set_int(d, "code", code);
-
-					fiji_emit_event("stop_output", d);
-					obs_data_release(d);
-				}
+				this_->lastStopCode = code;
+				this_->lifecycle.stopped(QString::fromStdString(last_error));
 			},
 			Qt::QueuedConnection);
 	}
@@ -526,13 +520,7 @@ bool OutputWidget::StartOutput(bool automated)
 			return false;
 		}
 		output = vco;
-		if (fiji_events_wanted()) {
-			const auto d = obs_data_create();
-			obs_data_set_string(d, "output", name);
-			obs_data_set_string(d, "canvas", obs_canvas_get_name(canvas));
-			fiji_emit_event("start_output", d);
-			obs_data_release(d);
-		}
+		lifecycle.startRequested();
 		obs_canvas_release(canvas);
 		return true;
 	} else if (strcmp(output_type, "ffmpeg") == 0) {
@@ -634,12 +622,7 @@ bool OutputWidget::StartOutput(bool automated)
 			return false;
 		}
 
-		if (fiji_events_wanted()) {
-			const auto d = obs_data_create();
-			obs_data_set_string(d, "output", name);
-			fiji_emit_event("start_output", d);
-			obs_data_release(d);
-		}
+		lifecycle.startRequested();
 		return true;
 	}
 
@@ -1039,12 +1022,7 @@ bool OutputWidget::StartOutput(bool automated)
 		output = nullptr;
 		return false;
 	}
-	if (fiji_events_wanted()) {
-		const auto d = obs_data_create();
-		obs_data_set_string(d, "output", name);
-		fiji_emit_event("start_output", d);
-		obs_data_release(d);
-	}
+	lifecycle.startRequested();
 	return true;
 }
 
@@ -1334,6 +1312,9 @@ bool OutputWidget::EncoderAvailable(const char *encoder)
 void OutputWidget::CheckActive()
 {
 	bool active = obs_output_active(output);
+	if (active && !lifecycle.running()) {
+		lifecycle.started();
+	}
 	if (outputButton->isChecked() != active) {
 		outputButton->setChecked(active);
 	}
@@ -1493,6 +1474,7 @@ void OutputWidget::StopOutput()
 	if (!output || !obs_output_active(output)) {
 		return;
 	}
+	lifecycle.stopRequested();
 
 	if (obs_output_get_active_delay(output) > 0) {
 		obs_output_stop(output);
@@ -1549,30 +1531,57 @@ bool OutputWidget::IsActive() const
 	return output && obs_output_active(output);
 }
 
-// Output signals arrive on the output's own thread; vendor events are sent from the UI thread.
-static void emit_output_event(OutputWidget *widget, const char *event)
-{
-	QMetaObject::invokeMethod(
-		widget,
-		[widget, event] {
-			if (!fiji_events_wanted()) {
-				return;
-			}
-			OBSDataAutoRelease d = obs_data_create();
-			obs_data_set_string(d, "output", widget->objectName().toUtf8().constData());
-			fiji_emit_event(event, d);
-		},
-		Qt::QueuedConnection);
-}
-
 void OutputWidget::output_reconnect(void *data, calldata_t *)
 {
-	emit_output_event((OutputWidget *)data, "output_reconnecting");
+	auto this_ = (OutputWidget *)data;
+	QMetaObject::invokeMethod(this_, [this_] { this_->lifecycle.reconnecting(); }, Qt::QueuedConnection);
 }
 
 void OutputWidget::output_reconnect_success(void *data, calldata_t *)
 {
-	emit_output_event((OutputWidget *)data, "output_reconnected");
+	auto this_ = (OutputWidget *)data;
+	QMetaObject::invokeMethod(this_, [this_] { this_->lifecycle.reconnected(); }, Qt::QueuedConnection);
+}
+
+// The output events, from the life cycle's changes (in the plugin's own words; the bridge ACL turns them into the
+// contract's output.state): output_starting, start_output (live), output_reconnecting, output_reconnected,
+// output_stopping, stop_output (with last_error when it failed).
+void OutputWidget::LifecycleChanged(fiji::state::OutputStateId now, fiji::state::OutputStateId before,
+				    const QString &error)
+{
+	using fiji::state::OutputStateId;
+	const char *event = nullptr;
+	switch (now) {
+	case OutputStateId::STARTING:
+		event = "output_starting";
+		break;
+	case OutputStateId::ACTIVE:
+		event = before == OutputStateId::RECONNECTING ? "output_reconnected" : "start_output";
+		break;
+	case OutputStateId::RECONNECTING:
+		event = "output_reconnecting";
+		break;
+	case OutputStateId::STOPPING:
+		event = "output_stopping";
+		break;
+	case OutputStateId::IDLE:
+	case OutputStateId::FAILED:
+		event = "stop_output";
+		break;
+	}
+	if (!event || !fiji_events_wanted()) {
+		return;
+	}
+	OBSDataAutoRelease d = obs_data_create();
+	obs_data_set_string(d, "output", objectName().toUtf8().constData());
+	obs_data_set_string(d, "state", fiji::state::outputStateName(now).toUtf8().constData());
+	if (now == OutputStateId::IDLE || now == OutputStateId::FAILED) {
+		if (!error.isEmpty()) {
+			obs_data_set_string(d, "last_error", error.toUtf8().constData());
+		}
+		obs_data_set_int(d, "code", lastStopCode);
+	}
+	fiji_emit_event(event, d);
 }
 
 extern OutputDock *output_dock;

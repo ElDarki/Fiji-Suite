@@ -29,6 +29,9 @@ QJsonObject only(const QJsonObject &from, const QStringList &fields)
 
 QString outputState(const model::OutputStatus &o)
 {
+	if (!o.state.isEmpty()) {
+		return o.state; // the output's own life cycle
+	}
 	return o.active ? (o.reconnecting ? QStringLiteral("RECONNECTING") : QStringLiteral("ACTIVE")) : QStringLiteral("IDLE");
 }
 
@@ -213,18 +216,20 @@ void BridgeAcl::onPluginEvent(const QString &name, const QJsonObject &data)
 	} else if (name == "main_scene_changed") {
 		sendEvent("scene.program", {{"canvas", mainCanvasName()}, {"scene", text("scene")}, {"previous", text("previous")}});
 	} else if (name == "start_output" || name == "stop_output" || name == "output_reconnecting" ||
-		   name == "output_reconnected") {
+		   name == "output_reconnected" || name == "output_starting" || name == "output_stopping") {
 		const auto output = text("output");
-		QString state = QStringLiteral("ACTIVE");
 		QJsonObject payload{{"output", output}, {"kind", outputKinds_.value(output)}};
-		if (name == "output_reconnecting") {
-			state = QStringLiteral("RECONNECTING");
-		} else if (name == "stop_output") {
-			const auto error = text("last_error");
-			state = error.isEmpty() ? QStringLiteral("IDLE") : QStringLiteral("FAILED");
-			if (!error.isEmpty()) {
-				payload.insert("error", error);
-			}
+		const auto error = text("last_error");
+		QString state = text("state"); // set by the output's life cycle; derived for older senders
+		if (state.isEmpty()) {
+			state = name == "output_reconnecting" ? QStringLiteral("RECONNECTING")
+				: name == "output_starting"   ? QStringLiteral("STARTING")
+				: name == "output_stopping"   ? QStringLiteral("STOPPING")
+				: name == "stop_output"       ? (error.isEmpty() ? QStringLiteral("IDLE") : QStringLiteral("FAILED"))
+							      : QStringLiteral("ACTIVE");
+		}
+		if (state == QStringLiteral("FAILED") && !error.isEmpty()) {
+			payload.insert("error", error);
 		}
 		payload.insert("state", state);
 		sendEvent("output.state", payload);

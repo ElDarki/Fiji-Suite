@@ -7,6 +7,9 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 - **Windows comes as an installer** (`.msi`): run it and the plugin is in place for every user of the PC; a newer one
   replaces the older version, and it uninstalls from Settings → Apps.
 - **Needs OBS 33 or newer**: the Windows build now targets OBS 33.0.3, like the Linux and Flatpak builds.
+- Each Fiji Suite output reports its real state: starting, live, reconnecting, stopping, stopped or failed. The bot and
+  obs-websocket clients now hear about a start when the output is actually live, not when it was asked for, and two new
+  events say when a start or stop was asked for (`output_starting`, `output_stopping`; docs/websocket.md).
 - Deck sounds follow OBS 33's audio monitoring switch (on or off), and the deprecated call is gone when built for
   OBS 33.
 - Inside: the decks follow the MVC + State layout: a deck model saved locally (the same decks.json), the deck engine as

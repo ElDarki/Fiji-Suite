@@ -145,7 +145,9 @@ set(FIJI_CORE_SOURCES
   src/state/deck-engine.cpp
   src/state/deck-engine.hpp
   src/state/link-state.cpp
-  src/state/link-state.hpp)
+  src/state/link-state.hpp
+  src/state/output-state.cpp
+  src/state/output-state.hpp)
 target_sources(${PROJECT_NAME} PRIVATE
   ${FIJI_CORE_SOURCES}
   src/bridge/bot-link.cpp
