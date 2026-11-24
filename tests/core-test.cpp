@@ -10,6 +10,7 @@
 #include "../src/controller/outputs-controller.hpp"
 #include "../src/model/deck-model.hpp"
 #include "../src/model/local-store.hpp"
+#include "../src/model/profile-model.hpp"
 #include "../src/model/theme-files.hpp"
 #include "../src/obs/deck-ports.hpp"
 #include "../src/obs/obs-data-store.hpp"
@@ -720,6 +721,41 @@ static void test_theme_files()
 	      fs::path("/home/a/.config/obs-studio/themes"));
 }
 
+// ---- the profile's settings ----------------------------------------------------------------------------
+static void test_profile_model()
+{
+	// a brand new profile: OBS's own outputs shown, and a Vertical canvas with three outputs
+	auto [fresh, created] = model::withFirstRunDefaults({}, false, "/videos");
+	CHECK(created && fresh.value("main_stream_output_show").toBool() && fresh.value("main_virtual_cam_output_show").toBool());
+	CHECK(fresh.value("canvas").toArray().at(0).toObject().value("name").toString() == "Vertical");
+	const auto outputs = fresh.value("outputs").toArray();
+	CHECK(outputs.size() == 3 && outputs.at(1).toObject().value("type").toString() == "backtrack");
+	CHECK(outputs.at(1).toObject().value("path").toString() == "/videos" && outputs.at(1).toObject().value("max_time_sec").toInt() == 10);
+
+	// an existing file is kept as it is: its outputs, its switches (a missing one is off), no new canvas
+	QJsonObject saved{{"canvas", QJsonArray{QJsonObject{{"name", "Square"}}}}, {"outputs", QJsonArray{}},
+			  {"main_stream_output_show", false}, {"main_record_output_show", true}};
+	auto [kept, again] = model::withFirstRunDefaults(saved, true, "/videos");
+	CHECK(!again && kept == saved);
+	// a file from before canvases: the canvas and its outputs are added, the switches are not touched
+	auto [old, added] = model::withFirstRunDefaults({{"main_record_output_show", true}}, true, "");
+	CHECK(added && old.value("outputs").toArray().size() == 3 && !old.contains("main_stream_output_show"));
+	CHECK(!old.value("outputs").toArray().at(1).toObject().contains("path"));
+
+	model::ProfileModel profile;
+	int changes = 0;
+	QObject::connect(&profile, &model::ProfileModel::changed, [&changes] { changes++; });
+	profile.load(kept);
+	CHECK(changes == 1);
+	const auto shown = profile.mainOutputs();
+	CHECK(!shown.stream && shown.record && !shown.backtrack && !shown.virtualCam);
+	CHECK(!profile.setMainOutputs(shown) && changes == 1); // nothing changed
+	CHECK(profile.setMainOutputs({true, true, false, false}) && changes == 2);
+	const auto owned = profile.owned();
+	CHECK(owned.size() == 4 && owned.value("main_stream_output_show").toBool() && !owned.value("main_backtrack_output_show").toBool());
+	CHECK(model::ProfileModel::ownedKeys().size() == 4);
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -734,6 +770,7 @@ int main(int argc, char **argv)
 	test_output_lifecycle();
 	test_outputs_controller();
 	test_theme_files();
+	test_profile_model();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

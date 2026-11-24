@@ -21,6 +21,8 @@
 #include "controller/deck-controller.hpp"
 #include "controller/obs-command-handler.hpp"
 #include "model/deck-model.hpp"
+#include "model/profile-model.hpp"
+#include "obs/profile-file.hpp"
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
@@ -50,7 +52,6 @@ OBS_MODULE_USE_DEFAULT_LOCALE("fiji-suite", "en-US")
 // The single dock mode this fork uses; see the comment on modesTabBar in obs_module_load.
 #define DOCK_MODE "Default"
 // Per-profile configuration file.
-#define CONFIG_FILE "fiji-suite.json"
 
 obs_data_t *current_profile_config = nullptr;
 QTabBar *modesTabBar = nullptr;
@@ -318,20 +319,10 @@ void save_current_profile_config(bool save_docks)
 	if (!current_profile_config) {
 		return;
 	}
-	char *profile_path = obs_frontend_get_current_profile_path();
-	if (!profile_path) {
+	const QString file = fiji::obs::CurrentProfileFile();
+	if (file.isEmpty()) {
 		return;
 	}
-
-	struct dstr path;
-	dstr_init_copy(&path, profile_path);
-	bfree(profile_path);
-
-	if (!dstr_is_empty(&path) && dstr_end(&path) != '/') {
-		dstr_cat_ch(&path, '/');
-	}
-	dstr_cat(&path, CONFIG_FILE);
-
 	if (save_docks) {
 		save_dock_state(QStringLiteral(DOCK_MODE));
 	}
@@ -342,14 +333,19 @@ void save_current_profile_config(bool save_docks)
 	if (output_dock) {
 		output_dock->SaveSettings();
 	}
-
-	if (!obs_data_save_json_safe(current_profile_config, path.array, "tmp", "bak")) {
+	// the old settings object, with the parts the profile model owns on top (they are mirrored, so this is a check)
+	auto document = QJsonDocument::fromJson(QByteArray(obs_data_get_json(current_profile_config))).object();
+	if (auto profile = fiji_profile()) {
+		const auto owned = profile->owned();
+		for (auto it = owned.begin(); it != owned.end(); ++it) {
+			document.insert(it.key(), it.value());
+		}
+	}
+	if (!fiji::obs::SaveProfileFile(file, document)) {
 		blog(LOG_WARNING, "[Fiji Suite] Failed to save configuration file");
 	} else {
 		blog(LOG_INFO, "[Fiji Suite] Saved configuration file");
 	}
-
-	dstr_free(&path);
 }
 
 void load_current_profile_config()
@@ -357,96 +353,18 @@ void load_current_profile_config()
 	obs_data_release(current_profile_config);
 	current_profile_config = nullptr;
 
-	char *profile_path = obs_frontend_get_current_profile_path();
-	if (!profile_path) {
+	const QString file = fiji::obs::CurrentProfileFile();
+	if (file.isEmpty()) {
 		return;
 	}
-
-	struct dstr path;
-	dstr_init_copy(&path, profile_path);
-	bfree(profile_path);
-
-	if (!dstr_is_empty(&path) && dstr_end(&path) != '/') {
-		dstr_cat_ch(&path, '/');
-	}
-	dstr_cat(&path, CONFIG_FILE);
-
-	current_profile_config = obs_data_create_from_json_file_safe(path.array, "bak");
-	dstr_free(&path);
-	if (!current_profile_config) {
-		current_profile_config = obs_data_create();
-		obs_data_set_bool(current_profile_config, "main_stream_output_show", true);
-		obs_data_set_bool(current_profile_config, "main_record_output_show", true);
-		obs_data_set_bool(current_profile_config, "main_backtrack_output_show", true);
-		obs_data_set_bool(current_profile_config, "main_virtual_cam_output_show", true);
-		blog(LOG_WARNING, "[Fiji Suite] No configuration file loaded");
-	} else {
-		blog(LOG_INFO, "[Fiji Suite] Loaded configuration file");
-	}
-
-	bool first_create = false;
-	auto canvas = obs_data_get_array(current_profile_config, "canvas");
-	if (!canvas) {
-		first_create = true;
-		canvas = obs_data_array_create();
-		const char *canvas_name = "Vertical";
-		auto new_canvas = obs_data_create();
-		obs_data_set_string(new_canvas, "name", canvas_name);
-		obs_data_set_int(new_canvas, "color", 0x1F1A17);
-		obs_data_array_push_back(canvas, new_canvas);
-		obs_data_release(new_canvas);
-
-		obs_data_set_array(current_profile_config, "canvas", canvas);
-
-		auto outputs2 = obs_data_get_array(current_profile_config, "outputs");
-		if (!outputs2) {
-			outputs2 = obs_data_array_create();
-			obs_data_set_array(current_profile_config, "outputs", outputs2);
-		}
-		if (obs_data_array_count(outputs2) < 1) {
-			auto new_output = obs_data_create();
-			obs_data_set_bool(new_output, "enabled", true);
-			obs_data_set_string(new_output, "type", "stream");
-			obs_data_set_string(new_output, "name", "Vertical Stream");
-			obs_data_set_string(new_output, "canvas", canvas_name);
-			obs_data_array_push_back(outputs2, new_output);
-			obs_data_release(new_output);
-
-			new_output = obs_data_create();
-			obs_data_set_bool(new_output, "enabled", true);
-			obs_data_set_string(new_output, "type", "backtrack");
-
-			config_t *config = obs_frontend_get_profile_config();
-			const char *mode = config_get_string(config, "Output", "Mode");
-			const char *path = nullptr;
-			if (mode && strcmp(mode, "Advanced") == 0) {
-				path = config_get_string(config, "AdvOut", "RecFilePath");
-			}
-			if (!path || path[0] == '\0') {
-				path = config_get_string(config, "SimpleOutput", "FilePath");
-			}
-			if (path) {
-				obs_data_set_string(new_output, "path", path);
-			}
-			obs_data_set_string(new_output, "filename", "%CCYY-%MM-%DD %hh-%mm-%ss Vertical Backtrack");
-			obs_data_set_string(new_output, "format", "hybrid_mp4");
-			obs_data_set_string(new_output, "name", "Vertical Backtrack");
-			obs_data_set_string(new_output, "canvas", canvas_name);
-			obs_data_set_int(new_output, "max_time_sec", 10);
-			obs_data_array_push_back(outputs2, new_output);
-			obs_data_release(new_output);
-
-			new_output = obs_data_create();
-			obs_data_set_bool(new_output, "enabled", true);
-			obs_data_set_string(new_output, "type", "virtual_cam");
-			obs_data_set_string(new_output, "name", "Vertical Virtual Camera");
-			obs_data_set_string(new_output, "canvas", canvas_name);
-			obs_data_array_push_back(outputs2, new_output);
-			obs_data_release(new_output);
-		}
-		obs_data_array_release(outputs2);
-	} else {
-		obs_data_array_release(canvas);
+	const auto loaded = fiji::obs::LoadProfileFile(file);
+	blog(loaded ? LOG_INFO : LOG_WARNING, loaded ? "[Fiji Suite] Loaded configuration file"
+						     : "[Fiji Suite] No configuration file loaded");
+	const auto [document, first_create] =
+		fiji::model::withFirstRunDefaults(loaded.value_or(QJsonObject()), loaded.has_value(), fiji::obs::ProfileRecordPath());
+	current_profile_config = obs_data_create_from_json(QJsonDocument(document).toJson(QJsonDocument::Compact).constData());
+	if (auto profile = fiji_profile()) {
+		profile->load(document);
 	}
 	load_canvas(first_create);
 
@@ -534,6 +452,7 @@ struct Core {
 		blog(LOG_WARNING, "[Fiji Suite] %s", line.toUtf8().constData());
 	}};
 	fiji::model::DeckModel deckModel{store};
+	fiji::model::ProfileModel profile;
 	fiji::obs::ObsDeckSteps deckSteps;
 	fiji::obs::ObsDeckHotkeys deckHotkeys{&deckSteps};
 	fiji::controller::DeckController decks{deckModel, deckSteps, &deckHotkeys, [](const QString &name, const QJsonObject &data) {
@@ -552,6 +471,16 @@ struct Core {
 	{
 		dispatcher.registerHandler(&handler);
 		dispatcher.registerHandler(&decks);
+		// the parts of the profile the model owns, copied into the old settings object for code that reads it there
+		QObject::connect(&profile, &fiji::model::ProfileModel::changed, [this] {
+			if (!current_profile_config) {
+				return;
+			}
+			const auto owned = profile.owned();
+			for (auto it = owned.begin(); it != owned.end(); ++it) {
+				obs_data_set_bool(current_profile_config, it.key().toUtf8().constData(), it.value().toBool());
+			}
+		});
 		fiji::bridge::BotLink::setInstance(&bot);
 		decks.start();
 	}
@@ -605,6 +534,11 @@ void main_canvas_event(enum obs_frontend_event event)
 	}
 }
 } // namespace
+
+fiji::model::ProfileModel *fiji_profile()
+{
+	return core ? &core->profile : nullptr;
+}
 
 fiji::controller::DeckController *fiji_decks()
 {
@@ -841,25 +775,13 @@ void open_config_dialog(int tab, const char *create_type)
 		bool outputs_changed = false;
 		bool check_new_canvas = false;
 		if (current_profile_config) {
-			auto show = obs_data_get_bool(settings, "main_stream_output_show");
-			if (show != obs_data_get_bool(current_profile_config, "main_stream_output_show")) {
-				obs_data_set_bool(current_profile_config, "main_stream_output_show", show);
-				outputs_changed = true;
-			}
-			show = obs_data_get_bool(settings, "main_record_output_show");
-			if (show != obs_data_get_bool(current_profile_config, "main_record_output_show")) {
-				obs_data_set_bool(current_profile_config, "main_record_output_show", show);
-				outputs_changed = true;
-			}
-			show = obs_data_get_bool(settings, "main_backtrack_output_show");
-			if (show != obs_data_get_bool(current_profile_config, "main_backtrack_output_show")) {
-				obs_data_set_bool(current_profile_config, "main_backtrack_output_show", show);
-				outputs_changed = true;
-			}
-			show = obs_data_get_bool(settings, "main_virtual_cam_output_show");
-			if (show != obs_data_get_bool(current_profile_config, "main_virtual_cam_output_show")) {
-				obs_data_set_bool(current_profile_config, "main_virtual_cam_output_show", show);
-				outputs_changed = true;
+			// which of OBS's own outputs the dock shows: the profile model owns these
+			if (auto profile = fiji_profile()) {
+				outputs_changed |= profile->setMainOutputs(
+					{obs_data_get_bool(settings, "main_stream_output_show"),
+					 obs_data_get_bool(settings, "main_record_output_show"),
+					 obs_data_get_bool(settings, "main_backtrack_output_show"),
+					 obs_data_get_bool(settings, "main_virtual_cam_output_show")});
 			}
 			obs_data_array_t *a = obs_data_get_array(current_profile_config, "canvas");
 			obs_data_array_t *b = obs_data_get_array(settings, "canvas");

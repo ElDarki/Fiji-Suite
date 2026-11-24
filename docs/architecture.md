@@ -71,3 +71,9 @@ stopping outputs together (`controller::OutputsController` over the `obs::Output
 and the themes (`model::themes` copies them, `obs::InstallLook` puts the fonts and themes in place,
 `view::ShowRestartNotice` asks for a restart). Still legacy: the docks and dialogs themselves, and the per-profile
 settings they share (`current_profile_config` in `fiji-suite.cpp`).
+
+The per-profile settings move onto `model::ProfileModel` one part at a time. Its first-run defaults
+(`model::withFirstRunDefaults`) and the file (`obs::LoadProfileFile`, `obs::SaveProfileFile`, fiji-suite.json in the OBS
+profile folder) are in the layers; it owns which of OBS's own outputs the output dock shows. The parts it owns are
+mirrored into `current_profile_config` for the code that has not moved, and written over it on save; each dock that
+moves takes its part off the old object.

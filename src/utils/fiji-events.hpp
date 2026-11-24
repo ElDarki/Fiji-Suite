@@ -21,6 +21,12 @@ class LinkStateMachine;
 namespace fiji::controller {
 class DeckController;
 }
+namespace fiji::model {
+class ProfileModel;
+}
+// The current OBS profile's Fiji Suite settings (src/model/), for the parts that have moved onto it; null before the
+// module has loaded.
+fiji::model::ProfileModel *fiji_profile();
 fiji::state::LinkStateMachine *fiji_link_state();
 // The deck controller (src/controller/), for the deck requests; null before the module has loaded.
 fiji::controller::DeckController *fiji_decks();

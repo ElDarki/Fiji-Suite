@@ -140,6 +140,8 @@ set(FIJI_CORE_SOURCES
   src/model/deck-model.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
+  src/model/profile-model.cpp
+  src/model/profile-model.hpp
   src/model/theme-files.cpp
   src/model/theme-files.hpp
   src/obs/deck-ports.hpp
@@ -165,6 +167,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-deck-hotkeys.hpp
   src/obs/obs-deck-steps.cpp
   src/obs/obs-deck-steps.hpp
+  src/obs/profile-file.cpp
+  src/obs/profile-file.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
   src/view/restart-notice.cpp

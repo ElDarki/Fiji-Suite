@@ -1,5 +1,8 @@
 #include "output-dock.hpp"
 
+#include "../model/profile-model.hpp"
+#include "../utils/fiji-events.hpp"
+
 #include "../version.h"
 #include <obs-frontend-api.h>
 #include <obs-module.h>
@@ -488,16 +491,17 @@ extern obs_data_t *current_profile_config;
 
 void OutputDock::LoadSettings()
 {
-	mainStreamEnabled = obs_data_get_bool(current_profile_config, "main_stream_output_show");
+	const auto shown = fiji_profile() ? fiji_profile()->mainOutputs() : fiji::model::MainOutputs();
+	mainStreamEnabled = shown.stream;
 	mainStreamGroup->setVisible(mainStreamEnabled);
 
-	mainRecordEnabled = obs_data_get_bool(current_profile_config, "main_record_output_show");
+	mainRecordEnabled = shown.record;
 	mainRecordGroup->setVisible(mainRecordEnabled);
 
-	mainBacktrackEnabled = obs_data_get_bool(current_profile_config, "main_backtrack_output_show");
+	mainBacktrackEnabled = shown.backtrack;
 	mainBacktrackGroup->setVisible(mainBacktrackEnabled);
 
-	mainVirtualCamEnabled = obs_data_get_bool(current_profile_config, "main_virtual_cam_output_show");
+	mainVirtualCamEnabled = shown.virtualCam;
 	mainVirtualCamGroup->setVisible(mainVirtualCamEnabled);
 
 	auto outputs2 = obs_data_get_array(current_profile_config, "outputs");
