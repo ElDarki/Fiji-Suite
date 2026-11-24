@@ -67,6 +67,14 @@ public:
 	// is no such output or nothing changed.
 	bool updateOutput(const QString &name, const QJsonObject &output);
 
+	// The canvases Fiji Suite adds (and clones of them), each an object with "name", "uuid" once OBS made it, size,
+	// colour, and the canvas dock's own settings (panels, projectors, transitions, studio mode, ...).
+	QJsonArray canvases() const { return canvases_; }
+	bool setCanvases(const QJsonArray &canvases);
+	// Replaces the canvas with the same "uuid" (or, before it has one, the same "name"): a canvas dock changing its own
+	// settings. False when there is no such canvas or nothing changed.
+	bool updateCanvas(const QJsonObject &canvas);
+
 signals:
 	void changed();
 
@@ -75,6 +83,8 @@ private:
 	QJsonObject hotkeys_;
 	QJsonArray outputs_;
 	bool hasOutputs_ = false;
+	QJsonArray canvases_;
+	bool hasCanvases_ = false;
 };
 
 } // namespace fiji::model

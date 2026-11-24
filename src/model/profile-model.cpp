@@ -48,7 +48,39 @@ QStringList ProfileModel::ownedKeys()
 	for (const char *key : kMainKeys) {
 		keys.append(QLatin1String(key));
 	}
-	return keys + hotkeyKeys() + QStringList{"outputs"};
+	return keys + hotkeyKeys() + QStringList{"outputs", "canvas"};
+}
+
+bool ProfileModel::setCanvases(const QJsonArray &canvases)
+{
+	if (hasCanvases_ && canvases == canvases_) {
+		return false;
+	}
+	canvases_ = canvases;
+	hasCanvases_ = true;
+	emit changed();
+	return true;
+}
+
+bool ProfileModel::updateCanvas(const QJsonObject &canvas)
+{
+	const QString uuid = canvas.value(QStringLiteral("uuid")).toString();
+	const QString name = canvas.value(QStringLiteral("name")).toString();
+	for (int i = 0; i < canvases_.size(); i++) {
+		const auto current = canvases_.at(i).toObject();
+		const QString currentUuid = current.value(QStringLiteral("uuid")).toString();
+		const bool same = !uuid.isEmpty() && !currentUuid.isEmpty() ? uuid == currentUuid
+									      : name == current.value(QStringLiteral("name")).toString();
+		if (same) {
+			if (current == canvas) {
+				return false;
+			}
+			canvases_.replace(i, canvas);
+			emit changed();
+			return true;
+		}
+	}
+	return false;
 }
 
 bool ProfileModel::setOutputs(const QJsonArray &outputs)
@@ -98,6 +130,8 @@ void ProfileModel::load(const QJsonObject &document)
 	// a file from before a key existed: off, as OBS's obs_data reads a missing bool
 	main_ = {document.value(QLatin1String(kMainKeys[0])).toBool(false), document.value(QLatin1String(kMainKeys[1])).toBool(false),
 		 document.value(QLatin1String(kMainKeys[2])).toBool(false), document.value(QLatin1String(kMainKeys[3])).toBool(false)};
+	hasCanvases_ = document.contains(QStringLiteral("canvas"));
+	canvases_ = document.value(QStringLiteral("canvas")).toArray();
 	hasOutputs_ = document.contains(QStringLiteral("outputs"));
 	outputs_ = document.value(QStringLiteral("outputs")).toArray();
 	hotkeys_ = {};
@@ -114,6 +148,9 @@ QJsonObject ProfileModel::owned() const
 	QJsonObject out = hotkeys_; // only the bindings that exist: a profile without them stays without them
 	if (hasOutputs_) {
 		out.insert(QStringLiteral("outputs"), outputs_);
+	}
+	if (hasCanvases_) {
+		out.insert(QStringLiteral("canvas"), canvases_);
 	}
 	out.insert(QLatin1String(kMainKeys[0]), main_.stream);
 	out.insert(QLatin1String(kMainKeys[1]), main_.record);

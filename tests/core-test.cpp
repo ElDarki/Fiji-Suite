@@ -752,9 +752,9 @@ static void test_profile_model()
 	CHECK(!profile.setMainOutputs(shown) && changes == 1); // nothing changed
 	CHECK(profile.setMainOutputs({true, true, false, false}) && changes == 2);
 	const auto owned = profile.owned();
-	CHECK(owned.size() == 5 && owned.value("main_stream_output_show").toBool() && !owned.value("main_backtrack_output_show").toBool());
+	CHECK(owned.size() == 6 && owned.contains("canvas") && owned.value("main_stream_output_show").toBool() && !owned.value("main_backtrack_output_show").toBool());
 	CHECK(owned.value("outputs").toArray().isEmpty()); // the file had an (empty) list, so it is written back
-	CHECK(model::ProfileModel::ownedKeys().size() == 11);
+	CHECK(model::ProfileModel::ownedKeys().size() == 12);
 
 	// hotkey bindings: kept as OBS saved them, only the ones that exist are written back
 	CHECK(!profile.owned().contains("group_hotkeys"));
@@ -781,6 +781,21 @@ static void test_profile_model()
 	CHECK(!own.updateOutput("Nope", vertical));
 	CHECK(own.setOutputs(QJsonArray{vertical}) && !own.setOutputs(QJsonArray{vertical}));
 	CHECK(own.outputs().size() == 1 && changed == 3);
+
+	// the canvases: found by uuid, or by name before OBS gave one
+	model::ProfileModel canvases;
+	canvases.load(fresh);
+	CHECK(canvases.canvases().size() == 1 && canvases.owned().contains("canvas"));
+	auto canvas = canvases.canvases().at(0).toObject();
+	CHECK(canvas.value("uuid").toString().isEmpty());
+	canvas.insert("uuid", "abc");
+	CHECK(canvases.updateCanvas(canvas)); // matched by name
+	canvas.insert("studio_mode", true);
+	canvas.insert("name", "Renamed");
+	CHECK(canvases.updateCanvas(canvas) && canvases.canvases().at(0).toObject().value("studio_mode").toBool()); // by uuid
+	CHECK(!canvases.updateCanvas(canvas));
+	CHECK(!canvases.updateCanvas(QJsonObject{{"uuid", "other"}, {"name", "Renamed"}})); // a different canvas
+	CHECK(canvases.setCanvases(QJsonArray{}) && canvases.canvases().isEmpty() && canvases.owned().contains("canvas"));
 }
 
 int main(int argc, char **argv)

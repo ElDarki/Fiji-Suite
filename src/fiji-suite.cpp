@@ -160,7 +160,16 @@ void load_canvas(bool check_new_canvas)
 	if (!main_window) {
 		return;
 	}
-	auto canvas = obs_data_get_array(current_profile_config, "canvas");
+	// the canvases from the profile model, as a list of their own: the docks keep their item and report changes back
+	// (fiji_publish_canvas); deleted ones are dropped and new uuids filled in below, and the result goes back at the end
+	obs_data_array_t *canvas = nullptr;
+	{
+		OBSDataAutoRelease wrapper = obs_data_create_from_json(
+			QJsonDocument(QJsonObject{{"canvas", fiji_profile() ? fiji_profile()->canvases() : QJsonArray()}})
+				.toJson(QJsonDocument::Compact)
+				.constData());
+		canvas = obs_data_get_array(wrapper, "canvas");
+	}
 	auto canvas_count = obs_data_array_count(canvas);
 	for (size_t i = 0; i < canvas_count;) {
 		obs_data_t *t = obs_data_array_item(canvas, i);
@@ -307,6 +316,9 @@ void load_canvas(bool check_new_canvas)
 			i++;
 		}
 	}
+	if (auto profile = fiji_profile()) {
+		profile->setCanvases(hotkey_json(canvas)); // (an obs_data array to JSON, like the hotkeys)
+	}
 	obs_data_array_release(canvas);
 	for (const auto &it : canvas_clone_docks) {
 		it->UpdateSettings(nullptr);
@@ -327,6 +339,13 @@ obs_data_array_t *hotkey_obs(const QJsonArray &keys)
 	OBSDataAutoRelease wrapper = obs_data_create_from_json(
 		QJsonDocument(QJsonObject{{"keys", keys}}).toJson(QJsonDocument::Compact).constData());
 	return obs_data_get_array(wrapper, "keys");
+}
+
+void fiji_publish_canvas(obs_data_t *canvas_settings)
+{
+	if (auto profile = fiji_profile(); profile && canvas_settings) {
+		profile->updateCanvas(QJsonDocument::fromJson(QByteArray(obs_data_get_json(canvas_settings))).object());
+	}
 }
 
 void save_current_profile_config(bool save_docks)
@@ -800,14 +819,13 @@ void open_config_dialog(int tab, const char *create_type)
 					 obs_data_get_bool(settings, "main_backtrack_output_show"),
 					 obs_data_get_bool(settings, "main_virtual_cam_output_show")});
 			}
-			obs_data_array_t *a = obs_data_get_array(current_profile_config, "canvas");
-			obs_data_array_t *b = obs_data_get_array(settings, "canvas");
-			if (!obs_data_array_equal(a, b)) {
+			// the canvases: the profile model owns the list
+			const auto edited_canvases =
+				QJsonDocument::fromJson(QByteArray(obs_data_get_json(settings))).object().value("canvas");
+			if (auto profile = fiji_profile();
+			    profile && edited_canvases.isArray() && profile->setCanvases(edited_canvases.toArray())) {
 				canvas_changed = true;
-				obs_data_set_array(current_profile_config, "canvas", b);
 			}
-			obs_data_array_release(a);
-			obs_data_array_release(b);
 			// Fiji Suite's outputs: the profile model owns the list
 			const auto edited = QJsonDocument::fromJson(QByteArray(obs_data_get_json(settings))).object().value("outputs");
 			if (auto profile = fiji_profile(); profile && edited.isArray() && profile->setOutputs(edited.toArray())) {

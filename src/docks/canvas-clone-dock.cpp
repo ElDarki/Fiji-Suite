@@ -1,3 +1,4 @@
+#include "../utils/fiji-events.hpp"
 #include "../utils/icon.hpp"
 #include "canvas-clone-dock.hpp"
 #include "canvas-dock.hpp"
@@ -241,6 +242,7 @@ CanvasCloneDock::CanvasCloneDock(obs_data_t *settings_, QWidget *parent)
 		}
 		if (strcmp(obs_data_get_string(settings, "uuid"), "") == 0) {
 			obs_data_set_string(settings, "uuid", obs_canvas_get_uuid(canvas));
+			fiji_publish_canvas(settings);
 		}
 	} else {
 		obs_video_info ovi;
@@ -256,6 +258,7 @@ CanvasCloneDock::CanvasCloneDock(obs_data_t *settings_, QWidget *parent)
 			obs_data_set_string(settings, "uuid", obs_canvas_get_uuid(canvas));
 			obs_data_set_int(settings, "width", canvas_width);
 			obs_data_set_int(settings, "height", canvas_height);
+			fiji_publish_canvas(settings);
 		}
 	}
 	LoadReplacements();
@@ -1080,6 +1083,11 @@ void CanvasCloneDock::RemoveSource(QString source_name)
 
 void CanvasCloneDock::SaveSettings(bool closing, QString mode)
 {
+	// whatever this changed goes to the profile model, on every way out
+	struct PublishOnExit {
+		obs_data_t *const &settings;
+		~PublishOnExit() { fiji_publish_canvas(settings); }
+	} publish{settings};
 	if (closing) {
 		return;
 	}

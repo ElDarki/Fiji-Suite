@@ -1,3 +1,4 @@
+#include "../utils/fiji-events.hpp"
 #include "../dialogs/name-dialog.hpp"
 #include "../utils/color.hpp"
 #include "../utils/icon.hpp"
@@ -137,6 +138,7 @@ CanvasDock::CanvasDock(obs_data_t *settings_, QWidget *parent)
 		}
 		if (strcmp(obs_data_get_string(settings, "uuid"), "") == 0) {
 			obs_data_set_string(settings, "uuid", obs_canvas_get_uuid(canvas));
+			fiji_publish_canvas(settings);
 		}
 	} else {
 		obs_video_info ovi;
@@ -155,6 +157,7 @@ CanvasDock::CanvasDock(obs_data_t *settings_, QWidget *parent)
 			obs_data_set_string(settings, "uuid", obs_canvas_get_uuid(canvas));
 			obs_data_set_int(settings, "width", canvas_width);
 			obs_data_set_int(settings, "height", canvas_height);
+			fiji_publish_canvas(settings);
 		}
 	}
 	if (canvas) {
@@ -1385,6 +1388,11 @@ extern obs_data_t *current_profile_config;
 
 void CanvasDock::SaveSettings(bool closing, QString mode)
 {
+	// whatever this changed goes to the profile model, on every way out
+	struct PublishOnExit {
+		obs_data_t *const &settings;
+		~PublishOnExit() { fiji_publish_canvas(settings); }
+	} publish{settings};
 	if (!settings) {
 		if (!closing && current_profile_config) {
 			auto state = canvas_split->saveState();
@@ -1533,6 +1541,7 @@ void CanvasDock::SaveSettings(bool closing, QString mode)
 	if (transition) {
 		obs_data_set_string(settings, "transition", transition->currentText().toUtf8().constData());
 	}
+	fiji_publish_canvas(settings);
 }
 
 void CanvasDock::DrawBackdrop(float cx, float cy)
@@ -2638,6 +2647,7 @@ void CanvasDock::SetStudioMode(bool enabled)
 	}
 	studioMode = enabled;
 	obs_data_set_bool(settings, "studio_mode", enabled);
+	fiji_publish_canvas(settings);
 	if (!enabled && programScene != scene) {
 		// Leaving studio mode: the preview goes back to showing what is live.
 		if (programScene) {
@@ -5033,6 +5043,7 @@ bool CanvasDock::HandleMouseReleaseEvent(QMouseEvent *event)
 			a = popup.addAction(QString::fromUtf8(obs_module_text("StudioModeSwap")), this, [this] {
 				studioSwap = !studioSwap;
 				obs_data_set_bool(settings, "studio_swap", studioSwap);
+				fiji_publish_canvas(settings);
 			});
 			a->setCheckable(true);
 			a->setChecked(studioSwap);

@@ -74,6 +74,9 @@ settings they share (`current_profile_config` in `fiji-suite.cpp`).
 
 The per-profile settings move onto `model::ProfileModel` one part at a time. Its first-run defaults
 (`model::withFirstRunDefaults`) and the file (`obs::LoadProfileFile`, `obs::SaveProfileFile`, fiji-suite.json in the OBS
-profile folder) are in the layers; it owns which of OBS's own outputs the output dock shows. The parts it owns are
+profile folder) are in the layers. It owns which of OBS's own outputs the output dock shows, the hotkey bindings
+(start/stop all, groups, multiview over preview), Fiji Suite's output list and the canvas list. The output widgets and
+canvas docks keep a settings object of their own and hand their changes back (`OutputWidget::Publish`,
+`fiji_publish_canvas`). The parts it owns are
 mirrored into `current_profile_config` for the code that has not moved, and written over it on save; each dock that
 moves takes its part off the old object.
