@@ -33,10 +33,7 @@ public:
 	virtual ObsCall setTransition(const QString &canvas, const QString &transition) = 0;
 	// Studio mode: put the canvas's preview on program.
 	virtual ObsCall runTransition(const QString &canvas) = 0;
-	// target: an output name, a group name, stream / record / backtrack / virtual_cam, or all.
-	// data: {"started": [names]} or {"stopped": [names]}.
-	virtual ObsCall startOutputs(const QString &target) = 0;
-	virtual ObsCall stopOutputs(const QString &target) = 0;
+	// (Starting and stopping outputs: output-port.hpp.)
 
 	// The deck pages (served by the bot too). data as named.
 	virtual ObsCall webFile(const QString &name) = 0;                         // {"content", "type"}

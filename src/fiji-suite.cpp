@@ -20,12 +20,14 @@
 #include "controller/command-dispatcher.hpp"
 #include "controller/deck-controller.hpp"
 #include "controller/obs-command-handler.hpp"
+#include "controller/output-controller.hpp"
 #include "model/deck-model.hpp"
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
+#include "state/output-states.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
@@ -538,6 +540,8 @@ struct Core {
 	fiji::controller::CommandDispatcher dispatcher;
 	fiji::obs::RequestObsApi obs;
 	fiji::controller::ObsCommandHandler handler{obs};
+	fiji::state::OutputStates outputs;
+	fiji::controller::OutputController outputController{obs, outputs};
 	fiji::obs::ObsDataStore store{fiji::obs::ObsDataStore::configFolder()};
 	fiji::model::DeckModel deckModel{store};
 	fiji::state::DeckKeys keys;
@@ -552,7 +556,12 @@ struct Core {
 	{
 		dispatcher.registerHandler(&handler);
 		dispatcher.registerHandler(&decks);
+		dispatcher.registerHandler(&outputController);
 		fiji::bridge::BotLink::setInstance(&bot);
+		QObject::connect(&outputs, &fiji::state::OutputStates::stateChanged,
+				 [this](const QString &output, fiji::state::OutputStateId state, const QString &error) {
+					 bot.acl().publishOutputState(output, fiji::state::outputStateName(state), error);
+				 });
 		hotkeys.onKey = [this](const QString &button, bool pressed) {
 			dispatcher.post({pressed ? QStringLiteral("deck.press") : QStringLiteral("deck.release"),
 					 {{"button", button}},
@@ -633,6 +642,15 @@ fiji::controller::CommandResult fiji_command(const fiji::controller::Command &co
 		return r;
 	}
 	return core->dispatcher.call(command);
+}
+
+void fiji_core_event(const char *event, obs_data_t *data)
+{
+	if (!core || !data) {
+		return;
+	}
+	core->outputs.onPluginEvent(QString::fromUtf8(event), QString::fromUtf8(obs_data_get_string(data, "output")),
+				    QString::fromUtf8(obs_data_get_string(data, "last_error")));
 }
 
 fiji::state::LinkStateMachine *fiji_link_state()

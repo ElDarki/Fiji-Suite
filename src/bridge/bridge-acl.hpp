@@ -59,6 +59,8 @@ public:
 	// ---- the plugin's side (UI thread) ----
 	// An event in the plugin's own words (the names fiji_emit_event uses, e.g. "button_state", "stop_output").
 	void onPluginEvent(const QString &name, const QJsonObject &data);
+	// An output changed state (state::OutputStates, in the contract's words: IDLE, STARTING, ACTIVE, ...).
+	void publishOutputState(const QString &output, const QString &state, const QString &error = QString());
 	// Sends a SYNC_STATE; replyTo is the state.sync COMMAND's id, or empty for a fresh one.
 	void publishSnapshot(const QString &replyTo = QString());
 	// Sends output.dropped for every active output (about every 15 s, from a timer).

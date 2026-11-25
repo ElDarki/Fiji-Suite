@@ -134,6 +134,8 @@ set(FIJI_CORE_SOURCES
   src/controller/deck-controller.hpp
   src/controller/obs-command-handler.cpp
   src/controller/obs-command-handler.hpp
+  src/controller/output-controller.cpp
+  src/controller/output-controller.hpp
   src/model/deck-engine.cpp
   src/model/deck-engine.hpp
   src/model/deck-model.cpp
@@ -141,10 +143,15 @@ set(FIJI_CORE_SOURCES
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
+  src/model/output-targets.cpp
+  src/model/output-targets.hpp
   src/obs/deck-port.hpp
   src/obs/obs-api.hpp
+  src/obs/output-port.hpp
   src/state/deck-keys.cpp
   src/state/deck-keys.hpp
+  src/state/output-states.cpp
+  src/state/output-states.hpp
   src/state/link-state.cpp
   src/state/link-state.hpp)
 target_sources(${PROJECT_NAME} PRIVATE

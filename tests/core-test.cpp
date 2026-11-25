@@ -12,6 +12,10 @@
 #include "../src/obs/deck-port.hpp"
 #include "../src/state/deck-keys.hpp"
 #include "../src/controller/obs-command-handler.hpp"
+#include "../src/controller/output-controller.hpp"
+#include "../src/model/output-targets.hpp"
+#include "../src/obs/output-port.hpp"
+#include "../src/state/output-states.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
 
@@ -44,7 +48,7 @@ static void settle()
 }
 
 // ---- a fake OBS ----------------------------------------------------------------------------------------
-class FakeObs final : public obs::ObsApi {
+class FakeObs final : public obs::ObsApi, public obs::OutputBackend {
 public:
 	QStringList calls;
 	obs::ObsCall next;
@@ -70,15 +74,15 @@ public:
 	obs::ObsCall switchScene(const QString &scene, const QString &canvas) override { return record("switch " + scene + "@" + canvas); }
 	obs::ObsCall setTransition(const QString &c, const QString &t) override { return record("transition " + c + " " + t); }
 	obs::ObsCall runTransition(const QString &c) override { return record("run " + c); }
-	obs::ObsCall startOutputs(const QString &t) override
-	{
-		auto r = record("start " + t);
-		if (r.ok) {
-			r.data = {{"started", QJsonArray{"Stream", "TikTok"}}, {"secret", 1}};
-		}
-		return r;
-	}
-	obs::ObsCall stopOutputs(const QString &t) override { return record("stop " + t); }
+	QList<model::OutputStatus> outputs() override { return snapshot().outputs; }
+	obs::ObsCall startAll() override { return record("start all"); }
+	obs::ObsCall stopAll() override { return record("stop all"); }
+	obs::ObsCall startGroup(const QString &g) override { return record("start group " + g); }
+	obs::ObsCall stopGroup(const QString &g) override { return record("stop group " + g); }
+	obs::ObsCall startMain(const QString &k) override { return record("start main " + k); }
+	obs::ObsCall stopMain(const QString &k) override { return record("stop main " + k); }
+	obs::ObsCall startOutput(const QString &n) override { return record("start " + n); }
+	obs::ObsCall stopOutput(const QString &n) override { return record("stop " + n); }
 	obs::ObsCall webFile(const QString &n) override { return record("file " + n); }
 	obs::ObsCall look() override { return record("look"); }
 };
@@ -237,6 +241,9 @@ static void test_acl()
 	dispatcher.registerHandler(&handler);
 	PressRecorder presses;
 	dispatcher.registerHandler(&presses);
+	state::OutputStates outputStates;
+	controller::OutputController outputs(obs, outputStates);
+	dispatcher.registerHandler(&outputs);
 	state::LinkStateMachine link;
 	bridge::BridgeAcl acl(dispatcher, link, "0.6.0");
 	Wire wire;
@@ -281,9 +288,10 @@ static void test_acl()
 	acl.onFrame(frame("COMMAND", "output.start", {{"target", "all"}}, "c-3"));
 	settle();
 	const auto started = wire.last("ACK", "output.start").value("payload").toObject().value("result").toObject();
-	CHECK(started.value("started").toArray().size() == 2 && !started.contains("secret")); // contract fields only
+	CHECK(started.value("started").toArray().size() == 2 && obs.calls.contains("start all"));
+	CHECK(outputStates.state("TikTok") == state::OutputStateId::STARTING);
+	CHECK(outputStates.state("Stream") == state::OutputStateId::IDLE); // already live (the fake says so) is untouched by asking
 
-	obs.next = obs::ObsCall::failed("NOT_FOUND", "There is no output called Nope");
 	acl.onFrame(frame("COMMAND", "output.stop", {{"target", "Nope"}}, "c-4"));
 	acl.onFrame(frame("COMMAND", "output.stop", {}, "c-5"));                       // target missing
 	acl.onFrame(frame("COMMAND", "transition.run", {{"canvas", "Vertical"}}, "c-6")); // transitions not accepted
@@ -316,12 +324,13 @@ static void test_acl()
 	CHECK(wire.last("ACK", "state.sync").value("id").toString() == "sync-1");
 
 	// the plugin's own events -> contract EVENTs
-	acl.onPluginEvent("stop_output", {{"output", "Stream"}, {"last_error", "Disconnected"}, {"code", -1}});
+	acl.publishOutputState("Stream", "FAILED", "Disconnected");
 	auto state = wire.last("EVENT", "output.state").value("payload").toObject();
 	CHECK(state.value("state").toString() == "FAILED" && state.value("kind").toString() == "stream");
-	CHECK(state.value("error").toString() == "Disconnected" && !state.contains("code"));
-	acl.onPluginEvent("output_reconnecting", {{"output", "TikTok"}});
-	CHECK(wire.last("EVENT", "output.state").value("payload").toObject().value("state").toString() == "RECONNECTING");
+	CHECK(state.value("error").toString() == "Disconnected");
+	acl.publishOutputState("TikTok", "STARTING");
+	CHECK(wire.last("EVENT", "output.state").value("payload").toObject().value("state").toString() == "STARTING");
+	CHECK(!wire.last("EVENT", "output.state").value("payload").toObject().contains("error"));
 	acl.onPluginEvent("switch_scene", {{"canvas", "Vertical"}, {"new_scene", "Full"}, {"old_scene", "Camera"}, {"width", 1080}});
 	const auto program = wire.last("EVENT", "scene.program").value("payload").toObject();
 	CHECK(program.value("scene").toString() == "Full" && program.value("previous").toString() == "Camera" && !program.contains("width"));
@@ -546,6 +555,78 @@ static void test_deck_controller()
 	CHECK(hotkeys.registered.isEmpty());
 }
 
+// ---- outputs ---------------------------------------------------------------------------------------
+static void test_output_targets()
+{
+	using Kind = model::OutputPlan::Kind;
+	QList<model::OutputStatus> list{{"Stream", "stream", "", "", true, true, false, 0, 0, 0},
+					{"TikTok", "rtmp", "Vertical", "Phones", false, false, false, 0, 0, 0},
+					{"Shorts", "rtmp", "Vertical", "Phones", false, false, false, 0, 0, 0},
+					{"Backup", "rtmp", "", "", false, false, false, 0, 0, 0}};
+	auto all = model::planOutputs("all", list);
+	CHECK(all.kind == Kind::All && all.names.size() == 4);
+	auto group = model::planOutputs("Phones", list);
+	CHECK(group.kind == Kind::Group && (group.names == QStringList{"TikTok", "Shorts"}));
+	auto byKind = model::planOutputs("stream", list);
+	CHECK(byKind.kind == Kind::Main && byKind.mainKind == "stream" && (byKind.names == QStringList{"Stream"}));
+	auto byName = model::planOutputs("Stream", list);
+	CHECK(byName.kind == Kind::Main && byName.mainKind == "stream");
+	auto record = model::planOutputs("record", list);
+	CHECK(record.kind == Kind::Main && (record.names == QStringList{"record"}));
+	CHECK(model::planOutputs("Backup", list).kind == Kind::Named);
+	CHECK(model::planOutputs("Nope", list).kind == Kind::None);
+}
+
+static void test_output_states()
+{
+	using I = state::OutputInput;
+	using S = state::OutputStateId;
+	CHECK(state::nextOutputState(S::IDLE, I::StartAsked) == S::STARTING);
+	CHECK(state::nextOutputState(S::STARTING, I::Started) == S::ACTIVE);
+	CHECK(state::nextOutputState(S::ACTIVE, I::Reconnecting) == S::RECONNECTING);
+	CHECK(state::nextOutputState(S::RECONNECTING, I::Reconnected) == S::ACTIVE);
+	CHECK(state::nextOutputState(S::ACTIVE, I::StopAsked) == S::STOPPING);
+	CHECK(state::nextOutputState(S::STOPPING, I::Stopped) == S::IDLE);
+	CHECK(state::nextOutputState(S::ACTIVE, I::Failed) == S::FAILED);
+	CHECK(state::nextOutputState(S::FAILED, I::StartAsked) == S::STARTING);
+	CHECK(state::nextOutputState(S::STOPPING, I::StartAsked) == S::STOPPING); // not a transition
+	state::OutputStates states;
+	QStringList seen;
+	QObject::connect(&states, &state::OutputStates::stateChanged, [&](const QString &o, S s, const QString &e) {
+		seen.append(o + "=" + state::outputStateName(s) + (e.isEmpty() ? "" : "(" + e + ")"));
+	});
+	states.input("Twitch", I::StartAsked);
+	states.onPluginEvent("start_output", "Twitch", "");
+	states.onPluginEvent("output_reconnecting", "Twitch", "");
+	states.onPluginEvent("output_reconnected", "Twitch", "");
+	states.onPluginEvent("stop_output", "Twitch", "Disconnected");
+	states.onPluginEvent("start_output", "Local", ""); // started outside the plugin
+	states.onPluginEvent("stop_output", "Local", "");
+	states.onPluginEvent("canvas_changed", "Twitch", "");
+	CHECK((seen == QStringList{"Twitch=STARTING", "Twitch=ACTIVE", "Twitch=RECONNECTING", "Twitch=ACTIVE",
+				   "Twitch=FAILED(Disconnected)", "Local=ACTIVE", "Local=IDLE"}));
+	CHECK(states.lastError("Twitch") == "Disconnected" && states.state("Local") == S::IDLE);
+}
+
+static void test_output_controller()
+{
+	FakeObs obs;
+	state::OutputStates states;
+	controller::OutputController outputs(obs, states);
+	const auto run = [&](const char *action, const char *target) {
+		return outputs.handle({action, target ? QJsonObject{{"target", target}} : QJsonObject{}, controller::CommandSource::Ui, {}});
+	};
+	CHECK(run("output.start", "stream").ok && obs.calls.last() == "start main stream");
+	CHECK(run("output.stop", "TikTok").result.value("stopped").toArray().at(0).toString() == "TikTok");
+	CHECK(obs.calls.last() == "stop TikTok" && states.state("TikTok") == state::OutputStateId::IDLE); // idle stays idle
+	CHECK(run("output.start", "Phones").ok && obs.calls.last() == "start group Phones");
+	CHECK(states.state("TikTok") == state::OutputStateId::STARTING);
+	CHECK(run("output.start", "Nope").code == "NOT_FOUND" && run("output.start", nullptr).code == "BAD_REQUEST");
+	obs.next = obs::ObsCall::failed("OBS_ERROR", "no encoder");
+	const auto refused = run("output.stop", "all");
+	CHECK(!refused.ok && refused.message == "no encoder" && states.state("TikTok") == state::OutputStateId::STARTING);
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -557,6 +638,9 @@ int main(int argc, char **argv)
 	test_deck_model();
 	test_key_states();
 	test_deck_controller();
+	test_output_targets();
+	test_output_states();
+	test_output_controller();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

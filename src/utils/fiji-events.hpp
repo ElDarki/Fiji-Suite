@@ -25,3 +25,5 @@ void fiji_set_bot_address(const QString &address);
 // "not available" before OBS has loaded the plugin. Lives in fiji-suite.cpp.
 #include "../controller/command.hpp"
 fiji::controller::CommandResult fiji_command(const fiji::controller::Command &command);
+// Hands one of the plugin's events to its core (the output state machine). Lives in fiji-suite.cpp.
+void fiji_core_event(const char *event, obs_data_t *data);
