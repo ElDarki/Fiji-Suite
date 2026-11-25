@@ -2,6 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## Unreleased
+
+- Transitions dock: on the main canvas the remove button is now off. It used to take the transition out of this
+  dock's list only, while it stayed in OBS; OBS's own Transitions dock removes them. Canvas transitions are removed
+  here as before.
+- Inside: the Transitions dock follows the plugin's layers, with tests for the name rules, the "copy from main" menu
+  and what each canvas allows.
+
 ## 0.9.0
 
 - Inside: the look (Fiji-chan's fonts and the Fiji Sun / Moon themes) follows the plugin's layers: the rules for which

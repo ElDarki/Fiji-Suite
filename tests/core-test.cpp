@@ -3,6 +3,7 @@
 //   cmake --build build_x86_64 --target fiji-core-test && ctest --test-dir build_x86_64 -R core
 
 #include "../src/bridge/bridge-acl.hpp"
+#include <memory>
 #include "../src/bridge/catalogue.hpp"
 #include "../src/bridge/envelope.hpp"
 #include "../src/controller/command-dispatcher.hpp"
@@ -22,6 +23,9 @@
 #include "../src/state/output-states.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
+#include "../src/model/transitions.hpp"
+#include "../src/controller/transitions-controller.hpp"
+#include "../src/obs/transition-port.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -699,6 +703,143 @@ static void test_updates()
 	CHECK(outcomeOf("v0.9.1", settings) == "off");
 }
 
+// ---- Transitions -------------------------------------------------------------------------------------------
+class FakeTransitionSet final : public obs::TransitionSet {
+public:
+	explicit FakeTransitionSet(bool own) : own(own) {}
+	bool own;
+	QList<model::TransitionInfo> list;
+	QString selected;
+	QStringList calls;
+	bool ownList() const override { return own; }
+	QList<model::TransitionInfo> transitions() override { return list; }
+	QString current() override { return selected; }
+	void select(const QString &name) override { calls.append("select " + name); selected = name; }
+	bool copyFromMain(const QString &name) override
+	{
+		list.append({name, true});
+		selected = name;
+		calls.append("copy " + name);
+		return true;
+	}
+	bool addNew(const QString &type, const QString &name) override
+	{
+		calls.append("add " + type + " " + name);
+		if (own) {
+			list.append({name, true});
+			selected = name;
+		}
+		return true;
+	}
+	bool remove(const QString &name) override
+	{
+		calls.append("remove " + name);
+		for (int i = 0; i < list.size(); i++) {
+			if (list[i].name == name) {
+				list.removeAt(i);
+				break;
+			}
+		}
+		selected = list.isEmpty() ? QString() : list[0].name;
+		return true;
+	}
+	bool rename(const QString &name, const QString &newName) override
+	{
+		calls.append("rename " + name + " " + newName);
+		for (auto &t : list) {
+			if (t.name == name) {
+				t.name = newName;
+			}
+		}
+		if (selected == name) {
+			selected = newName;
+		}
+		return true;
+	}
+	void openProperties(const QString &name) override { calls.append("properties " + name); }
+};
+
+class FakeCatalog final : public obs::TransitionCatalog {
+public:
+	int ms = 300;
+	QList<model::TransitionType> types() override { return {{"fade_transition", "Fade"}, {"swipe_transition", "Swipe"}}; }
+	int duration() override { return ms; }
+	void setDuration(int value) override { ms = value; }
+};
+
+static void test_transitions()
+{
+	using P = model::TransitionNameProblem;
+	const QList<model::TransitionInfo> some{{"Cut", false}, {"Fade", true}};
+	CHECK(model::transitionNameProblem("", some) == P::Empty);
+	CHECK(model::transitionNameProblem("Fade", some) == P::Taken);
+	CHECK(model::transitionNameProblem("Fade", some, "Fade") == P::None); // renaming to itself
+	CHECK(model::transitionNameProblem("Slow fade", some) == P::None);
+	const auto choices = model::copyChoices({{"Cut", false}, {"Fade", true}, {"Stinger", true}}, {{"Fade", true}});
+	CHECK(choices.size() == 3 && !choices[0].enabled && !choices[1].enabled && choices[2].enabled);
+
+	FakeCatalog catalog;
+	FakeTransitionSet main(false);
+	main.list = {{"Cut", false}, {"Fade", true}, {"Stinger", true}};
+	main.selected = "Fade";
+	controller::TransitionsController c(catalog, main);
+	int lists = 0;
+	QStringList currents;
+	QObject::connect(&c, &controller::TransitionsController::listChanged, [&] { lists++; });
+	QObject::connect(&c, &controller::TransitionsController::currentChanged, [&](const QString &n) { currents.append(n); });
+
+	// the main canvas: OBS's own list
+	CHECK(c.hasSet() && !c.ownList() && c.current() == "Fade");
+	CHECK(c.copyChoices().isEmpty());
+	c.select("Fade"); // already current: nothing to do
+	c.select("Cut");
+	CHECK(main.calls == QStringList({"select Cut"}));
+	CHECK(!c.remove("Fade"));              // OBS's own transitions are removed in OBS's dock
+	CHECK(!c.rename("Cut", "Hard cut"));   // no properties: not renamed
+	CHECK(!c.rename("Fade", "Stinger"));   // taken
+	CHECK(c.rename("Fade", "Soft"));
+	CHECK(c.addNew("fade_transition", "")); // OBS's dialog names it
+	c.openProperties("Cut");                // no properties
+	c.openProperties("Soft");
+	CHECK(main.calls == QStringList({"select Cut", "rename Fade Soft", "add fade_transition ", "properties Soft"}));
+	c.setDuration(700);
+	CHECK(c.duration() == 700);
+
+	// a canvas dock's own list
+	auto canvasDock = std::make_unique<QObject>();
+	FakeTransitionSet canvas(true);
+	canvas.list = {{"Cut", false}};
+	canvas.selected = "Cut";
+	lists = 0;
+	currents.clear();
+	c.use(&canvas, canvasDock.get());
+	CHECK(lists == 1 && currents == QStringList({"Cut"}));
+	CHECK(c.ownList());
+	const auto copy = c.copyChoices();
+	CHECK(copy.size() == 3 && !copy[0].enabled && copy[1].enabled && copy[2].enabled);
+	CHECK(!c.copyFromMain("Cut"));
+	CHECK(c.copyFromMain("Stinger") && c.current() == "Stinger");
+	CHECK(!c.copyFromMain("Stinger")); // it has one now
+	CHECK(!c.addNew("swipe_transition", "Stinger"));
+	CHECK(!c.addNew("swipe_transition", ""));
+	CHECK(c.addNew("swipe_transition", "Swoosh") && c.current() == "Swoosh");
+	CHECK(!c.remove("Cut")); // no properties
+	CHECK(c.remove("Swoosh"));
+	CHECK(canvas.calls == QStringList({"copy Stinger", "add swipe_transition Swoosh", "remove Swoosh"}));
+	c.obsListChanged(); // OBS's list: not this one
+	CHECK(lists == 4);   // use, copy, add, remove
+
+	// the canvas dock goes away: no set until the Scenes dock picks another canvas
+	canvasDock.reset();
+	CHECK(!c.hasSet() && c.transitions().isEmpty() && c.current().isEmpty());
+	c.select("Cut");
+	CHECK(!c.remove("Stinger"));
+	c.useMain();
+	CHECK(c.hasSet() && c.current() == "Cut");
+	c.use(nullptr); // a canvas without a dock
+	CHECK(!c.hasSet() && c.types().size() == 2);
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -715,6 +856,7 @@ int main(int argc, char **argv)
 	test_output_controller();
 	test_themes();
 	test_updates();
+	test_transitions();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

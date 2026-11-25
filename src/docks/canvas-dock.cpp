@@ -6909,6 +6909,126 @@ void CanvasDock::SetPanelVisible(const QString &panel_name, bool visible)
 	}
 }
 
+// The canvas's private transitions behind the Transitions dock's port (fiji::obs::TransitionSet).
+class CanvasDockTransitions final : public fiji::obs::TransitionSet {
+public:
+	explicit CanvasDockTransitions(CanvasDock &dock) : dock(dock) {}
+
+	bool ownList() const override { return true; }
+
+	QList<fiji::model::TransitionInfo> transitions() override
+	{
+		QList<fiji::model::TransitionInfo> out;
+		for (const auto &t : dock.transitions) {
+			out.append({QString::fromUtf8(obs_source_get_name(t)), obs_is_source_configurable(obs_source_get_id(t))});
+		}
+		return out;
+	}
+
+	QString current() override { return dock.transition->currentText(); }
+
+	void select(const QString &name) override { dock.SetSelectedTransition(name); }
+
+	bool copyFromMain(const QString &mainName) override
+	{
+		const QByteArray wanted = mainName.toUtf8();
+		obs_frontend_source_list list = {};
+		obs_frontend_get_transitions(&list);
+		OBSSourceAutoRelease copy;
+		for (size_t i = 0; i < list.sources.num; i++) {
+			obs_source_t *tr = list.sources.array[i];
+			if (wanted == obs_source_get_name(tr)) {
+				OBSDataAutoRelease d = obs_save_source(tr);
+				copy = obs_load_private_source(d);
+				break;
+			}
+		}
+		obs_frontend_source_list_free(&list);
+		if (!copy) {
+			return false;
+		}
+		append(copy);
+		return true;
+	}
+
+	bool addNew(const QString &typeId, const QString &name) override
+	{
+		OBSSourceAutoRelease t =
+			obs_source_create_private(typeId.toUtf8().constData(), name.toUtf8().constData(), nullptr);
+		if (!t) {
+			return false;
+		}
+		append(t);
+		obs_frontend_open_source_properties(t);
+		return true;
+	}
+
+	bool remove(const QString &name) override
+	{
+		const QByteArray n = name.toUtf8();
+		for (auto it = dock.transitions.begin(); it != dock.transitions.end(); ++it) {
+			if (n == obs_source_get_name(it->Get())) {
+				if (!obs_is_source_configurable(obs_source_get_id(it->Get()))) {
+					return false;
+				}
+				dock.transitions.erase(it);
+				break;
+			}
+		}
+		for (int idx = dock.transition->count() - 1; idx >= 0; --idx) {
+			if (dock.transition->itemText(idx) == name) {
+				dock.transition->removeItem(idx);
+			}
+		}
+		if (dock.transition->currentIndex() < 0) {
+			dock.transition->setCurrentIndex(0);
+		}
+		return true;
+	}
+
+	bool rename(const QString &name, const QString &newName) override
+	{
+		obs_source_t *t = dock.GetTransition(name.toUtf8().constData());
+		if (!t) {
+			return false;
+		}
+		obs_source_set_name(t, newName.toUtf8().constData());
+		for (int idx = 0; idx < dock.transition->count(); ++idx) {
+			if (dock.transition->itemText(idx) == name) {
+				dock.transition->setItemText(idx, newName);
+			}
+		}
+		return true;
+	}
+
+	void openProperties(const QString &name) override
+	{
+		if (obs_source_t *t = dock.GetTransition(name.toUtf8().constData())) {
+			obs_frontend_open_source_properties(t);
+		}
+	}
+
+private:
+	// Adds a transition to the canvas and selects it.
+	void append(obs_source_t *t)
+	{
+		const auto n = QString::fromUtf8(obs_source_get_name(t));
+		dock.transitions.emplace_back(t);
+		dock.transition->addItem(n);
+		dock.transition->setCurrentText(n);
+	}
+
+	CanvasDock &dock;
+};
+
+fiji::obs::TransitionSet *CanvasDock::GetTransitionSet()
+{
+	if (!transitionSet) {
+		transitionSet = std::make_unique<CanvasDockTransitions>(*this);
+	}
+	return transitionSet.get();
+}
+
 void CanvasDock::SetSelectedTransition(const QString &transition_name)
 {
 	auto pos = transition->findText(transition_name);

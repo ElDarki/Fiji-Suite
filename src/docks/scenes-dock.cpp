@@ -2,7 +2,7 @@
 #include "canvas-dock.hpp"
 #include "scenes-dock.hpp"
 #include "sources-dock.hpp"
-#include "transitions-dock.hpp"
+#include "canvas-dock.hpp"
 #include <obs-frontend-api.h>
 #include <obs-module.h>
 #include <QApplication>
@@ -23,7 +23,9 @@
 void fiji_emit_event(const char *event, obs_data_t *data);
 bool fiji_events_wanted();
 extern SourcesDock *sources_dock;
-extern TransitionsDock *transitions_dock;
+// The Transitions dock follows the canvas shown here (fiji-suite.cpp).
+void fiji_transitions_use_canvas(obs_canvas_t *canvas, CanvasDock *canvasDock);
+void fiji_transitions_current_changed();
 extern std::list<CanvasDock *> canvas_docks;
 
 ScenesDock::ScenesDock(QWidget *parent) : QFrame(parent)
@@ -353,9 +355,7 @@ void ScenesDock::SwitchToCanvas(obs_canvas_t *c)
 	}
 	obs_canvas_release(orig);
 	canvas = obs_canvas_get_weak_canvas(c);
-	if (transitions_dock) {
-		transitions_dock->SetCanvas(c, canvasDock);
-	}
+	fiji_transitions_use_canvas(c, canvasDock);
 	sceneList->clear();
 	if (!canvas) {
 		return;
@@ -990,7 +990,7 @@ void ScenesDock::channel_change(void *data, calldata_t *cd)
 		return;
 	}
 	QMetaObject::invokeMethod(self, [self] { self->UpdateCurrentScene(); }, Qt::QueuedConnection);
-	QMetaObject::invokeMethod(transitions_dock, [] { transitions_dock->UpdateCurrentTransition(); }, Qt::QueuedConnection);
+	fiji_transitions_current_changed();
 }
 
 void ScenesDock::UpdateCurrentScene()

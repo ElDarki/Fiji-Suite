@@ -99,9 +99,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/stats-dock.cpp
   src/docks/stats-dock.hpp
   src/docks/transform-dock.cpp
-  src/docks/transform-dock.hpp
-  src/docks/transitions-dock.cpp
-  src/docks/transitions-dock.hpp)
+  src/docks/transform-dock.hpp)
 
 target_sources(${PROJECT_NAME} PRIVATE
   src/decks/local-server.cpp
@@ -136,6 +134,8 @@ set(FIJI_CORE_SOURCES
   src/controller/obs-command-handler.hpp
   src/controller/output-controller.cpp
   src/controller/output-controller.hpp
+  src/controller/transitions-controller.cpp
+  src/controller/transitions-controller.hpp
   src/controller/update-checker.cpp
   src/controller/update-checker.hpp
   src/model/deck-engine.cpp
@@ -151,9 +151,12 @@ set(FIJI_CORE_SOURCES
   src/model/release-version.hpp
   src/model/theme-files.cpp
   src/model/theme-files.hpp
+  src/model/transitions.cpp
+  src/model/transitions.hpp
   src/obs/deck-port.hpp
   src/obs/obs-api.hpp
   src/obs/output-port.hpp
+  src/obs/transition-port.hpp
   src/obs/update-port.hpp
   src/state/deck-keys.cpp
   src/state/deck-keys.hpp
@@ -179,8 +182,12 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-look.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
+  src/obs/obs-transitions.cpp
+  src/obs/obs-transitions.hpp
   src/view/restart-notice.cpp
   src/view/restart-notice.hpp
+  src/view/transitions-dock.cpp
+  src/view/transitions-dock.hpp
   src/view/update-offer.cpp
   src/view/update-offer.hpp)
 

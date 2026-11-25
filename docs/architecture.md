@@ -76,3 +76,9 @@ Moved in 0.9.0: the look. `model::planThemes` decides which theme files to write
 registers the fonts and copies the themes, and `view::showRestartNotice` is the first view. The update check is
 `model::isNewer`, `controller::UpdateChecker`, `obs::GitHubReleases` (behind `obs/update-port.hpp`) and
 `view::showUpdateOffer`.
+
+Moved (unreleased): the Transitions dock. `model::transitionNameProblem` and `model::copyChoices` are its rules,
+`controller::TransitionsController` works on the transitions of the canvas the Scenes dock shows through
+`obs/transition-port.hpp`: `obs::FrontendTransitions` for OBS's own (and the types and the duration), and the canvas
+dock's `CanvasDockTransitions` for a Fiji Suite canvas (legacy code implementing a port until the canvas dock moves).
+`view::TransitionsDock` is the dock.
