@@ -7251,3 +7251,39 @@ void CanvasDock::AddDropURL(QUrl url)
 	obs_data_set_string(s, "url", url.url().toUtf8().constData());
 	AddDropSource(s, "browser_source", name);
 }
+
+// ------------------------------------------------------------------ the canvases, for the layers (src/obs/)
+// Narrow functions so the OBS adapter can reach the plugin's canvases without including this dock.
+
+static CanvasDock *canvas_dock_named(const char *name)
+{
+	const QString wanted = QString::fromUtf8(name);
+	for (const auto &dock : canvas_docks) {
+		if (wanted.compare(QString::fromUtf8(obs_canvas_get_name(dock->GetCanvas())), Qt::CaseInsensitive) == 0) {
+			return dock;
+		}
+	}
+	return nullptr;
+}
+
+obs_canvas_t *fiji_find_canvas(const char *name)
+{
+	auto dock = canvas_dock_named(name);
+	return dock ? dock->GetCanvas() : nullptr;
+}
+
+QString fiji_canvas_program_scene(const char *canvas)
+{
+	auto dock = canvas_dock_named(canvas);
+	return dock ? dock->GetProgramSceneName() : QString();
+}
+
+bool fiji_canvas_switch_scene(const char *canvas, const char *scene)
+{
+	auto dock = canvas_dock_named(canvas);
+	if (!dock) {
+		return false;
+	}
+	QMetaObject::invokeMethod(dock, "SwitchScene", Q_ARG(QString, QString::fromUtf8(scene)));
+	return true;
+}

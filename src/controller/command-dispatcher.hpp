@@ -37,11 +37,17 @@ public:
 	// Thread-safe; callable from any thread. Unknown actions reply UNKNOWN_ACTION.
 	void post(Command command, ReplyFn reply = {});
 
+	// Runs a command now and returns its result, for callers that must answer at once (obs-websocket requests,
+	// the request table). On the dispatcher's thread it runs directly; from another thread it waits for that thread
+	// (so never call it from a thread the UI thread is waiting on).
+	CommandResult call(Command command);
+
 	// Pending commands (for the stats dock and tests).
 	int pending() const;
 
 private:
 	void drain(); // consumer, on this object's thread
+	CommandResult run(const Command &command);
 
 	mutable QMutex mutex_;
 	std::deque<std::pair<Command, ReplyFn>> queue_;

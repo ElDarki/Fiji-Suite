@@ -1,5 +1,5 @@
 // Tests for the deck engine core. Build target: decks-engine-test. Exit code 0 means every check passed.
-#include "../src/decks/engine-core.hpp"
+#include "../src/model/deck-engine.hpp"
 
 #include <cstdio>
 #include <QJsonDocument>

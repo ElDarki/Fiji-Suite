@@ -1,8 +1,7 @@
 #pragma once
 
-// LocalStore backed by obs_data_t JSON files in the plugin's config folder (obs_module_config_path), one file per
-// key, written with obs_data_save_json_safe. The .cpp is the only place that includes obs.h for it.
-// Scaffold: declaration only.
+// LocalStore in the plugin's config folder (obs_module_config_path): one <key>.json file per key. Each save keeps
+// the previous file as <key>.json.bak and swaps the new one in, so a crash cannot leave a half-written file.
 
 #include "../model/local-store.hpp"
 
@@ -15,7 +14,11 @@ public:
 	QJsonObject load(const QString &key) const override;
 	bool save(const QString &key, const QJsonObject &value) override;
 
+	// The plugin's config folder.
+	static QString configFolder();
+
 private:
+	QString path(const QString &key) const;
 	QString folder_;
 };
 

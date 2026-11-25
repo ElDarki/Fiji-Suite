@@ -3,9 +3,9 @@
 // CONTROLLER layer: runs the OBS and deck commands (from the bridge today; hotkeys and docks as they move over) on the
 // dispatcher's thread, through obs::ObsApi only. Never throws: every failure is a CommandResult{ok = false}.
 //
-// Actions: scene.switch, transition.set, transition.run, output.start, output.stop, deck.list, deck.press,
-// deck.fire, deck.release, deck.stop, deck.save, deck.delete, deck.file, look.get, deck.triggers, and the local
-// state.snapshot (result: model::ObsSnapshot::toJson()).
+// Actions: scene.switch, transition.set, transition.run, output.start, output.stop, deck.file and look.get (the deck
+// pages), and the local state.snapshot (result: model::ObsSnapshot::toJson()). The other deck actions are the
+// DeckController's.
 
 #include "command-dispatcher.hpp"
 

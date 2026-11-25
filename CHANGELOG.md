@@ -2,6 +2,15 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.7.0
+
+- Deck keys know when they are held down: `get_deck_state` also says which keys are held, running, or both (the
+  ground for press-and-hold keys on the deck pages).
+- Deck sounds use OBS 33's audio monitoring switch (and the old one on older OBS), so the build has no warnings.
+- Inside: the decks follow Model-View-Controller plus the State pattern. Every deck action, whether from a deck page,
+  the bot, obs-websocket or a hotkey, runs through the same dispatcher. Tests cover the deck list, the key states and
+  the deck controller. `decks.json` and its backup work as before.
+
 ## 0.6.0
 
 - The link to the Fiji-chan bot speaks the new bridge contract (`BRIDGE_CONTRACT.md` 1.2): a handshake that agrees

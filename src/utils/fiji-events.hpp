@@ -20,3 +20,8 @@ class LinkStateMachine;
 }
 fiji::state::LinkStateMachine *fiji_link_state();
 void fiji_set_bot_address(const QString &address);
+
+// Runs a command through the plugin's dispatcher and returns its result (for the request table). Fails with
+// "not available" before OBS has loaded the plugin. Lives in fiji-suite.cpp.
+#include "../controller/command.hpp"
+fiji::controller::CommandResult fiji_command(const fiji::controller::Command &command);

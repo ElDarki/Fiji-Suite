@@ -2,6 +2,7 @@
 
 #include <QMetaObject>
 #include <QMutexLocker>
+#include <QThread>
 
 namespace fiji::controller {
 
@@ -42,18 +43,33 @@ void CommandDispatcher::drain()
 			next = std::move(queue_.front());
 			queue_.pop_front();
 		}
-		CommandResult result;
-		if (auto handler = handlers_.value(next.first.action)) {
-			result = handler->handle(next.first);
-		} else {
-			result.ok = false;
-			result.code = QStringLiteral("UNKNOWN_ACTION");
-			result.message = QStringLiteral("Nothing handles %1").arg(next.first.action);
-		}
+		const CommandResult result = run(next.first);
 		if (next.second) {
 			next.second(result);
 		}
 	}
+}
+
+CommandResult CommandDispatcher::run(const Command &command)
+{
+	if (auto handler = handlers_.value(command.action)) {
+		return handler->handle(command);
+	}
+	CommandResult result;
+	result.ok = false;
+	result.code = QStringLiteral("UNKNOWN_ACTION");
+	result.message = QStringLiteral("Nothing handles %1").arg(command.action);
+	return result;
+}
+
+CommandResult CommandDispatcher::call(Command command)
+{
+	if (QThread::currentThread() == thread()) {
+		return run(command);
+	}
+	CommandResult result;
+	QMetaObject::invokeMethod(this, [this, &command, &result] { result = run(command); }, Qt::BlockingQueuedConnection);
+	return result;
 }
 
 } // namespace fiji::controller

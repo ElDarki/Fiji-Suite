@@ -9,7 +9,7 @@
 #include <QStringList>
 #include <QVariant>
 
-// The part of the deck engine that decides what runs when. It knows nothing about OBS: every
+// MODEL layer: the part of the deck engine that decides what runs when. It knows nothing about OBS: every
 // step that touches the outside world is handed to a Host, so this file can be unit tested.
 //
 // A button is a JSON object {"id", "steps": [...], "release": [...], "queueable", "overlappable"}.
