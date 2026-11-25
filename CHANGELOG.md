@@ -2,6 +2,11 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## Unreleased
+
+- Inside: the Capture dock follows the plugin's layers, with tests for which sources it lists, the hooked-window
+  text and the window menu. It works as before.
+
 ## 0.9.0
 
 - Inside: the look (Fiji-chan's fonts and the Fiji Sun / Moon themes) follows the plugin's layers: the rules for which
