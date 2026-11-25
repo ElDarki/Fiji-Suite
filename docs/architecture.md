@@ -76,3 +76,8 @@ Moved in 0.9.0: the look. `model::planThemes` decides which theme files to write
 registers the fonts and copies the themes, and `view::showRestartNotice` is the first view. The update check is
 `model::isNewer`, `controller::UpdateChecker`, `obs::GitHubReleases` (behind `obs/update-port.hpp`) and
 `view::showUpdateOffer`.
+
+Moved (unreleased): the Stats dock. `model::OutputStats` matches OBS's encoders, outputs and canvases into rows and
+works out the rates, from a `model::StatsSnapshot` that `obs::ObsStatsSource` reads (`obs/stats-port.hpp`).
+`controller::StatsController` is the one-second clock's step, and `view::StatsDock` holds the table, the graphs and
+the grouped header; `fiji-suite.cpp` keeps its columns per dock mode.

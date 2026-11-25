@@ -22,6 +22,9 @@
 #include "../src/state/output-states.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
+#include "../src/model/output-stats.hpp"
+#include "../src/controller/stats-controller.hpp"
+#include "../src/obs/stats-port.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -699,6 +702,94 @@ static void test_updates()
 	CHECK(outcomeOf("v0.9.1", settings) == "off");
 }
 
+// ---- Stats -------------------------------------------------------------------------------------------------
+class FakeStats final : public obs::StatsSource {
+public:
+	model::StatsSnapshot next;
+	int samples = 0;
+	model::StatsSnapshot sample() override
+	{
+		samples++;
+		return next;
+	}
+};
+
+static void test_stats()
+{
+	const model::StatsNames names{"Recording", "Stream", "Virtual Camera"};
+	CHECK(model::outputDisplayName("Fiji Suite Output TikTok", names) == "TikTok");
+	CHECK(model::outputDisplayName("fiji_multi_output_YouTube", names) == "YouTube");
+	CHECK(model::outputDisplayName("adv_file_output", names) == "Recording");
+	CHECK(model::outputDisplayName("rtmp multitrack video", names) == "Stream");
+	CHECK(model::outputDisplayName("virtualcam_output", names) == "Virtual Camera");
+	CHECK(model::outputDisplayName("decklink_output", names) == "decklink output");
+	CHECK(model::encoderDisplayName("Fiji Suite Video TikTok Vertical") == "TikTok Vertical");
+	CHECK(model::encoderDisplayName("advanced_video_stream") == "advanced video stream");
+
+	model::OutputStats stats(names);
+	FakeStats obs;
+	controller::StatsController controller(obs, stats);
+
+	// hidden: OBS is not asked
+	CHECK(controller.tick(false).inserted == 0 && obs.samples == 0);
+
+	// an active encoder gets a row; its first rates are not its whole total
+	model::EncoderSample enc{1, "advanced_video_stream", 100, true, 1920, 1080, 5000};
+	model::CanvasSample main{9, "Main", -1, 100, 9000, 3, 1920, 1080};
+	obs.next.encoders = {enc};
+	obs.next.canvases = {main};
+	auto u = controller.tick(true);
+	CHECK(u.inserted == 1 && stats.rows().size() == 1);
+	CHECK(stats.rows()[0].encodedFps == 0 && stats.rows()[0].encodedFrames == 5000);
+	CHECK(stats.rows()[0].canvasName == "Main" && stats.rows()[0].canvasFps == 0 && stats.rows()[0].skippedFrames == 3);
+
+	// a second later: the stream output claims the encoder's row
+	enc.frames = 5060;
+	main.frames = 9060;
+	model::OutputSample stream{50, "adv_stream", true, true, {enc}, 0, 1000000, 4000, 2, 0};
+	obs.next.encoders = {enc};
+	obs.next.canvases = {main};
+	obs.next.outputs = {stream};
+	u = controller.tick(true);
+	CHECK(u.inserted == 0 && stats.rows().size() == 1);
+	const auto &row = stats.rows()[0];
+	CHECK(row.outputName == "Stream" && row.encodedFps == 60 && row.canvasFps == 60);
+	CHECK(row.outputBitrate == 0 && row.outputFps == 0); // claimed this second: counted from here
+	CHECK(row.droppedFrames == 2);
+
+	// the next second: rates from the counters
+	enc.frames = 5120;
+	stream.bytes += 750000; // 6000 kbit
+	stream.frames += 60;
+	stream.videoEncoders = {enc};
+	obs.next.encoders = {enc};
+	obs.next.outputs = {stream};
+	u = controller.tick(true);
+	CHECK(stats.rows()[0].outputBitrate == 6000 && stats.rows()[0].outputFps == 60 && stats.rows()[0].encodedFps == 60);
+	CHECK(u.firstChanged == 0 && u.lastChanged == 0);
+
+	// a raw output (the virtual camera) gets a row of its own, matched to its canvas by video
+	model::OutputSample vcam{60, "virtualcam_output", false, true, {}, 100, 0, 300, 0, 0};
+	obs.next.outputs = {stream, vcam};
+	u = controller.tick(true);
+	CHECK(u.inserted == 1 && stats.rows()[1].outputName == "Virtual Camera" && stats.rows()[1].canvasName == "Main");
+
+	// nothing reports for a row: its rates fall to zero, the row stays
+	obs.next = {};
+	u = controller.tick(true);
+	CHECK(stats.rows().size() == 2 && stats.rows()[0].outputBitrate == 0 && stats.rows()[0].encodedFps == 0);
+
+	// an inactive output adds nothing
+	model::OutputSample idle{70, "Fiji Suite Output Idle", true, false, {}, 0, 0, 0, 0, 0};
+	obs.next.outputs = {idle};
+	CHECK(controller.tick(true).inserted == 0);
+
+	// hiding the dock drops the rows
+	u = controller.tick(false);
+	CHECK(u.reset && stats.rows().isEmpty());
+	CHECK(!controller.tick(false).reset);
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -715,6 +806,7 @@ int main(int argc, char **argv)
 	test_output_controller();
 	test_themes();
 	test_updates();
+	test_stats();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

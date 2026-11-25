@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## Unreleased
+
+- Stats dock: an output, encoder or canvas that has just appeared no longer shows a huge first bitrate or frame rate
+  (its whole total until then), so its graph keeps a sensible scale.
+- Inside: the Stats dock follows the plugin's layers, with tests for how rows are matched, the names, the rates and
+  hiding the dock.
+
 ## 0.9.0
 
 - Inside: the look (Fiji-chan's fonts and the Fiji Sun / Moon themes) follows the plugin's layers: the rules for which

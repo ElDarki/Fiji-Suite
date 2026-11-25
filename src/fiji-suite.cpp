@@ -13,26 +13,29 @@
 #include "docks/properties-dock.hpp"
 #include "docks/scenes-dock.hpp"
 #include "docks/sources-dock.hpp"
-#include "docks/stats-dock.hpp"
 #include "docks/transform-dock.hpp"
 #include "docks/transitions-dock.hpp"
 #include "bridge/bot-link.hpp"
 #include "controller/command-dispatcher.hpp"
 #include "controller/deck-controller.hpp"
+#include "controller/stats-controller.hpp"
 #include "controller/obs-command-handler.hpp"
 #include "controller/output-controller.hpp"
 #include "controller/update-checker.hpp"
 #include "model/deck-model.hpp"
+#include "model/output-stats.hpp"
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
 #include "obs/obs-look.hpp"
+#include "obs/obs-stats.hpp"
 #include "obs/github-releases.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
 #include "state/output-states.hpp"
 #include "view/restart-notice.hpp"
 #include "view/update-offer.hpp"
+#include "view/stats-dock.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
@@ -67,7 +70,67 @@ FiltersDock *filters_dock = nullptr;
 TransformDock *transform_dock = nullptr;
 LiveScenesDock *live_scenes_dock = nullptr;
 CanvasDock *component_dock = nullptr;
-StatsDock *stats_dock = nullptr;
+// The Stats dock's parts: the rows (model), OBS's counters (adapter) and the clock's controller. Made with the docks;
+// the dock itself is OBS's to delete.
+struct StatsParts {
+	fiji::model::OutputStats stats;
+	fiji::obs::ObsStatsSource source;
+	fiji::controller::StatsController controller{source, stats};
+	explicit StatsParts(fiji::model::StatsNames names) : stats(std::move(names)) {}
+};
+static StatsParts *stats = nullptr;
+static fiji::view::StatsDock *stats_dock = nullptr;
+
+static QString stats_mode_setting(const QString &mode)
+{
+	return mode.isEmpty() ? QStringLiteral("stats_state") : QStringLiteral("stats_state_") + mode;
+}
+
+// The Stats dock's columns are kept per dock mode in the profile settings.
+static void stats_save_mode(QString mode)
+{
+	if (!stats_dock || !current_profile_config) {
+		return;
+	}
+	if (mode.isEmpty() && modesTabBar) {
+		const auto d = modesTabBar->tabData(modesTabBar->currentIndex());
+		mode = (d.isValid() && !d.toString().isEmpty()) ? d.toString() : modesTabBar->tabText(modesTabBar->currentIndex());
+	}
+	obs_data_set_string(current_profile_config, stats_mode_setting(mode).toUtf8().constData(),
+			    stats_dock->headerState().toBase64().constData());
+}
+
+static void stats_load_mode(const QString &mode)
+{
+	if (!stats_dock || !current_profile_config) {
+		return;
+	}
+	const char *state = obs_data_get_string(current_profile_config, stats_mode_setting(mode).toUtf8().constData());
+	if (state[0] == '\0') {
+		state = obs_data_get_string(current_profile_config, stats_mode_setting(mode.toLower()).toUtf8().constData());
+	}
+	if (state[0] != '\0') {
+		stats_dock->restoreHeaderState(QByteArray::fromBase64(state));
+	}
+}
+
+// For the Stats dock's canvas colours (src/obs/obs-stats.cpp): the colour the user gave a canvas, or -1.
+long long fiji_canvas_color(const char *canvas_name)
+{
+	if (!current_profile_config || !canvas_name) {
+		return -1;
+	}
+	long long color = -1;
+	OBSDataArrayAutoRelease canvases = obs_data_get_array(current_profile_config, "canvas");
+	const size_t count = obs_data_array_count(canvases);
+	for (size_t i = 0; i < count && color < 0; ++i) {
+		OBSDataAutoRelease c = obs_data_array_item(canvases, i);
+		if (c && strcmp(obs_data_get_string(c, "name"), canvas_name) == 0) {
+			color = obs_data_get_int(c, "color") & 0xffffff;
+		}
+	}
+	return color;
+}
 ScenesDock *scenes_dock = nullptr;
 SourcesDock *sources_dock = nullptr;
 TransitionsDock *transitions_dock = nullptr;
@@ -103,9 +166,7 @@ void save_dock_state(QString mode)
 	if (component_dock) {
 		QMetaObject::invokeMethod(component_dock, "SaveSettings", Q_ARG(bool, false), Q_ARG(QString, mode));
 	}
-	if (stats_dock) {
-		QMetaObject::invokeMethod(stats_dock, "SaveSettings", Q_ARG(bool, false), Q_ARG(QString, mode));
-	}
+	stats_save_mode(mode);
 }
 
 static bool scene_collection_changing = false;
@@ -135,7 +196,7 @@ void load_dock_state(QString mode)
 		QMetaObject::invokeMethod(component_dock, "LoadMode", Qt::QueuedConnection, Q_ARG(QString, mode));
 	}
 	if (stats_dock) {
-		QMetaObject::invokeMethod(stats_dock, "LoadMode", Qt::QueuedConnection, Q_ARG(QString, mode));
+		QMetaObject::invokeMethod(stats_dock, [mode] { stats_load_mode(mode); }, Qt::QueuedConnection);
 	}
 	if (scenes_dock && !visible_canvas_docks.isEmpty()) {
 		QMetaObject::invokeMethod(scenes_dock, "UpdateCanvasFromDockList",
@@ -1039,7 +1100,12 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteLiveScenes", obs_module_text("FijiSuiteLiveScenes"), live_scenes_dock);
 	auto capture_dock = new CaptureDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteCapture", obs_module_text("FijiSuiteCapture"), capture_dock);
-	stats_dock = new StatsDock(main_window);
+	stats = new StatsParts({QString::fromUtf8(obs_module_text("BuiltinRecord")),
+				QString::fromUtf8(obs_module_text("BuiltinStream")),
+				QString::fromUtf8(obs_module_text("BuiltinVirtualCamera"))});
+	stats_dock = new fiji::view::StatsDock(stats->stats, stats->controller,
+					       [](const char *key) { return QString::fromUtf8(obs_module_text(key)); },
+					       main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteStats", obs_module_text("FijiSuiteStats"), stats_dock);
 	scenes_dock = new ScenesDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteScenes", obs_module_text("FijiSuiteScenes"), scenes_dock);
@@ -1097,6 +1163,9 @@ void obs_module_unload()
 	obs_frontend_remove_dock("FijiSuiteLiveScenes");
 	obs_frontend_remove_dock("FijiSuiteCapture");
 	obs_frontend_remove_dock("FijiSuiteStats");
+	stats_dock = nullptr;
+	delete stats;
+	stats = nullptr;
 	obs_frontend_remove_dock("FijiSuiteScenes");
 	obs_frontend_remove_dock("FijiSuiteSources");
 	obs_frontend_remove_dock("FijiSuiteTransitions");
