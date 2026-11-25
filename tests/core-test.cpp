@@ -14,6 +14,7 @@
 #include "../src/controller/obs-command-handler.hpp"
 #include "../src/controller/output-controller.hpp"
 #include "../src/model/output-targets.hpp"
+#include "../src/model/theme-files.hpp"
 #include "../src/obs/output-port.hpp"
 #include "../src/state/output-states.hpp"
 #include "../src/obs/obs-api.hpp"
@@ -627,6 +628,24 @@ static void test_output_controller()
 	CHECK(!refused.ok && refused.message == "no encoder" && states.state("TikTok") == state::OutputStateId::STARTING);
 }
 
+// ---- the look ------------------------------------------------------------------------------------------
+static void test_themes()
+{
+	const QMap<QString, QByteArray> shipped{{"Fiji_Sun.obt", "sun 2"}, {"Fiji_Moon.obt", "moon"}, {"FijiSun/check.svg", "icon"},
+						{"README.txt", "not a theme"}};
+	const QMap<QString, QByteArray> fresh = {};
+	auto first = model::planThemes(shipped, fresh);
+	CHECK(first.write.size() == 3 && first.added == 2 && first.remove.isEmpty()); // icons do not count as themes
+	const QMap<QString, QByteArray> installed{{"Fiji_Sun.obt", "sun 1"}, {"Fiji_Moon.obt", "moon"}, {"FijiSun/check.svg", "icon"},
+						  {"Fiji_Sun.ovt", "old style"}, {"Someone_Else.obt", "theirs"}};
+	auto update = model::planThemes(shipped, installed);
+	CHECK((update.write == QStringList{"Fiji_Sun.obt"}) && update.added == 0);
+	CHECK((update.remove == QStringList{"Fiji_Sun.ovt"})); // only our retired files; never someone else's theme
+	CHECK(model::userThemesDir("/home/a/.config/obs-studio/plugin_config/fiji-suite/") == "/home/a/.config/obs-studio/themes");
+	CHECK(model::userThemesDir("C:/Users/a/AppData/Roaming/obs-studio/plugin_config/fiji-suite") ==
+	      "C:/Users/a/AppData/Roaming/obs-studio/themes");
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -641,6 +660,7 @@ int main(int argc, char **argv)
 	test_output_targets();
 	test_output_states();
 	test_output_controller();
+	test_themes();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

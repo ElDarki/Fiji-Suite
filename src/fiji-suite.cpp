@@ -25,14 +25,15 @@
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
+#include "obs/obs-look.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
 #include "state/output-states.hpp"
+#include "view/restart-notice.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
 #include "utils/update-check.hpp"
-#include "utils/fiji-look.hpp"
 #include "version.h"
 #include <obs-frontend-api.h>
 #include <obs.hpp>
@@ -594,6 +595,7 @@ struct Core {
 	}
 };
 Core *core = nullptr;
+bool themes_added = false; // this start copied themes OBS has not listed yet: it lists them after a restart
 
 void start_core()
 {
@@ -673,7 +675,12 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 	}
 	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 		finished_loading = true;
-		FijiLook::ShowRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()));
+		if (themes_added) {
+			themes_added = false;
+			fiji::view::showRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()),
+						      QString::fromUtf8(obs_module_text("ThemesAddedTitle")),
+						      QString::fromUtf8(obs_module_text("ThemesAddedText")));
+		}
 		log_same_sources();
 		struct obs_frontend_source_list transitions = {};
 		obs_frontend_get_transitions(&transitions);
@@ -953,7 +960,7 @@ bool obs_module_load(void)
 	obs_register_source(&component_info);
 
 	// Her fonts, and the Fiji Sun / Fiji Moon themes copied where OBS looks for them.
-	FijiLook::Install();
+	themes_added = fiji::obs::installLook();
 
 	obs_frontend_add_event_callback(frontend_event, nullptr);
 

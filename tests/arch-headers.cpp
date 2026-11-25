@@ -17,6 +17,7 @@
 #include "../src/model/local-store.hpp"
 #include "../src/model/obs-status.hpp"
 #include "../src/model/output-targets.hpp"
+#include "../src/model/theme-files.hpp"
 #include "../src/obs/deck-port.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/obs/obs-data-store.hpp"
