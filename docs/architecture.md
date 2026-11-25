@@ -76,3 +76,8 @@ Moved in 0.9.0: the look. `model::planThemes` decides which theme files to write
 registers the fonts and copies the themes, and `view::showRestartNotice` is the first view. The update check is
 `model::isNewer`, `controller::UpdateChecker`, `obs::GitHubReleases` (behind `obs/update-port.hpp`) and
 `view::showUpdateOffer`.
+
+Moved (unreleased): the Live Scenes dock. `model::LiveScenes` is the list and which entry is on program,
+`controller::LiveScenesController` adds, removes, reorders and switches through `obs/scene-port.hpp`, `obs::ObsScenes`
+and `obs::ObsLiveScenesSync` talk to OBS (the scenes, saving with the scene collection, renames), and
+`view::LiveScenesDock` is the dock. obs-websocket's live-scene requests use the controller.

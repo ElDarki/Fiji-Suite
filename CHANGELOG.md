@@ -2,6 +2,12 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## Unreleased
+
+- Inside: the Live Scenes dock follows the plugin's layers, with tests for adding, removing, reordering, following
+  renames and marking the scene on program. It works as before, and the list is still saved with the scene
+  collection. The obs-websocket requests for live scenes now read the list safely from any thread.
+
 ## 0.9.0
 
 - Inside: the look (Fiji-chan's fonts and the Fiji Sun / Moon themes) follows the plugin's layers: the rules for which

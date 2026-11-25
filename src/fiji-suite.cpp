@@ -7,7 +7,6 @@
 #include "docks/canvas-dock.hpp"
 #include "docks/capture-dock.hpp"
 #include "docks/filters-dock.hpp"
-#include "docks/live-scenes-dock.hpp"
 #include "docks/multiview-dock.hpp"
 #include "docks/output-dock.hpp"
 #include "docks/properties-dock.hpp"
@@ -19,20 +18,24 @@
 #include "bridge/bot-link.hpp"
 #include "controller/command-dispatcher.hpp"
 #include "controller/deck-controller.hpp"
+#include "controller/live-scenes-controller.hpp"
 #include "controller/obs-command-handler.hpp"
 #include "controller/output-controller.hpp"
 #include "controller/update-checker.hpp"
 #include "model/deck-model.hpp"
+#include "model/live-scenes.hpp"
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
 #include "obs/obs-look.hpp"
+#include "obs/obs-live-scenes.hpp"
 #include "obs/github-releases.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
 #include "state/output-states.hpp"
 #include "view/restart-notice.hpp"
 #include "view/update-offer.hpp"
+#include "view/live-scenes-dock.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
@@ -65,7 +68,49 @@ OutputDock *output_dock = nullptr;
 PropertiesDock *properties_dock = nullptr;
 FiltersDock *filters_dock = nullptr;
 TransformDock *transform_dock = nullptr;
-LiveScenesDock *live_scenes_dock = nullptr;
+// Live Scenes: the list (model), OBS's scenes (port), what the dock and obs-websocket do with it (controller), and
+// saving it with the scene collection. Made with the docks; the dock itself is OBS's to delete.
+struct LiveScenesParts {
+	fiji::model::LiveScenes model;
+	fiji::obs::ObsScenes scenes;
+	fiji::controller::LiveScenesController controller{model, scenes};
+	std::unique_ptr<fiji::obs::ObsLiveScenesSync> sync;
+};
+LiveScenesParts *live_scenes = nullptr;
+fiji::view::LiveScenesDock *live_scenes_dock = nullptr;
+
+static void live_scenes_program_changed()
+{
+	if (live_scenes) {
+		QMetaObject::invokeMethod(&live_scenes->model, [] { live_scenes->controller.programChanged(); },
+					  Qt::QueuedConnection);
+	}
+}
+
+// For obs-websocket (src/utils/obs-websocket.cpp).
+bool fiji_live_scenes_available()
+{
+	return live_scenes != nullptr;
+}
+
+QJsonArray fiji_live_scenes_list()
+{
+	return live_scenes ? live_scenes->model.toJson() : QJsonArray();
+}
+
+void fiji_live_scenes_change(const QString &scene, bool add)
+{
+	if (!live_scenes) {
+		return;
+	}
+	QMetaObject::invokeMethod(&live_scenes->model, [scene, add] {
+		if (add) {
+			live_scenes->controller.add(scene);
+		} else {
+			live_scenes->controller.remove(scene);
+		}
+	});
+}
 CanvasDock *component_dock = nullptr;
 StatsDock *stats_dock = nullptr;
 ScenesDock *scenes_dock = nullptr;
@@ -83,7 +128,7 @@ static bool finished_loading = false;
 
 void transition_start(void *, calldata_t *)
 {
-	QMetaObject::invokeMethod(live_scenes_dock, "MainSceneChanged", Qt::QueuedConnection);
+	live_scenes_program_changed();
 	for (const auto &it : canvas_docks) {
 		QMetaObject::invokeMethod(it, "MainSceneChanged", Qt::QueuedConnection);
 	}
@@ -784,9 +829,7 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 		}
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED || event == OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED) {
 		main_canvas_event(event);
-		if (live_scenes_dock) {
-			QMetaObject::invokeMethod(live_scenes_dock, "MainSceneChanged", Qt::QueuedConnection);
-		}
+		live_scenes_program_changed();
 		if (scenes_dock) {
 			QMetaObject::invokeMethod(scenes_dock, "MainSceneChanged", Qt::QueuedConnection);
 		}
@@ -1035,7 +1078,15 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteFilters", obs_module_text("FijiSuiteFilters"), filters_dock);
 	transform_dock = new TransformDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteTransform", obs_module_text("FijiSuiteTransform"), transform_dock);
-	live_scenes_dock = new LiveScenesDock(main_window);
+	live_scenes = new LiveScenesParts;
+	live_scenes->sync = std::make_unique<fiji::obs::ObsLiveScenesSync>(live_scenes->model);
+	live_scenes_dock = new fiji::view::LiveScenesDock(
+		live_scenes->model, live_scenes->controller,
+		{QString::fromUtf8(obs_frontend_get_locale_string("Add")),
+		 QString::fromUtf8(obs_frontend_get_locale_string("RemoveScene")),
+		 QString::fromUtf8(obs_frontend_get_locale_string("MoveSceneUp")),
+		 QString::fromUtf8(obs_frontend_get_locale_string("MoveSceneDown"))},
+		main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteLiveScenes", obs_module_text("FijiSuiteLiveScenes"), live_scenes_dock);
 	auto capture_dock = new CaptureDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteCapture", obs_module_text("FijiSuiteCapture"), capture_dock);
@@ -1085,6 +1136,9 @@ void obs_module_unload()
 	unload_obs_websocket();
 	obs_frontend_remove_save_callback(save_load, nullptr);
 	obs_frontend_remove_event_callback(frontend_event, nullptr);
+	if (live_scenes) {
+		live_scenes->sync.reset();
+	}
 	if (current_profile_config) {
 		obs_data_release(current_profile_config);
 		current_profile_config = nullptr;
@@ -1095,6 +1149,9 @@ void obs_module_unload()
 	obs_frontend_remove_dock("FijiSuiteFilters");
 	obs_frontend_remove_dock("FijiSuiteTransform");
 	obs_frontend_remove_dock("FijiSuiteLiveScenes");
+	live_scenes_dock = nullptr;
+	delete live_scenes;
+	live_scenes = nullptr;
 	obs_frontend_remove_dock("FijiSuiteCapture");
 	obs_frontend_remove_dock("FijiSuiteStats");
 	obs_frontend_remove_dock("FijiSuiteScenes");

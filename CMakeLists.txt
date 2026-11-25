@@ -84,8 +84,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/capture-dock.hpp
   src/docks/filters-dock.cpp
   src/docks/filters-dock.hpp
-  src/docks/live-scenes-dock.cpp
-  src/docks/live-scenes-dock.hpp
   src/docks/multiview-dock.cpp
   src/docks/multiview-dock.hpp
   src/docks/output-dock.cpp
@@ -132,6 +130,8 @@ set(FIJI_CORE_SOURCES
   src/controller/command.hpp
   src/controller/deck-controller.cpp
   src/controller/deck-controller.hpp
+  src/controller/live-scenes-controller.cpp
+  src/controller/live-scenes-controller.hpp
   src/controller/obs-command-handler.cpp
   src/controller/obs-command-handler.hpp
   src/controller/output-controller.cpp
@@ -142,6 +142,8 @@ set(FIJI_CORE_SOURCES
   src/model/deck-engine.hpp
   src/model/deck-model.cpp
   src/model/deck-model.hpp
+  src/model/live-scenes.cpp
+  src/model/live-scenes.hpp
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
@@ -154,6 +156,7 @@ set(FIJI_CORE_SOURCES
   src/obs/deck-port.hpp
   src/obs/obs-api.hpp
   src/obs/output-port.hpp
+  src/obs/scene-port.hpp
   src/obs/update-port.hpp
   src/state/deck-keys.cpp
   src/state/deck-keys.hpp
@@ -177,12 +180,16 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/github-releases.hpp
   src/obs/obs-look.cpp
   src/obs/obs-look.hpp
+  src/obs/obs-live-scenes.cpp
+  src/obs/obs-live-scenes.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
   src/view/restart-notice.cpp
   src/view/restart-notice.hpp
   src/view/update-offer.cpp
-  src/view/update-offer.hpp)
+  src/view/update-offer.hpp
+  src/view/live-scenes-dock.cpp
+  src/view/live-scenes-dock.hpp)
 
 target_sources(${PROJECT_NAME} PRIVATE
   src/utils/fiji-events.hpp
