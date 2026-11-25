@@ -6,6 +6,11 @@
 #include "../src/bridge/catalogue.hpp"
 #include "../src/bridge/envelope.hpp"
 #include "../src/controller/command-dispatcher.hpp"
+#include "../src/controller/deck-controller.hpp"
+#include "../src/model/deck-model.hpp"
+#include "../src/model/local-store.hpp"
+#include "../src/obs/deck-port.hpp"
+#include "../src/state/deck-keys.hpp"
 #include "../src/controller/obs-command-handler.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
@@ -74,16 +79,6 @@ public:
 		return r;
 	}
 	obs::ObsCall stopOutputs(const QString &t) override { return record("stop " + t); }
-	obs::ObsCall decks() override { return record("decks"); }
-	obs::ObsCall pressButton(const QString &b, const QJsonObject &vars) override
-	{
-		return record("press " + b + " " + vars.value("user").toString());
-	}
-	obs::ObsCall releaseButton(const QString &b) override { return record("release " + b); }
-	obs::ObsCall stopButton(const QString &b) override { return record("stopkey " + b); }
-	obs::ObsCall saveDeck(const QJsonObject &) override { return record("save"); }
-	obs::ObsCall deleteDeck(const QString &id) override { return record("delete " + id); }
-	obs::ObsCall triggers() override { return record("triggers"); }
 	obs::ObsCall webFile(const QString &n) override { return record("file " + n); }
 	obs::ObsCall look() override { return record("look"); }
 };
@@ -222,12 +217,26 @@ static QByteArray frame(const QString &type, const QString &action, const QJsonO
 		.toJson(QJsonDocument::Compact);
 }
 
+// Stands in for the deck controller in the bridge test.
+class PressRecorder final : public controller::CommandHandler {
+public:
+	QStringList pressed;
+	QStringList actions() const override { return {"deck.press"}; }
+	controller::CommandResult handle(const controller::Command &c) override
+	{
+		pressed.append(c.payload.value("button").toString() + " " + c.payload.value("vars").toObject().value("user").toString());
+		return {};
+	}
+};
+
 static void test_acl()
 {
 	controller::CommandDispatcher dispatcher;
 	FakeObs obs;
 	controller::ObsCommandHandler handler(obs);
 	dispatcher.registerHandler(&handler);
+	PressRecorder presses;
+	dispatcher.registerHandler(&presses);
 	state::LinkStateMachine link;
 	bridge::BridgeAcl acl(dispatcher, link, "0.6.0");
 	Wire wire;
@@ -296,7 +305,7 @@ static void test_acl()
 
 	acl.onFrame(frame("COMMAND", "deck.press", {{"button", "b1"}, {"vars", QJsonObject{{"user", "Ana"}}}}, "c-9"));
 	settle();
-	CHECK(obs.calls.contains("press b1 Ana"));
+	CHECK((presses.pressed == QStringList{"b1 Ana"}));
 
 	// state.sync: the ACK, then a SYNC_STATE with the command's id
 	const int snapshots = wire.count("SYNC_STATE", "state.snapshot");
@@ -354,11 +363,187 @@ static void test_handler_rejects_bad_payloads()
 	FakeObs obs;
 	controller::ObsCommandHandler handler(obs);
 	CHECK(handler.handle({"scene.switch", {}, controller::CommandSource::Ui, {}}).code == "BAD_REQUEST");
-	CHECK(handler.handle({"deck.save", {{"deck", "x"}}, controller::CommandSource::Ui, {}}).code == "BAD_REQUEST");
+	CHECK(handler.handle({"deck.save", {{"deck", "x"}}, controller::CommandSource::Ui, {}}).code == "UNKNOWN_ACTION"); // the decks' own
 	const auto snapshot = handler.handle({"state.snapshot", {}, controller::CommandSource::Ui, {}});
 	CHECK(snapshot.ok && model::ObsSnapshot::fromJson(snapshot.result).outputs.size() == 2);
 	CHECK(model::ObsSnapshot::fromJson(snapshot.result).canvases.at(1).studioMode);
 	CHECK(obs.calls.isEmpty());
+}
+
+
+// ---- the decks -----------------------------------------------------------------------------------------
+class MemoryStore final : public model::LocalStore {
+public:
+	QHash<QString, QJsonObject> saved;
+	int saves = 0;
+	QJsonObject load(const QString &key) const override { return saved.value(key); }
+	bool save(const QString &key, const QJsonObject &value) override
+	{
+		saved.insert(key, value);
+		saves++;
+		return true;
+	}
+};
+
+class FakeSteps final : public obs::DeckSteps {
+public:
+	QStringList ran;
+	QStringList stopped;
+	bool monitoring = false;
+	void run(const QJsonObject &step) override { ran.append(step.value("type").toString() + ":" + step.value("scene").toString()); }
+	void stopSounds(const QString &name) override { stopped.append(name.isEmpty() ? "*" : name); }
+	void setSoundMonitoring(bool on) override { monitoring = on; }
+};
+
+class FakeHotkeys final : public obs::DeckHotkeys {
+public:
+	QStringList registered;
+	QHash<QString, QJsonArray> bound;
+	int unregistered = 0;
+	void registerAll(const QJsonArray &decks) override
+	{
+		registered.clear();
+		for (const auto &d : decks) {
+			for (const auto &b : d.toObject().value("buttons").toArray()) {
+				registered.append(b.toObject().value("id").toString());
+			}
+		}
+	}
+	void unregisterAll() override
+	{
+		registered.clear();
+		unregistered++;
+	}
+	QHash<QString, QJsonArray> bindings() const override { return bound; }
+};
+
+static QJsonObject button(const char *id, QJsonArray steps, QJsonArray triggers = {})
+{
+	return {{"id", id}, {"text", id}, {"steps", steps}, {"triggers", triggers}};
+}
+
+static void test_deck_model()
+{
+	MemoryStore store;
+	store.saved.insert("decks", QJsonObject{{"version", 1}, {"sound_monitoring", false},
+					       {"decks", QJsonArray{QJsonObject{{"id", "d1"}, {"buttons", QJsonArray{button("b1", {})}}}}}});
+	model::DeckModel m(store);
+	m.load();
+	CHECK(m.decks().size() == 1 && !m.soundMonitoring() && m.hasButton("b1") && !m.hasButton("b9"));
+	int changes = 0;
+	QObject::connect(&m, &model::DeckModel::decksChanged, [&] { changes++; });
+
+	// a new deck gets an id, and a button id already used by another deck is replaced
+	const auto saved = m.saveDeck(QJsonObject{{"name", "Two"},
+						  {"buttons", QJsonArray{button("b1", {}), button("", {}), button("b3", {}, QJsonArray{QJsonObject{{"type", "sub"}}})}}});
+	const auto ids = saved.value("buttons").toArray();
+	CHECK(!saved.value("id").toString().isEmpty() && changes == 1 && store.saves == 1);
+	CHECK(ids.at(0).toObject().value("id").toString() != "b1" && !ids.at(1).toObject().value("id").toString().isEmpty());
+	CHECK(ids.at(2).toObject().value("id").toString() == "b3");
+	CHECK(store.saved.value("decks").value("decks").toArray().size() == 2 && store.saved.value("decks").value("version").toInt() == 1);
+	const auto triggers = m.triggers();
+	CHECK(triggers.size() == 1 && triggers.at(0).toObject().value("button").toString() == "b3");
+	CHECK(triggers.at(0).toObject().value("deck").toString() == saved.value("id").toString());
+
+	// saving the same deck again replaces it, keeping its own button ids
+	auto again = saved;
+	again.insert("name", "Renamed");
+	CHECK(m.saveDeck(again).value("buttons") == saved.value("buttons") && m.decks().size() == 2);
+
+	CHECK(m.deleteDeck("d1", {{"b3", QJsonArray{QJsonObject{{"key", "OBS_KEY_F5"}}}}}) && !m.deleteDeck("d1"));
+	CHECK(m.decks().size() == 1 && changes == 3);
+	CHECK(store.saved.value("decks").value("decks").toArray().at(0).toObject().value("buttons").toArray().at(2).toObject().value("hotkey").toArray().size() == 1);
+}
+
+static void test_key_states()
+{
+	using state::KeyInput;
+	using state::KeyState;
+	CHECK(state::next(KeyState::IDLE, KeyInput::Pressed) == KeyState::HELD);
+	CHECK(state::next(KeyState::HELD, KeyInput::RunStarted) == KeyState::HELD_RUNNING);
+	CHECK(state::next(KeyState::HELD_RUNNING, KeyInput::Released) == KeyState::RUNNING);
+	CHECK(state::next(KeyState::RUNNING, KeyInput::RunEnded) == KeyState::IDLE);
+	CHECK(state::next(KeyState::HELD_RUNNING, KeyInput::RunEnded) == KeyState::HELD);
+	CHECK(state::next(KeyState::IDLE, KeyInput::Released) == KeyState::IDLE); // not a transition: nothing changes
+	state::DeckKeys keys;
+	QStringList seen;
+	QObject::connect(&keys, &state::DeckKeys::keyStateChanged,
+			 [&](const QString &b, KeyState s) { seen.append(b + "=" + state::keyStateName(s)); });
+	keys.input("b1", KeyInput::Pressed);
+	keys.input("b1", KeyInput::Pressed);
+	keys.input("b1", KeyInput::Released);
+	keys.input("b2", KeyInput::RunStarted);
+	keys.clear();
+	CHECK((seen == QStringList{"b1=held", "b1=idle", "b2=running", "b2=idle"}));
+	CHECK(keys.state("b2") == KeyState::IDLE);
+}
+
+static void test_deck_controller()
+{
+	MemoryStore store;
+	store.saved.insert("decks", QJsonObject{{"decks", QJsonArray{QJsonObject{
+		{"id", "d1"}, {"name", "Stream"},
+		{"buttons", QJsonArray{
+			button("brb", QJsonArray{QJsonObject{{"type", "scene"}, {"scene", "BRB"}, {"at", 0}},
+						 QJsonObject{{"type", "chat"}, {"text", "brb, /$user$/!"}, {"at", 0}},
+						 QJsonObject{{"type", "notify"}, {"text", "on a break"}, {"at", 100}}}),
+			button("long", QJsonArray{QJsonObject{{"type", "wait"}, {"ms", 1000}}, QJsonObject{{"type", "scene"}, {"scene", "Live"}}})}}}}}});
+	model::DeckModel model(store);
+	state::DeckKeys keys;
+	FakeSteps steps;
+	FakeHotkeys hotkeys;
+	controller::DeckController decks(model, keys, steps, hotkeys);
+	qint64 clock = 0;
+	decks.setClock([&clock] { return clock; });
+	QStringList said, notes, changes;
+	QObject::connect(&decks, &controller::DeckController::say, [&](const QString &t) { said.append(t); });
+	QObject::connect(&decks, &controller::DeckController::notice, [&](const QString &t) { notes.append(t); });
+	QObject::connect(&decks, &controller::DeckController::keyChanged,
+			 [&](const QString &b, bool r) { changes.append(b + (r ? "+" : "-")); });
+	decks.start();
+	CHECK(steps.monitoring && (hotkeys.registered == QStringList{"brb", "long"}));
+
+	const auto cmd = [](const char *action, QJsonObject payload, controller::CommandSource source = controller::CommandSource::Bridge) {
+		return controller::Command{QString::fromLatin1(action), payload, source, {}};
+	};
+	CHECK(decks.handle(cmd("deck.press", {{"button", "brb"}, {"vars", QJsonObject{{"user", "Ana"}}}})).ok);
+	CHECK((steps.ran == QStringList{"scene:BRB"}) && (said == QStringList{"brb, Ana!"}) && notes.isEmpty());
+	clock = 150;
+	decks.tick();
+	CHECK((notes == QStringList{"on a break"}) && (changes == QStringList{"brb+", "brb-"}));
+	CHECK(decks.handle(cmd("deck.press", {{"button", "nope"}})).code == "NOT_FOUND");
+
+	// a hotkey holds the key down; the state shows it
+	CHECK(decks.handle(cmd("deck.press", {{"button", "long"}}, controller::CommandSource::Hotkey)).ok);
+	CHECK(keys.state("long") == state::KeyState::HELD_RUNNING);
+	CHECK(decks.handle(cmd("deck.press", {{"button", "long"}})).code == "BUSY");
+	auto stateNow = decks.handle(cmd("deck.state", {})).result;
+	CHECK(stateNow.value("running").toArray().at(0).toString() == "long" && stateNow.value("keys").toObject().value("long").toString() == "held_running");
+	decks.handle(cmd("deck.release", {{"button", "long"}}, controller::CommandSource::Hotkey));
+	CHECK(keys.state("long") == state::KeyState::RUNNING);
+	CHECK(decks.handle(cmd("deck.stop", {})).code == "BAD_REQUEST");
+	CHECK(decks.handle(cmd("deck.stop", {{"button", "all"}})).ok && (steps.stopped == QStringList{"*"}));
+	CHECK(keys.state("long") == state::KeyState::IDLE);
+
+	// editing keeps what was bound in OBS and registers the hotkeys again
+	hotkeys.bound.insert("brb", QJsonArray{QJsonObject{{"key", "OBS_KEY_F1"}}});
+	auto deck = model.decks().at(0).toObject();
+	deck.insert("name", "Renamed");
+	const auto saved = decks.handle(cmd("deck.save", {{"deck", deck}}));
+	CHECK(saved.ok && saved.result.value("deck").toObject().value("name").toString() == "Renamed");
+	CHECK(hotkeys.unregistered >= 1 && (hotkeys.registered == QStringList{"brb", "long"}));
+	CHECK(store.saved.value("decks").value("decks").toArray().at(0).toObject().value("buttons").toArray().at(0).toObject().value("hotkey").toArray().size() == 1);
+	CHECK(decks.handle(cmd("deck.save", {})).code == "BAD_REQUEST" && (hotkeys.registered == QStringList{"brb", "long"}));
+	CHECK(decks.handle(cmd("deck.delete", {{"id", "zz"}})).code == "NOT_FOUND");
+	CHECK(decks.handle(cmd("deck.delete", {{"id", "d1"}})).ok && hotkeys.registered.isEmpty());
+	CHECK(decks.handle(cmd("deck.list", {})).result.value("decks").toArray().isEmpty());
+
+	// the dispatcher's call runs it right away on its own thread
+	controller::CommandDispatcher dispatcher;
+	dispatcher.registerHandler(&decks);
+	CHECK(dispatcher.call(cmd("deck.list", {})).ok && dispatcher.call(cmd("deck.nope", {})).code == "UNKNOWN_ACTION");
+	decks.shutdown();
+	CHECK(hotkeys.registered.isEmpty());
 }
 
 int main(int argc, char **argv)
@@ -369,6 +554,9 @@ int main(int argc, char **argv)
 	test_envelope();
 	test_acl();
 	test_handler_rejects_bad_payloads();
+	test_deck_model();
+	test_key_states();
+	test_deck_controller();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

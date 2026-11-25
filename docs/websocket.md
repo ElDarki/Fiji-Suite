@@ -96,7 +96,7 @@ camera are controlled with the standard obs-websocket requests.
 | `fire_trigger` | `button`, `data` | The same as `press_button`; used by the bot for Twitch triggers. |
 | `release_button` | `button` | Runs the button's release list, if it has one. |
 | `stop_button` | `button` (`all` stops every button and sound) | |
-| `get_deck_state` | | `running`: list of `{button}` |
+| `get_deck_state` | | `running`: list of `{button}`; `keys`: `{button: state}` for keys that are not idle (`held`, `running`, `held_running`) |
 | `get_triggers` | | `triggers`: every trigger with its `button` and `deck` |
 | `get_web_file` | `name` | `content`, `type`: a file of the deck web interface |
 | `get_look` | | `dark`: true when OBS uses a dark theme; the deck pages then start in Fiji Moon |

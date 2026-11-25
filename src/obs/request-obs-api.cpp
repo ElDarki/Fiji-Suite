@@ -179,41 +179,6 @@ ObsCall RequestObsApi::outputs(bool start, const QString &target)
 	return call_;
 }
 
-ObsCall RequestObsApi::decks()
-{
-	return result(call("get_decks"), {"decks"});
-}
-
-ObsCall RequestObsApi::pressButton(const QString &button, const QJsonObject &vars)
-{
-	return result(call("press_button", {{"button", button}, {"data", vars}}));
-}
-
-ObsCall RequestObsApi::releaseButton(const QString &button)
-{
-	return result(call("release_button", {{"button", button}}));
-}
-
-ObsCall RequestObsApi::stopButton(const QString &button)
-{
-	return result(call("stop_button", {{"button", button}}));
-}
-
-ObsCall RequestObsApi::saveDeck(const QJsonObject &deck)
-{
-	return result(call("save_deck", {{"deck", deck}}), {"deck"});
-}
-
-ObsCall RequestObsApi::deleteDeck(const QString &id)
-{
-	return result(call("delete_deck", {{"id", id}}));
-}
-
-ObsCall RequestObsApi::triggers()
-{
-	return result(call("get_triggers"), {"triggers"});
-}
-
 ObsCall RequestObsApi::webFile(const QString &name)
 {
 	return result(call("get_web_file", {{"name", name}}), {"content", "type"});

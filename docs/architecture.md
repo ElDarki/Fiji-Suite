@@ -58,4 +58,10 @@ its widgets into `src/view`, with tests for the model, state and handler. Then i
 Moved so far (0.6.0): the bot link. The curl transport, the ACL and `BotLink` are in `src/bridge/`; the link's life cycle
 is `state::LinkStateMachine`; bot commands run through `controller::CommandDispatcher` and `ObsCommandHandler`; and
 `obs::RequestObsApi` reaches OBS through the plugin's request table until those calls move into it as direct libobs
-calls. `fiji-suite.cpp` builds them once OBS has finished loading.
+calls. `fiji-suite.cpp` builds them when the module loads.
+
+Moved in 0.7.0: the decks. `model::DeckModel` (saved through `obs::ObsDataStore`, still `decks.json`) and the deck
+engine (`model/deck-engine`), `state::DeckKeys` (idle, held, running, held and running),
+`controller::DeckController` (every deck action, from the bridge, the local deck server, obs-websocket and the
+hotkeys, goes through the dispatcher), and behind `obs/deck-port.hpp` the steps that act on OBS
+(`obs::ObsDeckSteps`) and the hotkeys (`obs::ObsDeckHotkeys`). The deck pages are the view.

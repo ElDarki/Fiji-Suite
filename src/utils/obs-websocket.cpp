@@ -11,6 +11,7 @@
 #include <obs-frontend-api.h>
 #include <obs.hpp>
 #include <QDateTime>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <list>
 #include <QDockWidget>
@@ -1037,15 +1038,90 @@ void vendor_request_stop_main(obs_data_t *request_data, obs_data_t *response_dat
 }
 
 // Deck requests live with the deck manager (src/decks/deck-manager.cpp).
-void vendor_request_get_decks(obs_data_t *request_data, obs_data_t *response_data, void *);
 void vendor_request_get_web_file(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_save_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_delete_deck(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_press_button(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_release_button(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_stop_button(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_get_deck_state(obs_data_t *request_data, obs_data_t *response_data, void *);
-void vendor_request_get_triggers(obs_data_t *request_data, obs_data_t *response_data, void *);
+
+// ---- decks: each request is a deck command, run by the deck controller through the dispatcher -------------
+static QJsonObject json_of(obs_data_t *data)
+{
+	return data ? QJsonDocument::fromJson(QByteArray(obs_data_get_json(data))).object() : QJsonObject();
+}
+
+// Runs a deck command and writes its result (or error) into the response, the way the requests always answered.
+static void deck_request(const char *action, const QJsonObject &payload, obs_data_t *response_data)
+{
+	const auto result = fiji_command({QString::fromLatin1(action), payload, fiji::controller::CommandSource::WebSocket, {}});
+	if (result.ok) {
+		OBSDataAutoRelease out = obs_data_create_from_json(QJsonDocument(result.result).toJson(QJsonDocument::Compact).constData());
+		obs_data_apply(response_data, out);
+	} else {
+		obs_data_set_string(response_data, "error", result.message.toUtf8().constData());
+	}
+	obs_data_set_bool(response_data, "success", result.ok);
+}
+
+static void vendor_request_get_decks(obs_data_t *, obs_data_t *response_data, void *)
+{
+	deck_request("deck.list", {}, response_data);
+}
+
+static void vendor_request_save_deck(obs_data_t *request_data, obs_data_t *response_data, void *)
+{
+	OBSDataAutoRelease deck = obs_data_get_obj(request_data, "deck");
+	if (!deck) {
+		obs_data_set_string(response_data, "error", "'deck' not set");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	deck_request("deck.save", {{"deck", json_of(deck)}}, response_data);
+}
+
+static void vendor_request_delete_deck(obs_data_t *request_data, obs_data_t *response_data, void *)
+{
+	deck_request("deck.delete", {{"id", QString::fromUtf8(obs_data_get_string(request_data, "id"))}}, response_data);
+}
+
+// press_button and fire_trigger are the same thing: "data" becomes the run's variables.
+static void vendor_request_press_button(obs_data_t *request_data, obs_data_t *response_data, void *)
+{
+	OBSDataAutoRelease vars = obs_data_get_obj(request_data, "data");
+	deck_request("deck.press",
+		     {{"button", QString::fromUtf8(obs_data_get_string(request_data, "button"))}, {"vars", json_of(vars)}},
+		     response_data);
+}
+
+static void vendor_request_release_button(obs_data_t *request_data, obs_data_t *response_data, void *)
+{
+	deck_request("deck.release", {{"button", QString::fromUtf8(obs_data_get_string(request_data, "button"))}}, response_data);
+}
+
+static void vendor_request_stop_button(obs_data_t *request_data, obs_data_t *response_data, void *)
+{
+	deck_request("deck.stop", {{"button", QString::fromUtf8(obs_data_get_string(request_data, "button"))}}, response_data);
+}
+
+// {"running": [{"button": id}], "keys": {id: state}} (obs_data arrays only hold objects)
+static void vendor_request_get_deck_state(obs_data_t *, obs_data_t *response_data, void *)
+{
+	auto result = fiji_command({QStringLiteral("deck.state"), {}, fiji::controller::CommandSource::WebSocket, {}});
+	if (result.ok) {
+		QJsonArray running;
+		for (const auto &button : result.result.value("running").toArray()) {
+			running.append(QJsonObject{{"button", button}});
+		}
+		result.result.insert("running", running);
+	}
+	OBSDataAutoRelease out = obs_data_create_from_json(QJsonDocument(result.result).toJson(QJsonDocument::Compact).constData());
+	obs_data_apply(response_data, out);
+	if (!result.ok) {
+		obs_data_set_string(response_data, "error", result.message.toUtf8().constData());
+	}
+	obs_data_set_bool(response_data, "success", result.ok);
+}
+
+static void vendor_request_get_triggers(obs_data_t *, obs_data_t *response_data, void *)
+{
+	deck_request("deck.triggers", {}, response_data);
+}
 
 // Every request, for OBS WebSocket clients and for the bot link alike.
 static const struct {
