@@ -24,6 +24,7 @@
 #include "../src/obs/obs-api.hpp"
 #include "../src/obs/obs-data-store.hpp"
 #include "../src/obs/output-port.hpp"
+#include "../src/model/multiview.hpp"
 #include "../src/obs/request-obs-api.hpp"
 #include "../src/state/deck-keys.hpp"
 #include "../src/state/link-state.hpp"

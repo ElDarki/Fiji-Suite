@@ -142,6 +142,8 @@ set(FIJI_CORE_SOURCES
   src/model/deck-engine.hpp
   src/model/deck-model.cpp
   src/model/deck-model.hpp
+  src/model/multiview.cpp
+  src/model/multiview.hpp
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp

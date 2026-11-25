@@ -2,6 +2,11 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## Unreleased
+
+- Inside: the Multiview's rules (which outputs each canvas shows, their status lines, the dropped-frame warning, the
+  on-air border and the grid) move into the plugin's model layer, with tests. It looks and works as before.
+
 ## 0.9.0
 
 - Inside: the look (Fiji-chan's fonts and the Fiji Sun / Moon themes) follows the plugin's layers: the rules for which

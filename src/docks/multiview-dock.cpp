@@ -25,9 +25,6 @@ static std::list<MultiviewDock *> multiviews;
 static MultiviewDock *overPreview = nullptr;
 static bool previewWasEnabled = true;
 
-// An output is flagged once it drops more than this share of its frames.
-static const double droppedWarningPercent = 1.0;
-
 CanvasTile::CanvasTile(obs_canvas_t *canvas_, const QString &dockName_, CanvasDock *canvasDock_, bool mainCanvas_,
 		       QWidget *parent)
 	: QFrame(parent),
@@ -36,6 +33,7 @@ CanvasTile::CanvasTile(obs_canvas_t *canvas_, const QString &dockName_, CanvasDo
 	  dockName(dockName_),
 	  canvasDock(canvasDock_),
 	  mainCanvas(mainCanvas_),
+	  outputs(QString::fromUtf8(obs_canvas_get_name(canvas_)), mainCanvas_),
 	  display(new OBSQTDisplay(this)),
 	  title(new QLabel(this)),
 	  chipsLayout(new QVBoxLayout)
@@ -118,7 +116,7 @@ void CanvasTile::UpdateTitle()
 	}
 }
 
-static QIcon output_icon(const OutputState &s)
+static QIcon output_icon(const fiji::model::Chip &s)
 {
 	if (s.type == QStringLiteral("record")) {
 		return QIcon(QStringLiteral(":/fiji/media/record.svg"));
@@ -160,35 +158,22 @@ void CanvasTile::SetWarningColor(const QColor &color)
 	}
 }
 
-void CanvasTile::UpdateOutputs(const std::vector<OutputState> &states)
+void CanvasTile::UpdateOutputs(const QList<fiji::model::MultiviewOutput> &states)
 {
 	UpdateTitle();
 
-	// outputs with no canvas set, and OBS's own outputs, belong to the main canvas
-	std::vector<const OutputState *> mine;
-	for (const auto &s : states) {
-		if ((s.main || s.canvas.isEmpty()) ? mainCanvas : (!mainCanvas && s.canvas == canvasName)) {
-			mine.push_back(&s);
+	const auto update = outputs.update(states, clock.elapsed());
+	for (const auto &name : update.gone) {
+		auto it = chips.find(name);
+		if (it != chips.end()) {
+			chipsLayout->removeWidget(it->second.row);
+			delete it->second.row;
+			chips.erase(it);
 		}
 	}
 
-	// drop chips of outputs that are gone
-	for (auto it = chips.begin(); it != chips.end();) {
-		const bool present =
-			std::any_of(mine.begin(), mine.end(), [&](const OutputState *s) { return s->name == it->first; });
-		if (present) {
-			++it;
-			continue;
-		}
-		chipsLayout->removeWidget(it->second.row);
-		delete it->second.row;
-		it = chips.erase(it);
-	}
-
-	bool anyLive = false;
-	const qint64 now = clock.elapsed();
-	for (const auto s : mine) {
-		auto found = chips.find(s->name);
+	for (const auto &s : update.chips) {
+		auto found = chips.find(s.name);
 		if (found == chips.end()) {
 			Chip chip;
 			chip.row = new QWidget(this);
@@ -196,63 +181,48 @@ void CanvasTile::UpdateOutputs(const std::vector<OutputState> &states)
 			rowLayout->setContentsMargins(0, 0, 0, 0);
 			rowLayout->setSpacing(6);
 			chip.icon = new QLabel(chip.row);
-			chip.icon->setPixmap(output_icon(*s).pixmap(16, 16));
+			chip.icon->setPixmap(output_icon(s).pixmap(16, 16));
 			rowLayout->addWidget(chip.icon);
 			chip.text = new QLabel(chip.row);
 			rowLayout->addWidget(chip.text, 1);
 			chip.row->setLayout(rowLayout);
 			chipsLayout->addWidget(chip.row);
-			chip.lastBytes = s->totalBytes;
-			chip.lastTime = now;
-			found = chips.emplace(s->name, chip).first;
+			found = chips.emplace(s.name, chip).first;
 		}
 		auto &chip = found->second;
 
-		if (s->active && now > chip.lastTime) {
-			if (s->totalBytes >= chip.lastBytes) {
-				chip.kbps = int((s->totalBytes - chip.lastBytes) * 8 / (now - chip.lastTime));
+		QString text = s.name;
+		const auto sep = QStringLiteral("  ·  ");
+		switch (s.state) {
+		case fiji::model::ChipState::Reconnecting:
+			text += sep + QString::fromUtf8(obs_module_text("OutputReconnecting"));
+			break;
+		case fiji::model::ChipState::Live:
+			text += sep + QString::fromUtf8(obs_module_text("OutputLive")) + QStringLiteral(" ") +
+				fiji::model::liveTime(s.liveSeconds);
+			if (s.showRate) {
+				text += sep + QStringLiteral("%1 kb/s").arg(s.kbps);
 			}
-		} else if (!s->active) {
-			chip.kbps = 0;
-		}
-		chip.lastBytes = s->totalBytes;
-		chip.lastTime = now;
-
-		QString text = s->name;
-		bool warning = false;
-		if (s->reconnecting) {
-			text += QStringLiteral("  ·  ") + QString::fromUtf8(obs_module_text("OutputReconnecting"));
-			warning = true;
-		} else if (s->active) {
-			anyLive = true;
-			const auto secs = s->startTime.isValid() ? s->startTime.secsTo(QDateTime::currentDateTime()) : 0;
-			const auto t = QTime(0, 0).addSecs(int(secs % 86400));
-			text += QStringLiteral("  ·  ") + QString::fromUtf8(obs_module_text("OutputLive")) + QStringLiteral(" ") +
-				t.toString(t.hour() ? QStringLiteral("hh:mm:ss") : QStringLiteral("mm:ss"));
-			if (s->type == QStringLiteral("stream") || s->type == QStringLiteral("ffmpeg")) {
-				text += QStringLiteral("  ·  %1 kb/s").arg(chip.kbps);
+			if (s.droppedPercent >= 0) {
+				text += sep + QString::fromUtf8(obs_module_text("OutputDropped")).arg(s.droppedPercent, 0, 'f', 1);
 			}
-			if (s->totalFrames > 0 && s->droppedFrames > 0) {
-				const double dropped = 100.0 * s->droppedFrames / s->totalFrames;
-				text += QStringLiteral("  ·  ") +
-					QString::fromUtf8(obs_module_text("OutputDropped")).arg(dropped, 0, 'f', 1);
-				warning = dropped >= droppedWarningPercent;
-			}
-		} else {
-			text += QStringLiteral("  ·  ") + QString::fromUtf8(obs_module_text("OutputIdle"));
+			break;
+		case fiji::model::ChipState::Idle:
+			text += sep + QString::fromUtf8(obs_module_text("OutputIdle"));
+			break;
 		}
 		if (chip.text->text() != text) {
 			chip.text->setText(text);
 		}
-		const auto style = warning ? QStringLiteral("color:%1;").arg(warningColor.name()) : QString();
+		const auto style = s.warning ? QStringLiteral("color:%1;").arg(warningColor.name()) : QString();
 		if (chip.text->styleSheet() != style) {
 			chip.text->setStyleSheet(style);
 		}
-		chip.text->setEnabled(s->active || s->reconnecting);
+		chip.text->setEnabled(s.state != fiji::model::ChipState::Idle);
 	}
 
-	if (anyLive != live) {
-		live = anyLive;
+	if (update.live != live) {
+		live = update.live;
 		setProperty("live", live);
 		style()->unpolish(this);
 		style()->polish(this);
@@ -365,7 +335,7 @@ void MultiviewDock::Rebuild()
 	}
 
 	// as square a grid as the number of canvases allows
-	const int columns = std::max(1, int(std::ceil(std::sqrt(double(tiles.size())))));
+	const int columns = fiji::model::multiviewColumns(int(tiles.size()));
 	for (size_t i = 0; i < tiles.size(); i++) {
 		grid->addWidget(tiles[i], int(i) / columns, int(i) % columns);
 	}
@@ -377,7 +347,13 @@ void MultiviewDock::Refresh()
 	if (!output_dock || tiles.empty()) {
 		return;
 	}
-	const auto states = output_dock->GetOutputStates();
+	QList<fiji::model::MultiviewOutput> states;
+	const auto now = QDateTime::currentDateTime();
+	for (const auto &s : output_dock->GetOutputStates()) {
+		states.append({s.name, s.type, s.server, s.canvas, s.main, s.active, s.reconnecting,
+			       s.startTime.isValid() ? s.startTime.secsTo(now) : 0, s.totalBytes, s.totalFrames,
+			       s.droppedFrames});
+	}
 	for (auto tile : tiles) {
 		tile->UpdateOutputs(states);
 	}

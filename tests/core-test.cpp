@@ -22,6 +22,7 @@
 #include "../src/state/output-states.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
+#include "../src/model/multiview.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -699,6 +700,51 @@ static void test_updates()
 	CHECK(outcomeOf("v0.9.1", settings) == "off");
 }
 
+// ---- Multiview -------------------------------------------------------------------------------------------------
+static void test_multiview()
+{
+	model::MultiviewOutput stream{"Stream", "stream", "rtmp://live.twitch.tv/app", "", true};
+	model::MultiviewOutput tiktok{"TikTok", "stream", "rtmp://tiktok", "Vertical"};
+	model::MultiviewOutput rec{"Local", "record", "", ""};
+	CHECK(model::outputOnTile(stream, "Main", true) && !model::outputOnTile(stream, "Vertical", false));
+	CHECK(model::outputOnTile(rec, "Main", true)); // no canvas: the main one
+	CHECK(model::outputOnTile(tiktok, "Vertical", false) && !model::outputOnTile(tiktok, "Vertical", true));
+	CHECK(!model::outputOnTile(tiktok, "Other", false));
+
+	CHECK(model::multiviewColumns(0) == 1 && model::multiviewColumns(1) == 1 && model::multiviewColumns(2) == 2);
+	CHECK(model::multiviewColumns(4) == 2 && model::multiviewColumns(5) == 3 && model::multiviewColumns(10) == 4);
+	CHECK(model::liveTime(65) == "01:05" && model::liveTime(3725) == "01:02:05" && model::liveTime(86400 + 5) == "00:05");
+
+	model::TileOutputs vertical("Vertical", false);
+	auto u = vertical.update({stream, tiktok, rec}, 0);
+	CHECK(u.chips.size() == 1 && u.chips[0].name == "TikTok" && u.chips[0].state == model::ChipState::Idle);
+	CHECK(!u.live && u.gone.isEmpty());
+
+	tiktok.active = true;
+	tiktok.liveSeconds = 30;
+	tiktok.totalBytes = 750000; // 6000 kbit over the next second
+	u = vertical.update({tiktok}, 1000);
+	CHECK(u.live && u.chips[0].state == model::ChipState::Live && u.chips[0].showRate && u.chips[0].kbps == 6000);
+	CHECK(u.chips[0].droppedPercent < 0 && !u.chips[0].warning);
+
+	tiktok.totalBytes += 500000;
+	tiktok.totalFrames = 1000;
+	tiktok.droppedFrames = 5; // 0.5 %: shown, no warning
+	u = vertical.update({tiktok}, 2000);
+	CHECK(u.chips[0].kbps == 4000 && qAbs(u.chips[0].droppedPercent - 0.5) < 1e-9 && !u.chips[0].warning);
+	tiktok.droppedFrames = 20; // 2 %: a warning
+	u = vertical.update({tiktok}, 3000);
+	CHECK(u.chips[0].warning && u.chips[0].kbps == 0);
+
+	tiktok.reconnecting = true;
+	u = vertical.update({tiktok}, 4000);
+	CHECK(u.chips[0].state == model::ChipState::Reconnecting && u.chips[0].warning && !u.live);
+
+	model::MultiviewOutput local{"Local", "record", "", "Vertical", false, true};
+	u = vertical.update({local}, 5000);
+	CHECK(u.gone == QStringList({"TikTok"}) && u.live && !u.chips[0].showRate);
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -715,6 +761,7 @@ int main(int argc, char **argv)
 	test_output_controller();
 	test_themes();
 	test_updates();
+	test_multiview();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;
