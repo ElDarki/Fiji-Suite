@@ -29,6 +29,7 @@ void fiji_emit_event(const char *event, obs_data_t *data)
 	if (auto server = LocalServer::Get()) {
 		server->Event(event, data);
 	}
+	fiji_core_event(event, data); // the plugin's own state machines (outputs)
 	// The bridge ACL turns the plugin's events into contract EVENTs (or SYNC_STATEs), on the UI thread.
 	auto link = fiji::bridge::BotLink::instance();
 	if (link && link->acl().linked()) {
@@ -41,7 +42,8 @@ void fiji_emit_event(const char *event, obs_data_t *data)
 bool fiji_events_wanted()
 {
 	auto link = fiji::bridge::BotLink::instance();
-	return vendor || (link && link->acl().linked()) || local_server_has_listeners();
+	// the core (built at module load) always listens: its output states follow these events
+	return fiji_link_state() != nullptr || vendor || (link && link->acl().linked()) || local_server_has_listeners();
 }
 
 // Whether the bot link is up, for the deck editor: Twitch triggers and chat steps only work while it is.

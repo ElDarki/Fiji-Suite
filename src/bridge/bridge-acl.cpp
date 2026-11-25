@@ -212,26 +212,22 @@ void BridgeAcl::onPluginEvent(const QString &name, const QJsonObject &data)
 		sendEvent("scene.program", {{"canvas", text("canvas")}, {"scene", text("new_scene")}, {"previous", text("old_scene")}});
 	} else if (name == "main_scene_changed") {
 		sendEvent("scene.program", {{"canvas", mainCanvasName()}, {"scene", text("scene")}, {"previous", text("previous")}});
-	} else if (name == "start_output" || name == "stop_output" || name == "output_reconnecting" ||
-		   name == "output_reconnected") {
-		const auto output = text("output");
-		QString state = QStringLiteral("ACTIVE");
-		QJsonObject payload{{"output", output}, {"kind", outputKinds_.value(output)}};
-		if (name == "output_reconnecting") {
-			state = QStringLiteral("RECONNECTING");
-		} else if (name == "stop_output") {
-			const auto error = text("last_error");
-			state = error.isEmpty() ? QStringLiteral("IDLE") : QStringLiteral("FAILED");
-			if (!error.isEmpty()) {
-				payload.insert("error", error);
-			}
-		}
-		payload.insert("state", state);
-		sendEvent("output.state", payload);
 	} else if (name == "scene_added" || name == "scene_removed" || name == "scene_renamed" || name == "scene_list_changed" ||
 		   name == "canvas_changed" || name == "outputs_changed") {
 		publishSnapshot(); // no event covers these (BRIDGE_CONTRACT.md section 4)
 	}
+}
+
+void BridgeAcl::publishOutputState(const QString &output, const QString &state, const QString &error)
+{
+	if (!linked_) {
+		return;
+	}
+	QJsonObject payload{{"output", output}, {"kind", outputKinds_.value(output)}, {"state", state}};
+	if (!error.isEmpty()) {
+		payload.insert("error", error);
+	}
+	sendEvent("output.state", payload);
 }
 
 void BridgeAcl::publishSnapshot(const QString &replyTo)

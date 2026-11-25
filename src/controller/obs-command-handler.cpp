@@ -30,8 +30,7 @@ CommandResult badRequest(const QString &message)
 
 QStringList ObsCommandHandler::actions() const
 {
-	return {"scene.switch", "transition.set", "transition.run", "output.start", "output.stop",
-		"deck.file",    "look.get",       "state.snapshot"};
+	return {"scene.switch", "transition.set", "transition.run", "deck.file", "look.get", "state.snapshot"};
 }
 
 CommandResult ObsCommandHandler::handle(const Command &command)
@@ -56,12 +55,6 @@ CommandResult ObsCommandHandler::handle(const Command &command)
 	}
 	if (a == "transition.run") {
 		return from(obs_.runTransition(text("canvas")));
-	}
-	if (a == "output.start" || a == "output.stop") {
-		if (text("target").isEmpty()) {
-			return badRequest(QStringLiteral("Which output?"));
-		}
-		return from(a == "output.start" ? obs_.startOutputs(text("target")) : obs_.stopOutputs(text("target")));
 	}
 	if (a == "deck.file") {
 		return from(obs_.webFile(text("name")));

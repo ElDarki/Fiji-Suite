@@ -65,3 +65,9 @@ engine (`model/deck-engine`), `state::DeckKeys` (idle, held, running, held and r
 `controller::DeckController` (every deck action, from the bridge, the local deck server, obs-websocket and the
 hotkeys, goes through the dispatcher), and behind `obs/deck-port.hpp` the steps that act on OBS
 (`obs::ObsDeckSteps`) and the hotkeys (`obs::ObsDeckHotkeys`). The deck pages are the view.
+
+Moved in 0.8.0: starting and stopping outputs, and their life cycle. `model::planOutputs` says what a target means
+(all, a group, OBS's own outputs, a name), `state::OutputStates` follows each output (IDLE, STARTING, ACTIVE,
+RECONNECTING, STOPPING, FAILED) from OBS's signals, and `controller::OutputController` serves `output.start` and
+`output.stop` through `obs::OutputBackend`. The bridge reports `output.state` from the state machine. The output
+dock, its widgets and the encoder setup are still legacy views; they move next.

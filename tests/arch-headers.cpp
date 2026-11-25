@@ -11,16 +11,20 @@
 #include "../src/controller/command.hpp"
 #include "../src/controller/deck-controller.hpp"
 #include "../src/controller/obs-command-handler.hpp"
+#include "../src/controller/output-controller.hpp"
 #include "../src/model/deck-engine.hpp"
 #include "../src/model/deck-model.hpp"
 #include "../src/model/local-store.hpp"
 #include "../src/model/obs-status.hpp"
+#include "../src/model/output-targets.hpp"
 #include "../src/obs/deck-port.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/obs/obs-data-store.hpp"
+#include "../src/obs/output-port.hpp"
 #include "../src/obs/request-obs-api.hpp"
 #include "../src/state/deck-keys.hpp"
 #include "../src/state/link-state.hpp"
+#include "../src/state/output-states.hpp"
 
 #include <cstdio>
 #include <cstring>

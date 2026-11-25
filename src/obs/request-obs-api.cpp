@@ -13,8 +13,6 @@ namespace fiji::obs {
 
 namespace {
 
-const QStringList kMainOutputs = {"stream", "record", "backtrack", "virtual_cam"};
-
 QJsonObject call(const char *name, const QJsonObject &data = {})
 {
 	OBSDataAutoRelease request = obs_data_create_from_json(QJsonDocument(data).toJson(QJsonDocument::Compact).constData());
@@ -124,59 +122,49 @@ ObsCall RequestObsApi::runTransition(const QString &canvas)
 	return result(call("transition", {{"canvas", canvas}}));
 }
 
-ObsCall RequestObsApi::startOutputs(const QString &target)
+QList<model::OutputStatus> RequestObsApi::outputs()
 {
-	return outputs(true, target);
+	return snapshot().outputs;
 }
 
-ObsCall RequestObsApi::stopOutputs(const QString &target)
+ObsCall RequestObsApi::startAll()
 {
-	return outputs(false, target);
+	return result(call("start_all_outputs"));
 }
 
-ObsCall RequestObsApi::outputs(bool start, const QString &target)
+ObsCall RequestObsApi::stopAll()
 {
-	const char *verb = start ? "start" : "stop";
-	const auto key = QLatin1String(start ? "started" : "stopped");
-	const auto list = snapshot().outputs;
-	QStringList affected;
-	if (target == QStringLiteral("all")) {
-		for (const auto &o : list) {
-			affected.append(o.name);
-		}
-		auto call_ = result(call(start ? "start_all_outputs" : "stop_all_outputs"));
-		call_.data.insert(key, QJsonArray::fromStringList(affected));
-		return call_;
-	}
-	for (const auto &o : list) {
-		if (o.group == target) {
-			affected.append(o.name);
-		}
-	}
-	if (!affected.isEmpty()) {
-		auto call_ = result(call(start ? "start_group" : "stop_group", {{"group", target}}));
-		call_.data.insert(key, QJsonArray::fromStringList(affected));
-		return call_;
-	}
-	QString mainKind = kMainOutputs.contains(target) ? target : QString();
-	bool known = !mainKind.isEmpty();
-	for (const auto &o : list) {
-		if (o.name == target) {
-			known = true;
-			if (o.main) {
-				mainKind = o.kind;
-			}
-		}
-	}
-	if (!known) {
-		return ObsCall::failed(QStringLiteral("NOT_FOUND"), QStringLiteral("There is no output or group called %1").arg(target));
-	}
-	auto call_ = mainKind.isEmpty() ? result(call(QStringLiteral("%1_output").arg(QLatin1String(verb)).toUtf8().constData(),
-						      {{"output", target}}))
-					: result(call(QStringLiteral("%1_main").arg(QLatin1String(verb)).toUtf8().constData(),
-						      {{"output", mainKind}}));
-	call_.data.insert(key, QJsonArray{target});
-	return call_;
+	return result(call("stop_all_outputs"));
+}
+
+ObsCall RequestObsApi::startGroup(const QString &group)
+{
+	return result(call("start_group", {{"group", group}}));
+}
+
+ObsCall RequestObsApi::stopGroup(const QString &group)
+{
+	return result(call("stop_group", {{"group", group}}));
+}
+
+ObsCall RequestObsApi::startMain(const QString &kind)
+{
+	return result(call("start_main", {{"output", kind}}));
+}
+
+ObsCall RequestObsApi::stopMain(const QString &kind)
+{
+	return result(call("stop_main", {{"output", kind}}));
+}
+
+ObsCall RequestObsApi::startOutput(const QString &name)
+{
+	return result(call("start_output", {{"output", name}}));
+}
+
+ObsCall RequestObsApi::stopOutput(const QString &name)
+{
+	return result(call("stop_output", {{"output", name}}));
 }
 
 ObsCall RequestObsApi::webFile(const QString &name)

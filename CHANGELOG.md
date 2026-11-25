@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.8.0
+
+- The bot hears every step of an output's life: starting and stopping too, not just live, reconnecting and stopped.
+- Inside: starting and stopping outputs follows Model-View-Controller plus the State pattern, with an explicit state
+  machine per output and tests for it, for what each target means (all, a group, OBS's own outputs, a name) and for
+  the controller. The output dock and its buttons work as before.
+
 ## 0.7.0
 
 - Deck keys know when they are held down: `get_deck_state` also says which keys are held, running, or both (the

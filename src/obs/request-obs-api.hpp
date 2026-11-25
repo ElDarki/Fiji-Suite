@@ -5,22 +5,30 @@
 // calls move here as direct libobs calls. Runs on the UI thread (the dispatcher's consumer).
 
 #include "obs-api.hpp"
+#include "output-port.hpp"
 
 namespace fiji::obs {
 
-class RequestObsApi final : public ObsApi {
+class RequestObsApi final : public ObsApi, public OutputBackend {
 public:
 	model::ObsSnapshot snapshot() override;
 	ObsCall switchScene(const QString &scene, const QString &canvas) override;
 	ObsCall setTransition(const QString &canvas, const QString &transition) override;
 	ObsCall runTransition(const QString &canvas) override;
-	ObsCall startOutputs(const QString &target) override;
-	ObsCall stopOutputs(const QString &target) override;
 	ObsCall webFile(const QString &name) override;
 	ObsCall look() override;
 
-private:
-	ObsCall outputs(bool start, const QString &target);
+
+	// OutputBackend
+	QList<model::OutputStatus> outputs() override;
+	ObsCall startAll() override;
+	ObsCall stopAll() override;
+	ObsCall startGroup(const QString &group) override;
+	ObsCall stopGroup(const QString &group) override;
+	ObsCall startMain(const QString &kind) override;
+	ObsCall stopMain(const QString &kind) override;
+	ObsCall startOutput(const QString &name) override;
+	ObsCall stopOutput(const QString &name) override;
 };
 
 } // namespace fiji::obs
