@@ -1054,6 +1054,7 @@ static void test_stream_output()
 		QJsonObject{{"ingests", QJsonArray{QJsonObject{{"name", "EU"}, {"url_template", "rtmp://eu.twitch.tv/app/{stream_key}"}}}}});
 	CHECK(ingests.size() == 2 && ingests.at(0).name == "Default" && ingests.at(1).url == "rtmp://eu.twitch.tv/app");
 
+	CHECK(model::isTwitchServer("rtmp://live.twitch.tv/app") && !model::isTwitchServer("rtmp://a.rtmp.youtube.com/live2"));
 	CHECK(model::serverWithoutKey("https://x/whip") && model::serverWithoutKey("SRT://x") && !model::serverWithoutKey("rtmp://x"));
 	CHECK(!model::streamOutputValid({"Main", "rtmp://x", ""}, {}));
 	CHECK(model::streamOutputValid({"Main", "srt://x", ""}, {}));

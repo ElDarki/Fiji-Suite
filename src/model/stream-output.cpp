@@ -29,10 +29,15 @@ StreamPlatform streamPlatform(const QString &id)
 	return streamPlatforms().last();
 }
 
+bool isTwitchServer(const QString &server)
+{
+	return server.contains("ingest.global-contribute.live-video.net") || server.contains(".contribute.live-video.net") ||
+	       server.contains(".twitch.tv");
+}
+
 QString streamPlatformFor(const QString &server)
 {
-	if (server.contains("ingest.global-contribute.live-video.net") || server.contains(".contribute.live-video.net") ||
-	    server.contains(".twitch.tv")) {
+	if (isTwitchServer(server)) {
 		return QStringLiteral("twitch");
 	}
 	if (server.contains(".youtube.com"))

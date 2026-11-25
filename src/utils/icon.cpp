@@ -1,3 +1,4 @@
+#include "../model/stream-output.hpp"
 #include "icon.hpp"
 
 #include <obs-frontend-api.h>
@@ -120,12 +121,11 @@ QIcon GetIconFromType(enum obs_icon_type icon_type, const char *id)
 	}
 }
 
-extern bool isTwitchServer(QString outputServer);
 
 QIcon getPlatformIconFromEndpoint(QString endpoint)
 {
 
-	if (isTwitchServer(endpoint)) { // twitch
+	if (fiji::model::isTwitchServer(endpoint)) { // twitch
 		return QIcon(":/fiji/media/twitch.png");
 	} else if (endpoint.contains(QString::fromUtf8(".youtube.com"))) { // youtube
 		return QIcon(":/fiji/media/youtube.png");

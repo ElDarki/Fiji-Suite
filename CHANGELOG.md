@@ -12,6 +12,8 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
   instead of leaving them empty.
 - The Stats dock's rates no longer start with a spike (an output that was already running showed its whole total as
   its first second), and its graphs are drawn from each rate's last minutes, scaled to what is shown.
+- A Linux build could leave a missing function unnoticed until OBS loaded the plugin (Windows refused to link it); it
+  now fails at build time too.
 - The FFmpeg output dialog: a new output starts as "to a file" with spaces allowed (both were left unset), and the
   "generate file names without spaces" box now does what it says.
 - Each Fiji Suite output reports its real state: starting, live, reconnecting, stopping, stopped or failed. The bot and

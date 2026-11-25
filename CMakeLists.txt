@@ -47,6 +47,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl)
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 endif()
+# Windows refuses to link a plugin with a missing symbol; make Linux refuse too, instead of failing when OBS loads it.
+if(OS_LINUX OR OS_FREEBSD OR OS_OPENBSD)
+  target_link_options(${PROJECT_NAME} PRIVATE -Wl,--no-undefined)
+endif()
 
 if((OS_LINUX OR OS_FREEBSD OR OS_OPENBSD) AND Qt6_VERSION VERSION_LESS "6.9.0")
   find_package(Qt6 COMPONENTS GuiPrivate)

@@ -1,3 +1,4 @@
+#include "../../model/stream-output.hpp"
 #include "output-widget.hpp"
 #include "../fiji-events.hpp"
 #include "../../model/profile-model.hpp"
@@ -22,7 +23,6 @@
 #include <util/config-file.h>
 #include <util/platform.h>
 
-extern bool isTwitchServer(QString outputServer);
 
 OutputWidget::OutputWidget(obs_data_t *output_data, QWidget *parent) : QFrame(parent), settings(output_data)
 {
@@ -756,7 +756,7 @@ bool OutputWidget::StartOutput(bool automated)
 				auto vod_track = obs_data_get_int(settings, "vod_track");
 				if (vod_track >= 0 && vod_track != audio_track &&
 				    (config_get_bool(obs_frontend_get_user_config(), "General", "EnableCustomServerVodTrack") ||
-				     isTwitchServer(streamServer))) {
+				     fiji::model::isTwitchServer(streamServer))) {
 					if (aes) {
 						s = obs_data_create();
 						obs_data_apply(s, aes);

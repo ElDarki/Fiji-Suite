@@ -1,3 +1,4 @@
+#include "../model/stream-output.hpp"
 #include "../decks/local-server.hpp"
 #include "../state/link-state.hpp"
 #include "../utils/fiji-events.hpp"
@@ -53,7 +54,6 @@
 #endif
 #include "../view/name-dialog.hpp"
 
-extern bool isTwitchServer(QString outputServer);
 
 template<typename T> std::string to_string_with_precision(const T a_value, const int n = 6)
 {
@@ -2157,7 +2157,7 @@ void OBSBasicSettings::LoadOutputLayout(obs_data_t *settings, QFormLayout *outpu
 	    !streamServer.startsWith("srt://", Qt::CaseInsensitive) && !streamServer.startsWith("rist://", Qt::CaseInsensitive)) {
 		QComboBox *vodTrack = nullptr;
 		if (config_get_bool(obs_frontend_get_user_config(), "General", "EnableCustomServerVodTrack") ||
-		    isTwitchServer(streamServer)) {
+		    fiji::model::isTwitchServer(streamServer)) {
 			obs_data_set_default_int(settings, "vod_track", -1);
 			vodTrack = new QComboBox;
 			vodTrack->addItem(QString::fromUtf8(obs_frontend_get_locale_string("None")));

@@ -51,6 +51,8 @@ QList<StreamServer> serversOf(const QJsonObject &servicesJson, const QString &se
 // Twitch's ingests, from rtmp-services' twitch_ingests.json, after Twitch's default server.
 QList<StreamServer> twitchIngests(const QJsonObject &ingestsJson);
 
+// A Twitch ingest server.
+bool isTwitchServer(const QString &server);
 // A server that needs no stream key: WHIP, SRT and RIST.
 bool serverWithoutKey(const QString &server);
 // Whether the dialog may save: a name no other output has, a server, and a key unless the server needs none.
