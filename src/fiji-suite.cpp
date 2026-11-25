@@ -21,18 +21,21 @@
 #include "controller/deck-controller.hpp"
 #include "controller/obs-command-handler.hpp"
 #include "controller/output-controller.hpp"
+#include "controller/update-checker.hpp"
 #include "model/deck-model.hpp"
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
+#include "obs/obs-look.hpp"
+#include "obs/github-releases.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
 #include "state/output-states.hpp"
+#include "view/restart-notice.hpp"
+#include "view/update-offer.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
-#include "utils/update-check.hpp"
-#include "utils/fiji-look.hpp"
 #include "version.h"
 #include <obs-frontend-api.h>
 #include <obs.hpp>
@@ -550,6 +553,9 @@ struct Core {
 	fiji::controller::DeckController decks{deckModel, keys, steps, hotkeys};
 	fiji::bridge::BotLink bot{dispatcher, link, QStringLiteral(PROJECT_VERSION),
 				  [](const QString &line) { blog(LOG_INFO, "[Fiji Suite] %s", line.toUtf8().constData()); }};
+	fiji::obs::GitHubReleases releases{QStringLiteral("fiji-suite/" PROJECT_VERSION)};
+	fiji::obs::FrontendUpdateSettings updateSettings;
+	fiji::controller::UpdateChecker updates{releases, updateSettings, QStringLiteral(PROJECT_VERSION)};
 	QString mainScene; // for scene.program's "previous"
 
 	Core()
@@ -585,15 +591,27 @@ struct Core {
 			blog(LOG_INFO, "[Fiji Suite] Deck: %s", text.toUtf8().constData());
 			emit_text_event("deck_notification", text);
 		});
+		QObject::connect(&updates, &fiji::controller::UpdateChecker::offerUpdate, [this](const QString &latest, const QString &current) {
+			const auto text = [](const char *key) { return QString::fromUtf8(obs_module_text(key)); };
+			blog(LOG_INFO, "[Fiji Suite] Version %s is available (this is %s)", latest.toUtf8().constData(),
+			     current.toUtf8().constData());
+			fiji::view::showUpdateOffer(static_cast<QWidget *>(obs_frontend_get_main_window()),
+						    {text("UpdateTitle"), text("UpdateText").arg(latest, current), text("UpdateInfo"),
+						     text("UpdateDownload"), text("UpdateSkip"), text("UpdateLater")},
+						    QStringLiteral("https://github.com/ElDarki/Fiji-Suite/releases/latest"),
+						    [this, latest] { updates.skip(latest); });
+		});
 		decks.start();
 	}
 	~Core()
 	{
+		updates.stop();
 		fiji::bridge::BotLink::setInstance(nullptr);
 		decks.shutdown();
 	}
 };
 Core *core = nullptr;
+bool themes_added = false; // this start copied themes OBS has not listed yet: it lists them after a restart
 
 void start_core()
 {
@@ -673,7 +691,12 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 	}
 	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 		finished_loading = true;
-		FijiLook::ShowRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()));
+		if (themes_added) {
+			themes_added = false;
+			fiji::view::showRestartNotice(static_cast<QWidget *>(obs_frontend_get_main_window()),
+						      QString::fromUtf8(obs_module_text("ThemesAddedTitle")),
+						      QString::fromUtf8(obs_module_text("ThemesAddedText")));
+		}
 		log_same_sources();
 		struct obs_frontend_source_list transitions = {};
 		obs_frontend_get_transitions(&transitions);
@@ -707,13 +730,12 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 			const char *address = config_get_string(user_config, "FijiSuite", "BotAddress");
 			fiji_set_bot_address(QString::fromUtf8(address ? address : ""));
 		}
-		UpdateCheck::Start();
+		core->updates.start(); // asks GitHub once per start, in the background, when the user allows it
 	} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
 		load_current_profile_config();
 	} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
 		save_current_profile_config(true);
 	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN) {
-		UpdateCheck::Stop();
 		stop_core(); // the bot link, and the decks: every key and sound stops, the hotkeys go
 		LocalServer::Stop();
 		MultiviewDock::CloseWindows();
@@ -953,7 +975,7 @@ bool obs_module_load(void)
 	obs_register_source(&component_info);
 
 	// Her fonts, and the Fiji Sun / Fiji Moon themes copied where OBS looks for them.
-	FijiLook::Install();
+	themes_added = fiji::obs::installLook();
 
 	obs_frontend_add_event_callback(frontend_event, nullptr);
 
@@ -1058,7 +1080,6 @@ void unload_obs_websocket();
 
 void obs_module_unload()
 {
-	UpdateCheck::Stop();
 	stop_core();
 	LocalServer::Stop();
 	unload_obs_websocket();

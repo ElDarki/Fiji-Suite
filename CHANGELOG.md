@@ -2,6 +2,15 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## 0.9.0
+
+- Inside: the look (Fiji-chan's fonts and the Fiji Sun / Moon themes) follows the plugin's layers: the rules for which
+  theme files to write and which retired ones to remove are tested without touching the disk, and the restart notice
+  is the first piece of the view layer. Nothing changes for you: the themes install and update exactly as before.
+- Inside: the update check is split the same way (version rules, the decision, the GitHub request, the offer
+  window), with tests for which versions are offered, skipped or ignored. It still asks GitHub once per OBS start,
+  only when "Check for updates when OBS starts" is on.
+
 ## 0.8.0
 
 - The bot hears every step of an output's life: starting and stopping too, not just live, reconnecting and stopped.

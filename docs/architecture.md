@@ -71,3 +71,8 @@ Moved in 0.8.0: starting and stopping outputs, and their life cycle. `model::pla
 RECONNECTING, STOPPING, FAILED) from OBS's signals, and `controller::OutputController` serves `output.start` and
 `output.stop` through `obs::OutputBackend`. The bridge reports `output.state` from the state machine. The output
 dock, its widgets and the encoder setup are still legacy views; they move next.
+
+Moved in 0.9.0: the look. `model::planThemes` decides which theme files to write or remove, `obs::installLook`
+registers the fonts and copies the themes, and `view::showRestartNotice` is the first view. The update check is
+`model::isNewer`, `controller::UpdateChecker`, `obs::GitHubReleases` (behind `obs/update-port.hpp`) and
+`view::showUpdateOffer`.

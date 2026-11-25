@@ -190,7 +190,7 @@ OBSBasicSettings::OBSBasicSettings(QMainWindow *parent) : QDialog(parent)
 	});
 	generalPageLayout->addWidget(remoteControl, 0);
 
-	// One request to GitHub per OBS start; see utils/update-check.hpp.
+	// One request to GitHub per OBS start; see controller/update-checker.hpp.
 	auto checkForUpdates = new QCheckBox(QString::fromUtf8(obs_module_text("CheckForUpdates")));
 	if (auto user_config = obs_frontend_get_user_config()) {
 		checkForUpdates->setChecked(config_get_bool(user_config, "FijiSuite", "CheckForUpdates"));
