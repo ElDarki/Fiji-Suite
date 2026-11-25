@@ -76,3 +76,9 @@ Moved in 0.9.0: the look. `model::planThemes` decides which theme files to write
 registers the fonts and copies the themes, and `view::showRestartNotice` is the first view. The update check is
 `model::isNewer`, `controller::UpdateChecker`, `obs::GitHubReleases` (behind `obs/update-port.hpp`) and
 `view::showUpdateOffer`.
+
+Moved (unreleased): the Filters dock. `model::FilterList` holds the shown source's filters, with the rules for which
+types fit a source and for free names; `obs::ObsFilters` follows OBS into it and is the `obs/filter-port.hpp` that
+changes filters (removing one stays undoable); `controller::FiltersController` is what the dock does, and
+`view::FiltersDock` is the dock. The Properties dock tells it which source to show through
+`fiji_filters_show`/`fiji_filters_deselect`, and a chosen filter opens there.

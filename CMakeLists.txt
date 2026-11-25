@@ -82,8 +82,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/canvas-clone-dock.hpp
   src/docks/capture-dock.cpp
   src/docks/capture-dock.hpp
-  src/docks/filters-dock.cpp
-  src/docks/filters-dock.hpp
   src/docks/live-scenes-dock.cpp
   src/docks/live-scenes-dock.hpp
   src/docks/multiview-dock.cpp
@@ -132,6 +130,8 @@ set(FIJI_CORE_SOURCES
   src/controller/command.hpp
   src/controller/deck-controller.cpp
   src/controller/deck-controller.hpp
+  src/controller/filters-controller.cpp
+  src/controller/filters-controller.hpp
   src/controller/obs-command-handler.cpp
   src/controller/obs-command-handler.hpp
   src/controller/output-controller.cpp
@@ -142,6 +142,8 @@ set(FIJI_CORE_SOURCES
   src/model/deck-engine.hpp
   src/model/deck-model.cpp
   src/model/deck-model.hpp
+  src/model/filters.cpp
+  src/model/filters.hpp
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
@@ -152,6 +154,7 @@ set(FIJI_CORE_SOURCES
   src/model/theme-files.cpp
   src/model/theme-files.hpp
   src/obs/deck-port.hpp
+  src/obs/filter-port.hpp
   src/obs/obs-api.hpp
   src/obs/output-port.hpp
   src/obs/update-port.hpp
@@ -175,12 +178,16 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-deck-steps.hpp
   src/obs/github-releases.cpp
   src/obs/github-releases.hpp
+  src/obs/obs-filters.cpp
+  src/obs/obs-filters.hpp
   src/obs/obs-look.cpp
   src/obs/obs-look.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
   src/view/restart-notice.cpp
   src/view/restart-notice.hpp
+  src/view/filters-dock.cpp
+  src/view/filters-dock.hpp
   src/view/update-offer.cpp
   src/view/update-offer.hpp)
 
@@ -208,7 +215,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/projector.cpp
   src/utils/widgets/qt-display.cpp
   src/utils/widgets/visibility-checkbox.cpp
-  src/utils/widgets/visibility-item-widget.cpp
   src/utils/color.hpp
   src/utils/event-filter.hpp
   src/utils/icon.hpp
@@ -229,8 +235,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/switching-splitter.hpp
   src/utils/widgets/projector.hpp
   src/utils/widgets/qt-display.hpp
-  src/utils/widgets/visibility-checkbox.hpp
-  src/utils/widgets/visibility-item-widget.hpp)
+  src/utils/widgets/visibility-checkbox.hpp)
 
 if(BUILD_OUT_OF_TREE)
 	set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

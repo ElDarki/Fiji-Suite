@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org); the README says what each part means here.
 
+## Unreleased
+
+- Filters dock: the Properties button opens the selected filter (it did nothing); duplicating a filter no longer hangs
+  when "Name 2" is already taken; reordering keeps the selected filter selected.
+- Inside: the Filters dock follows the plugin's layers, with tests for which filters fit a source, names, renaming,
+  duplicating, ordering and switching sources.
+
 ## 0.9.0
 
 - Inside: the look (Fiji-chan's fonts and the Fiji Sun / Moon themes) follows the plugin's layers: the rules for which
