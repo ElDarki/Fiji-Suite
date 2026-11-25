@@ -182,6 +182,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/github-releases.hpp
   src/obs/obs-look.cpp
   src/obs/obs-look.hpp
+  src/obs/output-runner.cpp
+  src/obs/output-runner.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
   src/view/restart-notice.cpp

@@ -6,6 +6,8 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QDateTime>
+#include <functional>
+#include "../../obs/output-runner.hpp"
 
 class OutputWidget : public QFrame {
 	Q_OBJECT
@@ -16,9 +18,8 @@ private:
 	QPushButton *outputButton = nullptr;
 	QPushButton *extraButton = nullptr;
 	QLabel *canvasLabel = nullptr;
-	obs_output_t *output = nullptr;
+	fiji::obs::OutputRunner *runner = nullptr; // the output at work in OBS
 
-	std::function<void()> onStarted = nullptr;
 
 	QTimer activeTimer;
 	QDateTime startTime;
@@ -31,23 +32,14 @@ private:
 
 	bool StartOutput(bool automated = false);
 	void UpdateCanvas();
-	obs_encoder_t *GetVideoEncoder(obs_data_t *settings, bool advanced, bool is_record, const char *output_name,
-				       bool automated);
-
-	static void output_stop(void *data, calldata_t *calldata);
-	static void output_start(void *data, calldata_t *calldata);
-	static void replay_saved(void *data, calldata_t *calldata);
-	static void output_reconnect(void *data, calldata_t *calldata);
-	static void output_reconnect_success(void *data, calldata_t *calldata);
 	void contextMenuEvent(QContextMenuEvent *event) override;
-	static bool EncoderAvailable(const char *encoder);
-	static void ensure_directory(char *path);
+	void emitOutputEvent(const char *event, const char *lastError = nullptr, long long code = 0);
 
 public:
 	OutputWidget(obs_data_t *output_data, QWidget *parent = nullptr);
 	~OutputWidget();
 
-	obs_output_t *GetOutput() const { return output; }
+	obs_output_t *GetOutput() const { return runner->output(); }
 
 	void CheckActive();
 	void SaveSettings();
