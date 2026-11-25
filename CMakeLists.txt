@@ -136,6 +136,8 @@ set(FIJI_CORE_SOURCES
   src/controller/obs-command-handler.hpp
   src/controller/output-controller.cpp
   src/controller/output-controller.hpp
+  src/controller/output-sequencer.cpp
+  src/controller/output-sequencer.hpp
   src/controller/update-checker.cpp
   src/controller/update-checker.hpp
   src/model/deck-engine.cpp
@@ -145,6 +147,8 @@ set(FIJI_CORE_SOURCES
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
+  src/model/output-sequence.cpp
+  src/model/output-sequence.hpp
   src/model/output-targets.cpp
   src/model/output-targets.hpp
   src/model/release-version.cpp
@@ -154,6 +158,7 @@ set(FIJI_CORE_SOURCES
   src/obs/deck-port.hpp
   src/obs/obs-api.hpp
   src/obs/output-port.hpp
+  src/obs/startable-port.hpp
   src/obs/update-port.hpp
   src/state/deck-keys.cpp
   src/state/deck-keys.hpp

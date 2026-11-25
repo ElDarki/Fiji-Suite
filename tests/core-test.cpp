@@ -17,6 +17,8 @@
 #include "../src/model/theme-files.hpp"
 #include "../src/model/release-version.hpp"
 #include "../src/controller/update-checker.hpp"
+#include "../src/controller/output-sequencer.hpp"
+#include "../src/obs/startable-port.hpp"
 #include "../src/obs/update-port.hpp"
 #include "../src/obs/output-port.hpp"
 #include "../src/state/output-states.hpp"
@@ -26,6 +28,7 @@
 #include <QCoreApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QSet>
 #include <QThread>
 #include <cstdio>
 #include <thread>
@@ -699,6 +702,67 @@ static void test_updates()
 	CHECK(outcomeOf("v0.9.1", settings) == "off");
 }
 
+// ---- starting outputs one after another ----------------------------------------------------------------------
+class FakeStartables final : public obs::StartableOutputs {
+public:
+	QStringList tried;
+	QSet<QString> refuse;    // these cannot start now
+	QSet<QString> liveAtOnce; // these are live already
+	QHash<QString, std::function<void()>> pending;
+	bool startOutput(const QString &id, std::function<void()> onLive) override
+	{
+		tried.append(id);
+		if (refuse.contains(id)) {
+			return false;
+		}
+		if (liveAtOnce.contains(id)) {
+			onLive();
+		} else {
+			pending.insert(id, onLive);
+		}
+		return true;
+	}
+	void live(const QString &id) { pending.take(id)(); }
+};
+
+static void test_output_sequence()
+{
+	model::StartSequence s;
+	s.reset({"a", "b", "c"});
+	CHECK(s.current() == "a");
+	s.accepted();
+	CHECK(s.current() == "b" && s.refused() && s.current() == "c");
+	s.accepted();
+	CHECK(s.current() == "b" && !s.refused() && s.empty()); // b refused for a whole round: given up
+	CHECK((model::groupsOf({"", "Phones", "PC", "Phones"}) == QStringList{"Phones", "PC"}));
+
+	FakeStartables outputs;
+	controller::OutputSequencer sequencer(outputs);
+	QStringList gaveUp;
+	QObject::connect(&sequencer, &controller::OutputSequencer::gaveUp, [&](const QStringList &ids) { gaveUp = ids; });
+	outputs.liveAtOnce = {"main:stream"};
+	outputs.refuse = {"output:Busy"};
+	sequencer.start({"main:stream", "output:TikTok", "output:Busy", "output:Shorts"});
+	CHECK((outputs.tried == QStringList{"main:stream"})); // the next waits until this one is live (queued)
+	settle();
+	CHECK((outputs.tried == QStringList{"main:stream", "output:TikTok"})); // one at a time: TikTok is not live yet
+	outputs.live("output:TikTok");
+	settle();
+	CHECK((outputs.tried == QStringList{"main:stream", "output:TikTok", "output:Busy", "output:Shorts"}));
+	outputs.refuse.remove("output:Busy");
+	outputs.live("output:Shorts");
+	settle();
+	CHECK(outputs.tried.last() == "output:Busy" && sequencer.waiting().isEmpty()); // tried again, and it started
+	outputs.refuse = {"output:A", "output:B"};
+	sequencer.start({"output:A", "output:B"});
+	CHECK((gaveUp == QStringList{"output:A", "output:B"}) && sequencer.waiting().isEmpty());
+	sequencer.start({"output:C", "output:D"});
+	sequencer.stop(); // a stop: what still waits is forgotten, and C's going live starts nothing
+	outputs.live("output:C");
+	settle();
+	CHECK(!outputs.tried.contains("output:D"));
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -715,6 +779,7 @@ int main(int argc, char **argv)
 	test_output_controller();
 	test_themes();
 	test_updates();
+	test_output_sequence();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;
