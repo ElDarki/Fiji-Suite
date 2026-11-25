@@ -15,6 +15,9 @@
 #include "../src/controller/output-controller.hpp"
 #include "../src/model/output-targets.hpp"
 #include "../src/model/theme-files.hpp"
+#include "../src/model/release-version.hpp"
+#include "../src/controller/update-checker.hpp"
+#include "../src/obs/update-port.hpp"
 #include "../src/obs/output-port.hpp"
 #include "../src/state/output-states.hpp"
 #include "../src/obs/obs-api.hpp"
@@ -646,6 +649,56 @@ static void test_themes()
 	      "C:/Users/a/AppData/Roaming/obs-studio/themes");
 }
 
+// ---- the update check -----------------------------------------------------------------------------------
+class FakeFeed final : public obs::ReleaseFeed {
+public:
+	QString tag;
+	int asked = 0;
+	void fetchLatest(std::function<void(const QString &)> done) override
+	{
+		asked++;
+		done(tag);
+	}
+	void stop() override {}
+};
+
+class FakeUpdateSettings final : public obs::UpdateSettings {
+public:
+	bool on = true;
+	QString skipped;
+	bool checkOnStart() const override { return on; }
+	QString skippedVersion() const override { return skipped; }
+	void skipVersion(const QString &v) override { skipped = v; }
+};
+
+static void test_updates()
+{
+	CHECK(model::isNewer("v1.2.0", "1.1.9") && model::isNewer("1.10.0", "1.9.9") && !model::isNewer("1.2.0", "1.2.0"));
+	CHECK(model::isNewer("1.2.0", "1.2.0-beta1") && !model::isNewer("1.2.0-beta2", "1.2.0"));
+	CHECK(model::isNewer("1.2.1+build5", "1.2.0") && !model::isNewer("1.2", "1.0.0") && !model::isNewer("nightly", "1.0.0"));
+	CHECK(model::bareVersion("v0.9.0") == "0.9.0");
+
+	const auto outcomeOf = [](const QString &tag, FakeUpdateSettings &settings, QStringList *offers = nullptr) {
+		FakeFeed feed;
+		feed.tag = tag;
+		controller::UpdateChecker checker(feed, settings, "0.8.0");
+		QObject::connect(&checker, &controller::UpdateChecker::offerUpdate,
+				 [offers](const QString &latest, const QString &) { if (offers) offers->append(latest); });
+		checker.start();
+		checker.start(); // once per start
+		CHECK(feed.asked <= 1);
+		return checker.outcome();
+	};
+	FakeUpdateSettings settings;
+	QStringList offers;
+	CHECK(outcomeOf("v0.9.0", settings, &offers) == "offered" && (offers == QStringList{"0.9.0"}));
+	CHECK(outcomeOf("v0.8.0", settings) == "up to date" && outcomeOf("", settings) == "failed");
+	settings.skipVersion("0.9.0");
+	CHECK(outcomeOf("v0.9.0", settings) == "skipped" && outcomeOf("v0.9.1", settings) == "offered");
+	settings.on = false;
+	CHECK(outcomeOf("v0.9.1", settings) == "off");
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -661,6 +714,7 @@ int main(int argc, char **argv)
 	test_output_states();
 	test_output_controller();
 	test_themes();
+	test_updates();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

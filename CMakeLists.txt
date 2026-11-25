@@ -136,6 +136,8 @@ set(FIJI_CORE_SOURCES
   src/controller/obs-command-handler.hpp
   src/controller/output-controller.cpp
   src/controller/output-controller.hpp
+  src/controller/update-checker.cpp
+  src/controller/update-checker.hpp
   src/model/deck-engine.cpp
   src/model/deck-engine.hpp
   src/model/deck-model.cpp
@@ -145,11 +147,14 @@ set(FIJI_CORE_SOURCES
   src/model/obs-status.hpp
   src/model/output-targets.cpp
   src/model/output-targets.hpp
+  src/model/release-version.cpp
+  src/model/release-version.hpp
   src/model/theme-files.cpp
   src/model/theme-files.hpp
   src/obs/deck-port.hpp
   src/obs/obs-api.hpp
   src/obs/output-port.hpp
+  src/obs/update-port.hpp
   src/state/deck-keys.cpp
   src/state/deck-keys.hpp
   src/state/output-states.cpp
@@ -168,17 +173,19 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-deck-hotkeys.hpp
   src/obs/obs-deck-steps.cpp
   src/obs/obs-deck-steps.hpp
+  src/obs/github-releases.cpp
+  src/obs/github-releases.hpp
   src/obs/obs-look.cpp
   src/obs/obs-look.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
   src/view/restart-notice.cpp
-  src/view/restart-notice.hpp)
+  src/view/restart-notice.hpp
+  src/view/update-offer.cpp
+  src/view/update-offer.hpp)
 
 target_sources(${PROJECT_NAME} PRIVATE
   src/utils/fiji-events.hpp
-  src/utils/update-check.cpp
-  src/utils/update-check.hpp
   src/utils/color.cpp
   src/utils/event-filter.cpp
   src/utils/icon.cpp
