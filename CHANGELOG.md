@@ -18,6 +18,10 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
   when "Name 2" is already taken; reordering keeps the selected filter selected.
 - Inside: the Filters dock follows the plugin's layers, with tests for which filters fit a source, names, renaming,
   duplicating, ordering and switching sources.
+- Stats dock: an output, encoder or canvas that has just appeared no longer shows a huge first bitrate or frame rate
+  (its whole total until then), so its graph keeps a sensible scale.
+- Inside: the Stats dock follows the plugin's layers, with tests for how rows are matched, the names, the rates and
+  hiding the dock.
 
 ## 0.9.0
 

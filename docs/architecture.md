@@ -94,3 +94,7 @@ types fit a source and for free names; `obs::ObsFilters` follows OBS into it and
 changes filters (removing one stays undoable); `controller::FiltersController` is what the dock does, and
 `view::FiltersDock` is the dock. The Properties dock tells it which source to show through
 `fiji_filters_show`/`fiji_filters_deselect`, and a chosen filter opens there.
+Moved (unreleased): the Stats dock. `model::OutputStats` matches OBS's encoders, outputs and canvases into rows and
+works out the rates, from a `model::StatsSnapshot` that `obs::ObsStatsSource` reads (`obs/stats-port.hpp`).
+`controller::StatsController` is the one-second clock's step, and `view::StatsDock` holds the table, the graphs and
+the grouped header; `fiji-suite.cpp` keeps its columns per dock mode.
