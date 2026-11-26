@@ -659,10 +659,11 @@ static void test_themes()
 	const QMap<QString, QByteArray> fresh = {};
 	auto first = model::planThemes(shipped, fresh);
 	CHECK(first.write.size() == 3 && first.added == 2 && first.remove.isEmpty()); // icons do not count as themes
+	CHECK(first.newThemes.size() == 2 && !first.newThemes.contains("FijiSun/check.svg"));
 	const QMap<QString, QByteArray> installed{{"Fiji_Sun.obt", "sun 1"}, {"Fiji_Moon.obt", "moon"}, {"FijiSun/check.svg", "icon"},
 						  {"Fiji_Sun.ovt", "old style"}, {"Someone_Else.obt", "theirs"}};
 	auto update = model::planThemes(shipped, installed);
-	CHECK((update.write == QStringList{"Fiji_Sun.obt"}) && update.added == 0);
+	CHECK((update.write == QStringList{"Fiji_Sun.obt"}) && update.added == 0 && update.newThemes.isEmpty());
 	CHECK((update.remove == QStringList{"Fiji_Sun.ovt"})); // only our retired files; never someone else's theme
 	CHECK(model::userThemesDir("/home/a/.config/obs-studio/plugin_config/fiji-suite/") == "/home/a/.config/obs-studio/themes");
 	CHECK(model::userThemesDir("C:/Users/a/AppData/Roaming/obs-studio/plugin_config/fiji-suite") ==

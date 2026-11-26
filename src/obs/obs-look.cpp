@@ -76,24 +76,38 @@ bool installLook()
 		return false;
 	}
 	const QString target = model::userThemesDir(configDir);
+	const QByteArray targetName = QDir::toNativeSeparators(target).toUtf8();
 	const auto shippedFiles = themeFiles(shipped);
 	const auto plan = model::planThemes(shippedFiles, themeFiles(target));
-	int written = 0;
+	int written = 0, failed = 0, newWritten = 0;
 	for (const auto &relative : plan.write) {
 		const QString path = QDir(target).filePath(relative);
-		QDir().mkpath(QFileInfo(path).absolutePath());
+		if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+			blog(LOG_WARNING, "[Fiji Suite] could not make the folder for theme file %s in %s",
+			     relative.toUtf8().constData(), targetName.constData());
+			failed++;
+			continue;
+		}
 		QSaveFile out(path);
 		if (out.open(QIODevice::WriteOnly) && out.write(shippedFiles.value(relative)) >= 0 && out.commit()) {
 			written++;
+			if (plan.newThemes.contains(relative)) {
+				newWritten++;
+			}
+		} else {
+			blog(LOG_WARNING, "[Fiji Suite] could not write theme file %s into %s: %s", relative.toUtf8().constData(),
+			     targetName.constData(), out.errorString().toUtf8().constData());
+			failed++;
 		}
 	}
 	for (const auto &relative : plan.remove) {
 		QFile::remove(QDir(target).filePath(relative));
 	}
-	if (written) {
-		blog(LOG_INFO, "[Fiji Suite] installed %d theme file(s) into %s", written, target.toUtf8().constData());
-	}
-	return plan.added > 0;
+	// Always say where the themes live, so a log shows it even when nothing needed writing.
+	blog(LOG_INFO, "[Fiji Suite] themes folder %s: %d file(s) written, %d failed, %d already up to date",
+	     targetName.constData(), written, failed, int(shippedFiles.size()) - int(plan.write.size()));
+	// Only themes really written are worth a restart: OBS lists them when it starts.
+	return newWritten > 0;
 }
 
 } // namespace fiji::obs

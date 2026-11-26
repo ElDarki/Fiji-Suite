@@ -4,6 +4,9 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 
 ## Unreleased
 
+- Themes: the "restart OBS to see the Fiji themes" notice now appears only when the theme files were really
+  written. When a file cannot be written, the OBS log says which file, the folder and why. The log also always
+  names the themes folder, to track down the themes not showing on Linux.
 - Inside: the Capture dock follows the plugin's layers, with tests for which sources it lists, the hooked-window
   text and the window menu. It works as before.
 - Inside: the Live Scenes dock follows the plugin's layers, with tests for adding, removing, reordering, following

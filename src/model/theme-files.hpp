@@ -15,6 +15,7 @@ struct ThemePlan {
 	QStringList write;  // relative paths to (over)write from the shipped copy
 	QStringList remove; // relative paths of retired theme files to delete
 	int added = 0;      // themes (not icons) the user did not have yet: OBS lists them only after a restart
+	QStringList newThemes; // which those are (relative paths), so a failed write does not count as added
 };
 
 // Theme files the plugin ever shipped and no longer does. Only these are ever removed from the user's folder.

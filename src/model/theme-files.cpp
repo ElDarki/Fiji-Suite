@@ -30,6 +30,7 @@ ThemePlan planThemes(const QMap<QString, QByteArray> &shipped, const QMap<QStrin
 		plan.write.append(it.key());
 		if (there == installed.constEnd() && !it.key().endsWith(QStringLiteral(".svg"))) {
 			plan.added++;
+			plan.newThemes.append(it.key());
 		}
 	}
 	for (const auto &old : retiredThemes()) {
