@@ -5,7 +5,6 @@
 #include "dialogs/name-dialog.hpp"
 #include "docks/canvas-clone-dock.hpp"
 #include "docks/canvas-dock.hpp"
-#include "docks/capture-dock.hpp"
 #include "docks/filters-dock.hpp"
 #include "docks/live-scenes-dock.hpp"
 #include "docks/multiview-dock.hpp"
@@ -19,20 +18,24 @@
 #include "bridge/bot-link.hpp"
 #include "controller/command-dispatcher.hpp"
 #include "controller/deck-controller.hpp"
+#include "controller/capture-controller.hpp"
 #include "controller/obs-command-handler.hpp"
 #include "controller/output-controller.hpp"
 #include "controller/update-checker.hpp"
 #include "model/deck-model.hpp"
+#include "model/captures.hpp"
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
 #include "obs/obs-look.hpp"
+#include "obs/obs-captures.hpp"
 #include "obs/github-releases.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
 #include "state/output-states.hpp"
 #include "view/restart-notice.hpp"
 #include "view/update-offer.hpp"
+#include "view/capture-dock.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
@@ -80,6 +83,15 @@ extern std::list<CanvasCloneDock *> canvas_clone_docks;
 
 
 static bool finished_loading = false;
+
+// The Capture dock's parts: the list (model), OBS's captures (adapter and port) and the menu's controller. Made with
+// the docks; the dock itself is OBS's to delete.
+struct CaptureParts {
+	fiji::model::Captures model;
+	fiji::obs::ObsCaptures obs{model};
+	fiji::controller::CaptureController controller{obs};
+};
+static CaptureParts *captures = nullptr;
 
 void transition_start(void *, calldata_t *)
 {
@@ -1037,7 +1049,9 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteTransform", obs_module_text("FijiSuiteTransform"), transform_dock);
 	live_scenes_dock = new LiveScenesDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteLiveScenes", obs_module_text("FijiSuiteLiveScenes"), live_scenes_dock);
-	auto capture_dock = new CaptureDock(main_window);
+	captures = new CaptureParts;
+	auto capture_dock = new fiji::view::CaptureDock(captures->model, captures->controller,
+							QString::fromUtf8(obs_module_text("Config")), main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteCapture", obs_module_text("FijiSuiteCapture"), capture_dock);
 	stats_dock = new StatsDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteStats", obs_module_text("FijiSuiteStats"), stats_dock);
@@ -1096,6 +1110,8 @@ void obs_module_unload()
 	obs_frontend_remove_dock("FijiSuiteTransform");
 	obs_frontend_remove_dock("FijiSuiteLiveScenes");
 	obs_frontend_remove_dock("FijiSuiteCapture");
+	delete captures;
+	captures = nullptr;
 	obs_frontend_remove_dock("FijiSuiteStats");
 	obs_frontend_remove_dock("FijiSuiteScenes");
 	obs_frontend_remove_dock("FijiSuiteSources");

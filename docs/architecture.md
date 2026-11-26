@@ -76,3 +76,7 @@ Moved in 0.9.0: the look. `model::planThemes` decides which theme files to write
 registers the fonts and copies the themes, and `view::showRestartNotice` is the first view. The update check is
 `model::isNewer`, `controller::UpdateChecker`, `obs::GitHubReleases` (behind `obs/update-port.hpp`) and
 `view::showUpdateOffer`.
+
+Moved (unreleased): the Capture dock. `model::Captures` lists the game and window captures and the window each has
+hooked, `obs::ObsCaptures` follows OBS's sources into it and is the `obs/capture-port.hpp` for choosing a window,
+`controller::CaptureController` serves the settings menu, and `view::CaptureDock` is the dock.

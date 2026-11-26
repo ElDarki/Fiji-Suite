@@ -80,8 +80,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/canvas-dock.hpp
   src/docks/canvas-clone-dock.cpp
   src/docks/canvas-clone-dock.hpp
-  src/docks/capture-dock.cpp
-  src/docks/capture-dock.hpp
   src/docks/filters-dock.cpp
   src/docks/filters-dock.hpp
   src/docks/live-scenes-dock.cpp
@@ -130,6 +128,8 @@ set(FIJI_CORE_SOURCES
   src/controller/command-dispatcher.cpp
   src/controller/command-dispatcher.hpp
   src/controller/command.hpp
+  src/controller/capture-controller.cpp
+  src/controller/capture-controller.hpp
   src/controller/deck-controller.cpp
   src/controller/deck-controller.hpp
   src/controller/obs-command-handler.cpp
@@ -142,6 +142,8 @@ set(FIJI_CORE_SOURCES
   src/model/deck-engine.hpp
   src/model/deck-model.cpp
   src/model/deck-model.hpp
+  src/model/captures.cpp
+  src/model/captures.hpp
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
@@ -154,6 +156,7 @@ set(FIJI_CORE_SOURCES
   src/obs/deck-port.hpp
   src/obs/obs-api.hpp
   src/obs/output-port.hpp
+  src/obs/capture-port.hpp
   src/obs/update-port.hpp
   src/state/deck-keys.cpp
   src/state/deck-keys.hpp
@@ -177,12 +180,16 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/github-releases.hpp
   src/obs/obs-look.cpp
   src/obs/obs-look.hpp
+  src/obs/obs-captures.cpp
+  src/obs/obs-captures.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
   src/view/restart-notice.cpp
   src/view/restart-notice.hpp
   src/view/update-offer.cpp
-  src/view/update-offer.hpp)
+  src/view/update-offer.hpp
+  src/view/capture-dock.cpp
+  src/view/capture-dock.hpp)
 
 target_sources(${PROJECT_NAME} PRIVATE
   src/utils/fiji-events.hpp
@@ -193,7 +200,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/accessible-alignment-cell.cpp
   src/utils/widgets/accessible-alignment-selector.cpp
   src/utils/widgets/alignment-selector.cpp
-  src/utils/widgets/capture-widget.cpp
   src/utils/widgets/double-slider.cpp
   src/utils/widgets/focus-scroll-spinbox.cpp
   src/utils/widgets/hotkey-edit.cpp
@@ -215,7 +221,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/accessible-alignment-cell.hpp
   src/utils/widgets/accessible-alignment-selector.hpp
   src/utils/widgets/alignment-selector.hpp
-  src/utils/widgets/capture-widget.hpp
   src/utils/widgets/double-slider.hpp
   src/utils/widgets/focus-scroll-spinbox.hpp
   src/utils/widgets/hotkey-edit.hpp

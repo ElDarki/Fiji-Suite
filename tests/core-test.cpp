@@ -22,6 +22,9 @@
 #include "../src/state/output-states.hpp"
 #include "../src/obs/obs-api.hpp"
 #include "../src/state/link-state.hpp"
+#include "../src/model/captures.hpp"
+#include "../src/controller/capture-controller.hpp"
+#include "../src/obs/capture-port.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -699,6 +702,57 @@ static void test_updates()
 	CHECK(outcomeOf("v0.9.1", settings) == "off");
 }
 
+// ---- Captures ----------------------------------------------------------------------------------------------
+class FakeCaptures final : public obs::CapturePort {
+public:
+	QList<model::WindowChoice> list{{"[game.exe]: Game", "game:Game"}, {"", "hidden"}, {"[obs.exe]: OBS", 7}};
+	QStringList chosen;
+	QList<model::WindowChoice> windows(const QString &key) override { return key == "u1" ? list : QList<model::WindowChoice>(); }
+	void chooseWindow(const QString &key, const QVariant &value) override { chosen.append(key + "=" + value.toString()); }
+};
+
+static void test_captures()
+{
+	CHECK(model::isCaptureKind("game_capture"));
+	CHECK(model::isCaptureKind("window_capture"));
+	CHECK(!model::isCaptureKind("monitor_capture"));
+	CHECK(model::hookedText("game.exe", "Game") == "[game.exe]: Game");
+	CHECK(model::hookedText("", "Game") == "Game");
+	CHECK(model::hookedText("game.exe", "") == "[game.exe]: ");
+
+	model::Captures captures;
+	QStringList seen;
+	QObject::connect(&captures, &model::Captures::added, [&](int i) { seen.append("added " + QString::number(i)); });
+	QObject::connect(&captures, &model::Captures::removed, [&](int i) { seen.append("removed " + QString::number(i)); });
+	QObject::connect(&captures, &model::Captures::changed, [&](int i) { seen.append("changed " + QString::number(i)); });
+	captures.add("u1", "Game Capture");
+	captures.add("u2", "Window Capture");
+	captures.add("u1", "again");      // already listed
+	captures.add("", "no key");
+	captures.hooked("u2", "obs.exe", "OBS");
+	captures.hooked("u2", "obs.exe", "OBS"); // no change
+	captures.renamed("u1", "Game");
+	captures.unhooked("u2");
+	captures.unhooked("u2");               // no change
+	captures.hooked("nope", "x", "y");
+	captures.remove("u1");
+	captures.remove("u1");
+	CHECK(seen == QStringList({"added 0", "added 1", "changed 1", "changed 0", "changed 1", "removed 0"}));
+	CHECK(captures.entries().size() == 1 && captures.entries()[0].name == "Window Capture" &&
+	      captures.entries()[0].hooked.isEmpty());
+
+	FakeCaptures obs;
+	controller::CaptureController controller(obs);
+	const auto windows = controller.windows("u1");
+	CHECK(windows.size() == 2); // the unlabelled one is not offered
+	controller.choose("u1", windows[0]);
+	controller.choose("u1", windows[1]);
+	controller.choose("", windows[0]);
+	controller.choose("u1", model::WindowChoice{"no value", QVariant()});
+	CHECK(obs.chosen == QStringList({"u1=game:Game", "u1=7"}));
+	CHECK(controller.windows("u2").isEmpty());
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -715,6 +769,7 @@ int main(int argc, char **argv)
 	test_output_controller();
 	test_themes();
 	test_updates();
+	test_captures();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;
