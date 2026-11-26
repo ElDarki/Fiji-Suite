@@ -89,3 +89,8 @@ Moved (unreleased): the Transitions dock. `model::transitionNameProblem` and `mo
 `obs/transition-port.hpp`: `obs::FrontendTransitions` for OBS's own (and the types and the duration), and the canvas
 dock's `CanvasDockTransitions` for a Fiji Suite canvas (legacy code implementing a port until the canvas dock moves).
 `view::TransitionsDock` is the dock.
+Moved (unreleased): the Filters dock. `model::FilterList` holds the shown source's filters, with the rules for which
+types fit a source and for free names; `obs::ObsFilters` follows OBS into it and is the `obs/filter-port.hpp` that
+changes filters (removing one stays undoable); `controller::FiltersController` is what the dock does, and
+`view::FiltersDock` is the dock. The Properties dock tells it which source to show through
+`fiji_filters_show`/`fiji_filters_deselect`, and a chosen filter opens there.

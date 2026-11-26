@@ -32,6 +32,9 @@
 #include "../src/model/transitions.hpp"
 #include "../src/controller/transitions-controller.hpp"
 #include "../src/obs/transition-port.hpp"
+#include "../src/model/filters.hpp"
+#include "../src/controller/filters-controller.hpp"
+#include "../src/obs/filter-port.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -991,6 +994,103 @@ static void test_transitions()
 	CHECK(!c.hasSet() && c.types().size() == 2);
 }
 
+// ---- Filters -----------------------------------------------------------------------------------------------
+class FakeFilters final : public obs::FilterPort {
+public:
+	explicit FakeFilters(model::FilterList &list) : list(list) {}
+	model::FilterList &list;
+	model::MediaFlags flags{true, true, false};
+	QStringList calls;
+	int next = 1;
+	model::MediaFlags sourceFlags() override { return flags; }
+	QList<model::FilterType> filterTypes() override
+	{
+		return {{"color_filter", "Color Correction", {true, false, false}},
+			{"gain_filter", "Gain", {false, true, false}},
+			{"async_delay_filter", "Video Delay (Async)", {true, false, true}},
+			{"old_filter", "Old", {true, false, false}, true},
+			{"chroma_key_filter", "chroma Key", {true, false, false}}};
+	}
+	QString add(const QString &type, const QString &name) override
+	{
+		calls.append("add " + type + " " + name);
+		const QString key = "k" + QString::number(next++);
+		list.added({key, name, true});
+		return key;
+	}
+	QString duplicate(const QString &key, const QString &name) override
+	{
+		calls.append("duplicate " + key + " " + name);
+		const QString copy = "k" + QString::number(next++);
+		list.added({copy, name, true});
+		return copy;
+	}
+	void remove(const QString &key) override { calls.append("remove " + key); list.removed(key); }
+	void rename(const QString &key, const QString &name) override { calls.append("rename " + key + " " + name); list.renamed(key, name); }
+	void setEnabled(const QString &key, bool on) override { calls.append(QString("enable %1 %2").arg(key).arg(on)); list.enabledChanged(key, on); }
+	void move(const QString &key, model::FilterMove m) override { calls.append(QString("move %1 %2").arg(key).arg(int(m))); }
+};
+
+static void test_filters()
+{
+	const model::MediaFlags video{true, false, false}, audioOnly{false, true, false}, camera{true, true, true};
+	CHECK(model::filterFits(video, {true, false, false}));
+	CHECK(!model::filterFits(video, {false, true, false}));     // audio filter, silent source
+	CHECK(!model::filterFits(video, {true, false, true}));      // async video filter, not an async source
+	CHECK(model::filterFits(camera, {true, false, true}));
+	CHECK(!model::filterFits(audioOnly, {true, false, false})); // video filter, audio-only source
+	CHECK(model::uniqueFilterName("Gain", {}) == "Gain");
+	CHECK(model::uniqueFilterName("Gain", {"Gain", "Gain 2"}) == "Gain 3");
+
+	model::FilterList list;
+	FakeFilters obs(list);
+	QStringList opened;
+	controller::FiltersController c(list, obs, [&](const QString &key) { opened.append(key); });
+
+	// no source: nothing to add
+	CHECK(!c.hasSource() && c.addable().isEmpty() && !c.add("gain_filter"));
+
+	int resets = 0;
+	QObject::connect(&list, &model::FilterList::reset, [&] { resets++; });
+	list.show({{"a", "Gain", true}});
+	CHECK(c.hasSource() && resets == 1);
+
+	// the add menu: fits the source, no retired types, by name
+	QStringList offered;
+	for (const auto &t : c.addable()) {
+		offered.append(t.displayName);
+	}
+	CHECK(offered == QStringList({"chroma Key", "Color Correction", "Gain"}));
+	CHECK(!c.add("async_delay_filter")); // does not fit
+	CHECK(c.add("gain_filter"));          // "Gain" is taken
+	CHECK(obs.calls.last() == "add gain_filter Gain 2" && opened.last() == "k1");
+	CHECK(c.duplicate("a") && obs.calls.last() == "duplicate a Gain 3" && opened.last() == "k2");
+	CHECK(!c.duplicate("nope"));
+
+	// renaming
+	CHECK(c.nameTaken("Gain 2", "Gain") && !c.nameTaken("Gain", "Gain") && !c.nameTaken("Loud", "Gain"));
+	CHECK(c.rename("a", "Gain"));          // unchanged: nothing to do
+	CHECK(!c.rename("a", "Gain 2"));       // taken
+	CHECK(!c.rename("a", ""));
+	CHECK(c.rename("a", "Loud") && list.entries()[0].name == "Loud");
+
+	// on/off, order, remove
+	c.setEnabled("a", false);
+	CHECK(!list.entries()[0].enabled);
+	c.move("a", model::FilterMove::Bottom);
+	c.move("nope", model::FilterMove::Top);
+	CHECK(c.remove("k1") && list.indexOf("k1") < 0 && !c.remove("k1"));
+	CHECK(obs.calls.mid(2) == QStringList({"rename a Loud", "enable a 0", "move a 3", "remove k1"}));
+
+	// another source, or none
+	list.reordered({{"k2", "Gain 3", true}, {"a", "Loud", false}});
+	CHECK(list.entries()[0].key == "k2" && resets == 2);
+	list.clear();
+	CHECK(!c.hasSource() && list.entries().isEmpty());
+	list.added({"x", "late", true}); // a late signal for the old source
+	CHECK(list.entries().isEmpty());
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -1010,6 +1110,7 @@ int main(int argc, char **argv)
 	test_captures();
 	test_live_scenes();
 	test_transitions();
+	test_filters();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

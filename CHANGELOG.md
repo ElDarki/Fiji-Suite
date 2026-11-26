@@ -14,6 +14,10 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
   here as before.
 - Inside: the Transitions dock follows the plugin's layers, with tests for the name rules, the "copy from main" menu
   and what each canvas allows.
+- Filters dock: the Properties button opens the selected filter (it did nothing); duplicating a filter no longer hangs
+  when "Name 2" is already taken; reordering keeps the selected filter selected.
+- Inside: the Filters dock follows the plugin's layers, with tests for which filters fit a source, names, renaming,
+  duplicating, ordering and switching sources.
 
 ## 0.9.0
 

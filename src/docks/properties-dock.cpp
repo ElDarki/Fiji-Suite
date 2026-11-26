@@ -1,7 +1,7 @@
-#include "filters-dock.hpp"
 #include "properties-dock.hpp"
 #include "transform-dock.hpp"
 #include <obs.h>
+#include <obs.hpp>
 #include <obs-module.h>
 #include <QCheckBox>
 #include <QColorDialog>
@@ -22,7 +22,9 @@
 #include <src/utils/widgets/double-slider.hpp>
 #include <src/utils/widgets/focus-scroll-spinbox.hpp>
 
-extern FiltersDock *filters_dock;
+// The Filters dock follows the source shown here (fiji-suite.cpp); safe from any thread.
+void fiji_filters_show(OBSSource source);
+void fiji_filters_deselect(OBSSource source);
 extern TransformDock *transform_dock;
 
 PropertiesDock::PropertiesDock(QWidget *parent) : QFrame(parent)
@@ -127,8 +129,7 @@ void PropertiesDock::scene_item_select(void *param, calldata_t *cd)
 	auto item = (obs_sceneitem_t *)calldata_ptr(cd, "item");
 	QMetaObject::invokeMethod(this_, "SourceChanged", Qt::QueuedConnection,
 				  Q_ARG(OBSSource, OBSSource(obs_sceneitem_get_source(item))));
-	QMetaObject::invokeMethod(filters_dock, "SourceChanged", Qt::QueuedConnection,
-				  Q_ARG(OBSSource, OBSSource(obs_sceneitem_get_source(item))));
+	fiji_filters_show(OBSSource(obs_sceneitem_get_source(item)));
 	QMetaObject::invokeMethod(transform_dock, "setItem", Qt::QueuedConnection, Q_ARG(OBSSceneItem, OBSSceneItem(item)));
 }
 
@@ -141,8 +142,7 @@ void PropertiesDock::scene_item_deselect(void *param, calldata_t *cd)
 	if (obs_weak_source_references_source(this_->current_source, obs_sceneitem_get_source(item))) {
 		QMetaObject::invokeMethod(this_, "SourceDeselected", Qt::QueuedConnection,
 					  Q_ARG(OBSSource, OBSSource(obs_sceneitem_get_source(item))));
-		QMetaObject::invokeMethod(filters_dock, "SourceDeselected", Qt::QueuedConnection,
-					  Q_ARG(OBSSource, obs_sceneitem_get_source(item)));
+		fiji_filters_deselect(OBSSource(obs_sceneitem_get_source(item)));
 	}
 	QMetaObject::invokeMethod(transform_dock, "unsetItem", Qt::QueuedConnection, Q_ARG(OBSSceneItem, item));
 }
@@ -192,7 +192,7 @@ void PropertiesDock::SceneChanged(OBSSource scene)
 	signal_handler_connect(ssh, "item_transform", scene_item_transform, this);
 	signal_handler_connect(ssh, "item_locked", scene_item_locked, this);
 	QMetaObject::invokeMethod(this, "SourceChanged", Qt::QueuedConnection, Q_ARG(OBSSource, OBSSource(scene)));
-	QMetaObject::invokeMethod(filters_dock, "SourceChanged", Qt::QueuedConnection, Q_ARG(OBSSource, OBSSource(scene)));
+	fiji_filters_show(OBSSource(scene));
 	obs_scene_enum_items(
 		obs_scene_from_source(scene),
 		[](obs_scene_t *scene, obs_sceneitem_t *item, void *param) {

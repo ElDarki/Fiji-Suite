@@ -80,8 +80,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/docks/canvas-dock.hpp
   src/docks/canvas-clone-dock.cpp
   src/docks/canvas-clone-dock.hpp
-  src/docks/filters-dock.cpp
-  src/docks/filters-dock.hpp
   src/docks/multiview-dock.cpp
   src/docks/multiview-dock.hpp
   src/docks/output-dock.cpp
@@ -130,6 +128,8 @@ set(FIJI_CORE_SOURCES
   src/controller/deck-controller.hpp
   src/controller/live-scenes-controller.cpp
   src/controller/live-scenes-controller.hpp
+  src/controller/filters-controller.cpp
+  src/controller/filters-controller.hpp
   src/controller/obs-command-handler.cpp
   src/controller/obs-command-handler.hpp
   src/controller/output-controller.cpp
@@ -146,6 +146,8 @@ set(FIJI_CORE_SOURCES
   src/model/captures.hpp
   src/model/live-scenes.cpp
   src/model/live-scenes.hpp
+  src/model/filters.cpp
+  src/model/filters.hpp
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
@@ -158,6 +160,7 @@ set(FIJI_CORE_SOURCES
   src/model/transitions.cpp
   src/model/transitions.hpp
   src/obs/deck-port.hpp
+  src/obs/filter-port.hpp
   src/obs/obs-api.hpp
   src/obs/output-port.hpp
   src/obs/capture-port.hpp
@@ -184,6 +187,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-deck-steps.hpp
   src/obs/github-releases.cpp
   src/obs/github-releases.hpp
+  src/obs/obs-filters.cpp
+  src/obs/obs-filters.hpp
   src/obs/obs-look.cpp
   src/obs/obs-look.hpp
   src/obs/obs-captures.cpp
@@ -198,6 +203,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/view/restart-notice.hpp
   src/view/transitions-dock.cpp
   src/view/transitions-dock.hpp
+  src/view/filters-dock.cpp
+  src/view/filters-dock.hpp
   src/view/update-offer.cpp
   src/view/update-offer.hpp
   src/view/capture-dock.cpp
@@ -228,7 +235,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/projector.cpp
   src/utils/widgets/qt-display.cpp
   src/utils/widgets/visibility-checkbox.cpp
-  src/utils/widgets/visibility-item-widget.cpp
   src/utils/color.hpp
   src/utils/event-filter.hpp
   src/utils/icon.hpp
@@ -248,8 +254,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/utils/widgets/switching-splitter.hpp
   src/utils/widgets/projector.hpp
   src/utils/widgets/qt-display.hpp
-  src/utils/widgets/visibility-checkbox.hpp
-  src/utils/widgets/visibility-item-widget.hpp)
+  src/utils/widgets/visibility-checkbox.hpp)
 
 if(BUILD_OUT_OF_TREE)
 	set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

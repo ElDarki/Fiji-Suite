@@ -5,7 +5,6 @@
 #include "dialogs/name-dialog.hpp"
 #include "docks/canvas-clone-dock.hpp"
 #include "docks/canvas-dock.hpp"
-#include "docks/filters-dock.hpp"
 #include "docks/multiview-dock.hpp"
 #include "docks/output-dock.hpp"
 #include "docks/properties-dock.hpp"
@@ -19,12 +18,14 @@
 #include "controller/capture-controller.hpp"
 #include "controller/live-scenes-controller.hpp"
 #include "controller/transitions-controller.hpp"
+#include "controller/filters-controller.hpp"
 #include "controller/obs-command-handler.hpp"
 #include "controller/output-controller.hpp"
 #include "controller/update-checker.hpp"
 #include "model/deck-model.hpp"
 #include "model/captures.hpp"
 #include "model/live-scenes.hpp"
+#include "model/filters.hpp"
 #include "obs/obs-data-store.hpp"
 #include "obs/obs-deck-hotkeys.hpp"
 #include "obs/obs-deck-steps.hpp"
@@ -32,6 +33,7 @@
 #include "obs/obs-captures.hpp"
 #include "obs/obs-live-scenes.hpp"
 #include "obs/obs-transitions.hpp"
+#include "obs/obs-filters.hpp"
 #include "obs/github-releases.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
@@ -41,6 +43,7 @@
 #include "view/capture-dock.hpp"
 #include "view/live-scenes-dock.hpp"
 #include "view/transitions-dock.hpp"
+#include "view/filters-dock.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
@@ -71,7 +74,44 @@ QTabBar *modesTabBar = nullptr;
 OBSBasicSettings *configDialog = nullptr;
 OutputDock *output_dock = nullptr;
 PropertiesDock *properties_dock = nullptr;
-FiltersDock *filters_dock = nullptr;
+// The Filters dock's parts: the shown source's filters (model), OBS's side (adapter and port) and the controller.
+// Opening a filter shows it in the Properties dock. Made with the docks; the dock itself is OBS's to delete.
+static void filters_open(const QString &key);
+struct FiltersParts {
+	fiji::model::FilterList model;
+	fiji::obs::ObsFilters obs{model};
+	fiji::controller::FiltersController controller{model, obs, filters_open};
+};
+static FiltersParts *filters = nullptr;
+static fiji::view::FiltersDock *filters_dock = nullptr;
+
+// For the Properties dock (src/docks/properties-dock.cpp), from any thread: show this source's filters, or stop.
+void fiji_filters_show(OBSSource source)
+{
+	if (filters) {
+		QMetaObject::invokeMethod(&filters->obs, [source] { filters->obs.show(source); }, Qt::QueuedConnection);
+	}
+}
+
+void fiji_filters_deselect(OBSSource source)
+{
+	if (filters) {
+		QMetaObject::invokeMethod(&filters->obs, [source] { filters->obs.deselected(source); }, Qt::QueuedConnection);
+	}
+}
+
+// A filter chosen in the Filters dock opens in the Properties dock.
+static void filters_open(const QString &key)
+{
+	if (!filters || !properties_dock) {
+		return;
+	}
+	OBSSourceAutoRelease filter = filters->obs.filterSource(key);
+	if (filter) {
+		QMetaObject::invokeMethod(properties_dock, "LoadProperties", Qt::QueuedConnection,
+					  Q_ARG(OBSSource, OBSSource(filter.Get())));
+	}
+}
 TransformDock *transform_dock = nullptr;
 // Live Scenes: the list (model), OBS's scenes (port), what the dock and obs-websocket do with it (controller), and
 // saving it with the scene collection. Made with the docks; the dock itself is OBS's to delete.
@@ -1123,7 +1163,31 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteOutput", obs_module_text("FijiSuiteOutput"), output_dock);
 	properties_dock = new PropertiesDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteProperties", obs_module_text("FijiSuiteProperties"), properties_dock);
-	filters_dock = new FiltersDock(main_window);
+	filters = new FiltersParts;
+	{
+		auto locale = [](const char *key) { return QString::fromUtf8(obs_frontend_get_locale_string(key)); };
+		fiji::view::FiltersTexts texts{locale("Add"),
+					       locale("RemoveFilter"),
+					       locale("SourceProperties"),
+					       locale("MoveFilterUp"),
+					       locale("MoveFilterDown"),
+					       locale("Duplicate"),
+					       locale("Rename"),
+					       locale("Basic.MainMenu.Edit.Order"),
+					       locale("Basic.MainMenu.Edit.Order.MoveToTop"),
+					       locale("Basic.MainMenu.Edit.Order.MoveToBottom"),
+					       QString::fromUtf8(obs_module_text("NoSourceSelected")),
+					       QString::fromUtf8(obs_module_text("FilterName"))};
+		auto askName = [](QWidget *parent, const QString &title, QString &name) {
+			std::string answer = name.toStdString();
+			if (!NameDialog::AskForName(parent, title, answer)) {
+				return false;
+			}
+			name = QString::fromStdString(answer);
+			return true;
+		};
+		filters_dock = new fiji::view::FiltersDock(filters->model, filters->controller, texts, askName, main_window);
+	}
 	obs_frontend_add_dock_by_id("FijiSuiteFilters", obs_module_text("FijiSuiteFilters"), filters_dock);
 	transform_dock = new TransformDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteTransform", obs_module_text("FijiSuiteTransform"), transform_dock);
@@ -1220,6 +1284,9 @@ void obs_module_unload()
 	obs_frontend_remove_dock("FijiSuiteOutput");
 	obs_frontend_remove_dock("FijiSuiteProperties");
 	obs_frontend_remove_dock("FijiSuiteFilters");
+	filters_dock = nullptr;
+	delete filters;
+	filters = nullptr;
 	obs_frontend_remove_dock("FijiSuiteTransform");
 	obs_frontend_remove_dock("FijiSuiteLiveScenes");
 	live_scenes_dock = nullptr;
