@@ -25,6 +25,9 @@
 #include "../src/model/captures.hpp"
 #include "../src/controller/capture-controller.hpp"
 #include "../src/obs/capture-port.hpp"
+#include "../src/model/live-scenes.hpp"
+#include "../src/controller/live-scenes-controller.hpp"
+#include "../src/obs/scene-port.hpp"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -753,6 +756,100 @@ static void test_captures()
 	CHECK(controller.windows("u2").isEmpty());
 }
 
+// ---- Live Scenes -------------------------------------------------------------------------------------------
+class FakeScenes final : public obs::ScenePort {
+public:
+	QStringList names{"Intro", "Gameplay", "BRB"};
+	obs::SceneRef program;
+	QStringList shown;
+	QStringList sceneNames() override { return names; }
+	QString uuidOf(const QString &name) override { return names.contains(name) ? "u-" + name : QString(); }
+	obs::SceneRef programScene() override { return program; }
+	bool showOnProgram(const obs::SceneRef &scene) override
+	{
+		if (!names.contains(scene.name) && scene.uuid.isEmpty()) {
+			return false;
+		}
+		shown.append(scene.name);
+		program = scene;
+		return true;
+	}
+};
+
+static void test_live_scenes()
+{
+	model::LiveScenes list;
+	FakeScenes obs;
+	controller::LiveScenesController live(list, obs);
+	int changes = 0;
+	QList<int> lives;
+	QObject::connect(&list, &model::LiveScenes::changed, [&] { changes++; });
+	QObject::connect(&list, &model::LiveScenes::liveChanged, [&](int i) { lives.append(i); });
+
+	// adding checks the scene exists and keeps its uuid
+	CHECK(live.addable() == QStringList({"Intro", "Gameplay", "BRB"}));
+	CHECK(live.add("Gameplay"));
+	CHECK(live.add("BRB"));
+	CHECK(live.add("Intro"));
+	CHECK(!live.add("Nope"));
+	CHECK(!live.add(""));
+	CHECK(list.count() == 3);
+	CHECK(changes == 3);
+	CHECK(list.entries()[0] == (model::LiveScene{"Gameplay", "u-Gameplay"}));
+
+	// program follows OBS: by name, else by uuid (taking the new name)
+	obs.program = {"BRB", "u-BRB"};
+	live.programChanged();
+	CHECK(list.live() == 1);
+	obs.program = {"Be Right Back", "u-BRB"};
+	live.programChanged();
+	CHECK(list.live() == 1);
+	CHECK(list.entries()[1].name == "Be Right Back");
+	obs.program = {"Elsewhere", "u-x"};
+	live.programChanged();
+	CHECK(list.live() == -1);
+	obs.program = {};
+	live.programChanged();
+	CHECK(list.live() == -1);
+	CHECK(lives == QList<int>({1, -1}));
+
+	// clicking an entry puts it on program
+	CHECK(live.show(0));
+	CHECK(obs.shown == QStringList({"Gameplay"}));
+	CHECK(!live.show(5));
+	live.programChanged();
+	CHECK(list.live() == 0);
+
+	// moving keeps the live mark on its entry, and stops at the ends
+	CHECK(live.move(0, -1) == -1);
+	CHECK(live.move(2, 1) == -1);
+	CHECK(live.move(0, 1) == 1);
+	CHECK(list.entries()[1].name == "Gameplay");
+	CHECK(list.live() == 1);
+	CHECK(live.move(2, -1) == 1); // Intro moves above Gameplay
+	CHECK(list.live() == 2);
+	CHECK(list.entries()[2].name == "Gameplay");
+
+	// removing: the live mark moves with the list or goes
+	CHECK(live.removeAt(0)); // Be Right Back
+	CHECK(list.live() == 1);
+	CHECK(live.remove("Gameplay"));
+	CHECK(list.live() == -1);
+	CHECK(!live.remove("Gameplay"));
+	CHECK(!live.removeAt(-1));
+	CHECK(list.count() == 1);
+
+	// OBS renames follow; saving and loading round-trips
+	list.renamed("Intro", "Opening");
+	CHECK(list.entries()[0].name == "Opening");
+	const auto json = list.toJson();
+	CHECK(json.size() == 1 && json[0].toObject().value("uuid").toString() == "u-Intro");
+	model::LiveScenes loaded;
+	loaded.replaceAll(model::LiveScenes::fromJson(json));
+	CHECK(loaded.entries() == list.entries());
+	CHECK(loaded.live() == -1);
+}
+
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
@@ -770,6 +867,7 @@ int main(int argc, char **argv)
 	test_themes();
 	test_updates();
 	test_captures();
+	test_live_scenes();
 	if (failures) {
 		std::printf("%d check(s) failed\n", failures);
 		return 1;

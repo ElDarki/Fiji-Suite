@@ -1,7 +1,6 @@
 
 #include "../docks/canvas-clone-dock.hpp"
 #include "../docks/canvas-dock.hpp"
-#include "../docks/live-scenes-dock.hpp"
 #include "../docks/output-dock.hpp"
 #include "../version.h"
 #include "../bridge/bot-link.hpp"
@@ -13,6 +12,7 @@
 #include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <list>
 #include <QDockWidget>
 #include <QMainWindow>
@@ -56,7 +56,10 @@ void vendor_request_get_link(obs_data_t *, obs_data_t *response_data, void *)
 extern std::list<CanvasDock *> canvas_docks;
 extern std::list<CanvasCloneDock *> canvas_clone_docks;
 extern OutputDock *output_dock;
-extern LiveScenesDock *live_scenes_dock;
+// Live Scenes, from fiji-suite.cpp (the list lives in the model layer).
+bool fiji_live_scenes_available();
+QJsonArray fiji_live_scenes_list();
+void fiji_live_scenes_change(const QString &scene, bool add);
 
 void vendor_request_version(obs_data_t *request_data, obs_data_t *response_data, void *)
 {
@@ -505,51 +508,43 @@ void vendor_request_dock_hide(obs_data_t *request_data, obs_data_t *response_dat
 void vendor_request_get_live_scenes(obs_data_t *request_data, obs_data_t *response_data, void *)
 {
 	UNUSED_PARAMETER(request_data);
-	if (!live_scenes_dock) {
+	if (!fiji_live_scenes_available()) {
 		obs_data_set_string(response_data, "error", "Live Scenes dock not available");
 		obs_data_set_bool(response_data, "success", false);
 		return;
 	}
-	auto sa = live_scenes_dock->GetLiveScenesArray();
+	const QByteArray json = QJsonDocument(QJsonObject{{"live_scenes", fiji_live_scenes_list()}}).toJson(QJsonDocument::Compact);
+	OBSDataAutoRelease list = obs_data_create_from_json(json.constData());
+	OBSDataArrayAutoRelease sa = obs_data_get_array(list, "live_scenes");
 	obs_data_set_bool(response_data, "success", true);
 	obs_data_set_array(response_data, "live_scenes", sa);
-	obs_data_array_release(sa);
+}
+
+static void live_scenes_change(obs_data_t *request_data, obs_data_t *response_data, bool add)
+{
+	const char *scene_name = obs_data_get_string(request_data, "scene");
+	if (scene_name[0] == '\0') {
+		obs_data_set_string(response_data, "error", "'scene' not set");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	if (!fiji_live_scenes_available()) {
+		obs_data_set_string(response_data, "error", "Live Scenes dock not available");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	fiji_live_scenes_change(QString::fromUtf8(scene_name), add);
+	obs_data_set_bool(response_data, "success", true);
 }
 
 void vendor_request_live_scenes_add(obs_data_t *request_data, obs_data_t *response_data, void *)
 {
-	const char *scene_name = obs_data_get_string(request_data, "scene");
-	if (scene_name[0] == '\0') {
-		obs_data_set_string(response_data, "error", "'scene' not set");
-		obs_data_set_bool(response_data, "success", false);
-		return;
-	}
-	if (!live_scenes_dock) {
-		obs_data_set_string(response_data, "error", "Live Scenes dock not available");
-		obs_data_set_bool(response_data, "success", false);
-		return;
-	}
-	auto sn = QString::fromUtf8(scene_name);
-	QMetaObject::invokeMethod(live_scenes_dock, [sn] { live_scenes_dock->AddLiveScene(sn); });
-	obs_data_set_bool(response_data, "success", true);
+	live_scenes_change(request_data, response_data, true);
 }
 
 void vendor_request_live_scenes_remove(obs_data_t *request_data, obs_data_t *response_data, void *)
 {
-	const char *scene_name = obs_data_get_string(request_data, "scene");
-	if (scene_name[0] == '\0') {
-		obs_data_set_string(response_data, "error", "'scene' not set");
-		obs_data_set_bool(response_data, "success", false);
-		return;
-	}
-	if (!live_scenes_dock) {
-		obs_data_set_string(response_data, "error", "Live Scenes dock not available");
-		obs_data_set_bool(response_data, "success", false);
-		return;
-	}
-	auto sn = QString::fromUtf8(scene_name);
-	QMetaObject::invokeMethod(live_scenes_dock, [sn] { live_scenes_dock->RemoveLiveScene(sn); });
-	obs_data_set_bool(response_data, "success", true);
+	live_scenes_change(request_data, response_data, false);
 }
 
 void vendor_request_dock_show_panel(obs_data_t *request_data, obs_data_t *response_data, void *)

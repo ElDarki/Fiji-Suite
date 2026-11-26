@@ -80,3 +80,7 @@ registers the fonts and copies the themes, and `view::showRestartNotice` is the 
 Moved (unreleased): the Capture dock. `model::Captures` lists the game and window captures and the window each has
 hooked, `obs::ObsCaptures` follows OBS's sources into it and is the `obs/capture-port.hpp` for choosing a window,
 `controller::CaptureController` serves the settings menu, and `view::CaptureDock` is the dock.
+Moved (unreleased): the Live Scenes dock. `model::LiveScenes` is the list and which entry is on program,
+`controller::LiveScenesController` adds, removes, reorders and switches through `obs/scene-port.hpp`, `obs::ObsScenes`
+and `obs::ObsLiveScenesSync` talk to OBS (the scenes, saving with the scene collection, renames), and
+`view::LiveScenesDock` is the dock. obs-websocket's live-scene requests use the controller.

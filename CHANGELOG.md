@@ -6,6 +6,9 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
 
 - Inside: the Capture dock follows the plugin's layers, with tests for which sources it lists, the hooked-window
   text and the window menu. It works as before.
+- Inside: the Live Scenes dock follows the plugin's layers, with tests for adding, removing, reordering, following
+  renames and marking the scene on program. It works as before, and the list is still saved with the scene
+  collection. The obs-websocket requests for live scenes now read the list safely from any thread.
 
 ## 0.9.0
 
