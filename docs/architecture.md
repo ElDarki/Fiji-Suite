@@ -84,3 +84,8 @@ Moved (unreleased): the Live Scenes dock. `model::LiveScenes` is the list and wh
 `controller::LiveScenesController` adds, removes, reorders and switches through `obs/scene-port.hpp`, `obs::ObsScenes`
 and `obs::ObsLiveScenesSync` talk to OBS (the scenes, saving with the scene collection, renames), and
 `view::LiveScenesDock` is the dock. obs-websocket's live-scene requests use the controller.
+Moved (unreleased): the Transitions dock. `model::transitionNameProblem` and `model::copyChoices` are its rules,
+`controller::TransitionsController` works on the transitions of the canvas the Scenes dock shows through
+`obs/transition-port.hpp`: `obs::FrontendTransitions` for OBS's own (and the types and the duration), and the canvas
+dock's `CanvasDockTransitions` for a Fiji Suite canvas (legacy code implementing a port until the canvas dock moves).
+`view::TransitionsDock` is the dock.

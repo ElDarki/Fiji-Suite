@@ -1,6 +1,8 @@
 
 #pragma once
 #include "../utils/event-filter.hpp"
+#include "../obs/transition-port.hpp"
+#include <memory>
 #include "../utils/widgets/projector.hpp"
 #include "../utils/widgets/qt-display.hpp"
 #include "../utils/widgets/source-tree.hpp"
@@ -49,6 +51,8 @@ class CanvasDock : public QFrame {
 	Q_OBJECT
 private:
 	friend class CanvasCloneDock;
+	friend class CanvasDockTransitions;
+	std::unique_ptr<fiji::obs::TransitionSet> transitionSet;
 	friend class OBSProjector;
 	friend class ScenesDock;
 	friend class SourcesDock;
@@ -340,6 +344,8 @@ public:
 		return transitionList;
 	}
 	void SetSelectedTransition(const QString &transition_name);
+	// This canvas's transitions, for the Transitions dock (src/controller/transitions-controller.hpp).
+	fiji::obs::TransitionSet *GetTransitionSet();
 	void AddTransition(const char *source_type, const char *name, obs_data_t *settings);
 	void RemoveTransition(const char *transition_name);
 };

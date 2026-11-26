@@ -13,12 +13,12 @@
 #include "docks/sources-dock.hpp"
 #include "docks/stats-dock.hpp"
 #include "docks/transform-dock.hpp"
-#include "docks/transitions-dock.hpp"
 #include "bridge/bot-link.hpp"
 #include "controller/command-dispatcher.hpp"
 #include "controller/deck-controller.hpp"
 #include "controller/capture-controller.hpp"
 #include "controller/live-scenes-controller.hpp"
+#include "controller/transitions-controller.hpp"
 #include "controller/obs-command-handler.hpp"
 #include "controller/output-controller.hpp"
 #include "controller/update-checker.hpp"
@@ -31,6 +31,7 @@
 #include "obs/obs-look.hpp"
 #include "obs/obs-captures.hpp"
 #include "obs/obs-live-scenes.hpp"
+#include "obs/obs-transitions.hpp"
 #include "obs/github-releases.hpp"
 #include "obs/request-obs-api.hpp"
 #include "state/deck-keys.hpp"
@@ -39,6 +40,7 @@
 #include "view/update-offer.hpp"
 #include "view/capture-dock.hpp"
 #include "view/live-scenes-dock.hpp"
+#include "view/transitions-dock.hpp"
 #include "state/link-state.hpp"
 #include "utils/fiji-events.hpp"
 #include "utils/obs-websocket-api.h"
@@ -118,7 +120,48 @@ CanvasDock *component_dock = nullptr;
 StatsDock *stats_dock = nullptr;
 ScenesDock *scenes_dock = nullptr;
 SourcesDock *sources_dock = nullptr;
-TransitionsDock *transitions_dock = nullptr;
+// The Transitions dock's parts: OBS's own transitions and the catalogue (adapter), and the controller, which works on
+// the canvas the Scenes dock shows. Made with the docks; the dock itself is OBS's to delete.
+struct TransitionsParts {
+	fiji::obs::FrontendTransitions frontend;
+	fiji::controller::TransitionsController controller{frontend, frontend};
+};
+static TransitionsParts *transitions = nullptr;
+static fiji::view::TransitionsDock *transitions_dock = nullptr;
+
+// For the Scenes dock (src/docks/scenes-dock.cpp): it switched canvas, or that canvas's transition changed.
+void fiji_transitions_use_canvas(obs_canvas_t *canvas, CanvasDock *canvasDock)
+{
+	if (!transitions) {
+		return;
+	}
+	if (canvasDock) {
+		transitions->controller.use(canvasDock->GetTransitionSet(), canvasDock);
+		return;
+	}
+	OBSCanvasAutoRelease main_canvas = obs_get_main_canvas();
+	if (canvas && canvas == main_canvas.Get()) {
+		transitions->controller.useMain();
+	} else {
+		transitions->controller.use(nullptr); // a canvas without a dock has no transitions of its own here
+	}
+}
+
+void fiji_transitions_current_changed()
+{
+	if (transitions) {
+		QMetaObject::invokeMethod(&transitions->controller, [] { transitions->controller.obsCurrentChanged(); },
+					  Qt::QueuedConnection);
+	}
+}
+
+static void transitions_obs_news(void (fiji::controller::TransitionsController::*news)())
+{
+	if (transitions) {
+		QMetaObject::invokeMethod(&transitions->controller, [news] { (transitions->controller.*news)(); },
+					  Qt::QueuedConnection);
+	}
+}
 MultiviewDock *multiview_dock = nullptr;
 obs_hotkey_id multiview_over_preview_hotkey = OBS_INVALID_HOTKEY_ID;
 
@@ -891,17 +934,11 @@ static void frontend_event(enum obs_frontend_event event, void *private_data)
 			}
 		}
 	} else if (event == OBS_FRONTEND_EVENT_TRANSITION_DURATION_CHANGED) {
-		if (transitions_dock) {
-			QMetaObject::invokeMethod(transitions_dock, "TransitionDurationChanged", Qt::QueuedConnection);
-		}
+		transitions_obs_news(&fiji::controller::TransitionsController::obsDurationChanged);
 	} else if (event == OBS_FRONTEND_EVENT_TRANSITION_CHANGED) {
-		if (transitions_dock) {
-			QMetaObject::invokeMethod(transitions_dock, "TransitionChanged", Qt::QueuedConnection);
-		}
+		transitions_obs_news(&fiji::controller::TransitionsController::obsCurrentChanged);
 	} else if (event == OBS_FRONTEND_EVENT_TRANSITION_LIST_CHANGED) {
-		if (transitions_dock) {
-			QMetaObject::invokeMethod(transitions_dock, "TransitionListChanged", Qt::QueuedConnection);
-		}
+		transitions_obs_news(&fiji::controller::TransitionsController::obsListChanged);
 	}
 }
 
@@ -1110,7 +1147,29 @@ bool obs_module_load(void)
 	obs_frontend_add_dock_by_id("FijiSuiteScenes", obs_module_text("FijiSuiteScenes"), scenes_dock);
 	sources_dock = new SourcesDock(main_window);
 	obs_frontend_add_dock_by_id("FijiSuiteSources", obs_module_text("FijiSuiteSources"), sources_dock);
-	transitions_dock = new TransitionsDock(main_window);
+	transitions = new TransitionsParts;
+	{
+		auto locale = [](const char *key) { return QString::fromUtf8(obs_frontend_get_locale_string(key)); };
+		fiji::view::TransitionsTexts texts{locale("Basic.TransitionDuration"),
+						  locale("Basic.AddTransition"),
+						  locale("Basic.RemoveTransition"),
+						  locale("Basic.TransitionProperties"),
+						  QString::fromUtf8(obs_module_text("CopyFromMain")),
+						  locale("ConfirmRemove.Title"),
+						  locale("ConfirmRemove.Text"),
+						  locale("Rename"),
+						  locale("Properties"),
+						  QString::fromUtf8(obs_module_text("TransitionName"))};
+		auto askName = [](QWidget *parent, const QString &title, QString &name) {
+			std::string answer = name.toStdString();
+			if (!NameDialog::AskForName(parent, title, answer)) {
+				return false;
+			}
+			name = QString::fromStdString(answer);
+			return true;
+		};
+		transitions_dock = new fiji::view::TransitionsDock(transitions->controller, texts, askName, main_window);
+	}
 	obs_frontend_add_dock_by_id("FijiSuiteTransitions", obs_module_text("FijiSuiteTransitions"),
 				    transitions_dock);
 	start_core(); // the decks register their hotkeys now, so OBS's settings show them
@@ -1173,6 +1232,9 @@ void obs_module_unload()
 	obs_frontend_remove_dock("FijiSuiteScenes");
 	obs_frontend_remove_dock("FijiSuiteSources");
 	obs_frontend_remove_dock("FijiSuiteTransitions");
+	transitions_dock = nullptr;
+	delete transitions;
+	transitions = nullptr;
 	MultiviewDock::CloseWindows();
 	obs_frontend_remove_dock("FijiSuiteMultiview");
 	if (multiview_over_preview_hotkey != OBS_INVALID_HOTKEY_ID) {
