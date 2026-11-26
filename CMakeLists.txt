@@ -148,6 +148,8 @@ set(FIJI_CORE_SOURCES
   src/model/live-scenes.hpp
   src/model/filters.cpp
   src/model/filters.hpp
+  src/model/multiview.cpp
+  src/model/multiview.hpp
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp

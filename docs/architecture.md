@@ -98,3 +98,7 @@ Moved (unreleased): the Stats dock. `model::OutputStats` matches OBS's encoders,
 works out the rates, from a `model::StatsSnapshot` that `obs::ObsStatsSource` reads (`obs/stats-port.hpp`).
 `controller::StatsController` is the one-second clock's step, and `view::StatsDock` holds the table, the graphs and
 the grouped header; `fiji-suite.cpp` keeps its columns per dock mode.
+Moved (unreleased): the Multiview's rules. `model::TileOutputs` says which outputs a canvas tile shows, their status
+lines, bitrate and dropped-frame warning, and whether the canvas is on air; `model::multiviewColumns` lays out the
+grid. The tiles that draw the canvases stay in `src/docks/multiview-dock.cpp` until there is a layer for OBS's
+display widget (the canvas dock needs the same).

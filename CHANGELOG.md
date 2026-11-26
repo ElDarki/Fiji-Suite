@@ -22,6 +22,8 @@ Versions follow [semantic versioning](https://semver.org); the README says what 
   (its whole total until then), so its graph keeps a sensible scale.
 - Inside: the Stats dock follows the plugin's layers, with tests for how rows are matched, the names, the rates and
   hiding the dock.
+- Inside: the Multiview's rules (which outputs each canvas shows, their status lines, the dropped-frame warning, the
+  on-air border and the grid) move into the plugin's model layer, with tests. It looks and works as before.
 
 ## 0.9.0
 

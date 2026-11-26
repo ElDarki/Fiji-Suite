@@ -39,6 +39,7 @@
 #include "../src/obs/stats-port.hpp"
 #include "../src/model/output-stats.hpp"
 #include "../src/controller/stats-controller.hpp"
+#include "../src/model/multiview.hpp"
 #include "../src/obs/request-obs-api.hpp"
 #include "../src/state/deck-keys.hpp"
 #include "../src/state/link-state.hpp"

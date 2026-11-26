@@ -1,6 +1,7 @@
 #pragma once
 
 #include "output-dock.hpp"
+#include "../model/multiview.hpp"
 #include <list>
 #include <map>
 #include <obs.hpp>
@@ -27,9 +28,6 @@ private:
 		QWidget *row = nullptr;
 		QLabel *icon = nullptr;
 		QLabel *text = nullptr;
-		uint64_t lastBytes = 0;
-		qint64 lastTime = 0;
-		int kbps = 0;
 	};
 
 	// weak, so an open multiview never keeps a removed canvas alive
@@ -48,6 +46,7 @@ private:
 	QLabel *title;
 	QVBoxLayout *chipsLayout;
 	std::map<QString, Chip> chips;
+	fiji::model::TileOutputs outputs; // which outputs are on this canvas, and their status
 	QElapsedTimer clock;
 
 	static void Draw(void *data, uint32_t cx, uint32_t cy);
@@ -61,7 +60,7 @@ public:
 		   QWidget *parent = nullptr);
 	~CanvasTile();
 
-	void UpdateOutputs(const std::vector<OutputState> &states);
+	void UpdateOutputs(const QList<fiji::model::MultiviewOutput> &states);
 
 	QColor LiveColor() const { return liveColor; }
 	void SetLiveColor(const QColor &color);
