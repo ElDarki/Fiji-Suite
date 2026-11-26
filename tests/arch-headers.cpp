@@ -12,6 +12,7 @@
 #include "../src/controller/deck-controller.hpp"
 #include "../src/controller/obs-command-handler.hpp"
 #include "../src/controller/output-controller.hpp"
+#include "../src/controller/output-sequencer.hpp"
 #include "../src/controller/update-checker.hpp"
 #include "../src/model/deck-engine.hpp"
 #include "../src/model/deck-model.hpp"

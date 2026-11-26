@@ -136,6 +136,8 @@ set(FIJI_CORE_SOURCES
   src/controller/transitions-controller.hpp
   src/controller/stats-controller.cpp
   src/controller/stats-controller.hpp
+  src/controller/output-sequencer.cpp
+  src/controller/output-sequencer.hpp
   src/controller/update-checker.cpp
   src/controller/update-checker.hpp
   src/model/deck-engine.cpp
@@ -153,6 +155,8 @@ set(FIJI_CORE_SOURCES
   src/model/local-store.hpp
   src/model/obs-status.cpp
   src/model/obs-status.hpp
+  src/model/output-sequence.cpp
+  src/model/output-sequence.hpp
   src/model/output-targets.cpp
   src/model/output-targets.hpp
   src/model/output-stats.cpp
@@ -171,6 +175,7 @@ set(FIJI_CORE_SOURCES
   src/obs/scene-port.hpp
   src/obs/transition-port.hpp
   src/obs/stats-port.hpp
+  src/obs/startable-port.hpp
   src/obs/update-port.hpp
   src/state/deck-keys.cpp
   src/state/deck-keys.hpp
@@ -200,6 +205,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/obs/obs-captures.hpp
   src/obs/obs-live-scenes.cpp
   src/obs/obs-live-scenes.hpp
+  src/obs/output-runner.cpp
+  src/obs/output-runner.hpp
   src/obs/request-obs-api.cpp
   src/obs/request-obs-api.hpp
   src/obs/obs-transitions.cpp

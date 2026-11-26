@@ -9,6 +9,8 @@
 #include <QPushButton>
 #include <QTimer>
 #include <src/utils/widgets/output-widget.hpp>
+#include "../controller/output-sequencer.hpp"
+#include "../obs/startable-port.hpp"
 
 // A snapshot of one output for the multiview and remote control. `main` marks OBS's own
 // stream / record / replay / virtual camera outputs; their canvas is empty.
@@ -27,7 +29,9 @@ struct OutputState {
 	int droppedFrames = 0;
 };
 
-class OutputDock : public QFrame {
+// The view of the outputs. It also carries them out for the output sequencer (obs::StartableOutputs) until the
+// widgets and their encoder setup move into src/obs.
+class OutputDock : public QFrame, public fiji::obs::StartableOutputs {
 	Q_OBJECT
 
 private:
@@ -62,8 +66,7 @@ private:
 
 	std::vector<OutputWidget *> outputWidgets;
 
-	std::list<std::function<bool(std::function<void()>)>> outputsToStart;
-	size_t outputStarting = 0;
+	fiji::controller::OutputSequencer sequencer{*this};
 
 	obs_hotkey_pair_id StartStopHotkey = OBS_INVALID_HOTKEY_PAIR_ID;
 	obs_hotkey_id StartStreamHotkey = OBS_INVALID_HOTKEY_ID;
@@ -89,17 +92,20 @@ private:
 	void ClearGroupRows();
 	void UpdateGroupStatus();
 	void StartOutputs(const std::function<bool(OutputWidget *)> &filter);
+	OutputWidget *widgetNamed(const QString &name) const;
 
 private slots:
 	void StartAll(bool streamOnly, bool recordOnly);
 	void StopAll(bool streamOnly, bool recordOnly);
-	void StartNextOutput();
 
 public:
 	OutputDock(QWidget *parent = nullptr);
 	~OutputDock();
 
 	obs_data_array_t *GetOutputsArray();
+
+	// fiji::obs::StartableOutputs
+	bool startOutput(const QString &id, std::function<void()> onLive) override;
 
 	void Exiting() { exiting = true; }
 	void LoadSettings();
